@@ -172,6 +172,14 @@
       }
     });
 
+    // Add shift+enter handler for the textarea
+    document.getElementById('note-content').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        noteForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
     // Group notes by date
     function groupNotesByDate(notes) {
       const groups = {};
