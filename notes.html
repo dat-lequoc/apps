@@ -145,7 +145,7 @@
 </head>
 <body>
   <a href="index.html" class="back-link">← Back</a>
-  <button id="theme-toggle" class="theme-toggle">Toggle Theme</button>
+  <button id="theme-toggle" class="theme-toggle">Light</button>
   <div id="notes-container"></div>
 
   <form id="note-form">
@@ -164,15 +164,22 @@
 
     // Theme toggle button event listener
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('theme-toggle').addEventListener('click', () => {
+      const themeToggle = document.getElementById('theme-toggle');
+      
+      // Set initial button text based on current theme
+      themeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+      
+      themeToggle.addEventListener('click', () => {
         if (document.body.classList.contains('dark')) {
           document.body.classList.remove('dark');
           document.body.classList.add('light');
           localStorage.setItem('theme', 'light');
+          themeToggle.textContent = 'Dark';
         } else {
           document.body.classList.remove('light');
           document.body.classList.add('dark');
           localStorage.setItem('theme', 'dark');
+          themeToggle.textContent = 'Light';
         }
       });
     });
