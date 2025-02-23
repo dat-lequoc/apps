@@ -10,6 +10,7 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
       /* Floating add button */
       .add-habit-btn {
@@ -402,6 +403,11 @@
     </div>
 
     <script>
+      // Initialize Supabase client
+      const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
       // Helper functions
       const $ = (id) => document.getElementById(id);
       const formatDate = (date) => {
@@ -509,94 +515,136 @@
       // HabitManager class to manage habit list and UI
       class HabitManager {
         constructor() {
-          // Test localStorage availability
-          try {
-            localStorage.setItem('test', 'test');
-            localStorage.removeItem('test');
-            console.log('localStorage is available');
-          } catch (e) {
-            console.error('localStorage is not available:', e);
-            alert('Your browser does not support or has disabled local storage. Your data will not persist.');
-          }
-          
           this.habits = [];
-          this.groups = new Set(); // Store unique groups
-          this.groupToggles = {}; 
-          this.LOCAL_STORAGE_KEY = "habitTrackerHabits";
-          this.GROUPS_STORAGE_KEY = "habitTrackerGroups";
-          this.habitOrder = JSON.parse(localStorage.getItem("habitOrder")) || [];
-          this.groupOrder = JSON.parse(localStorage.getItem("groupOrder")) || [];
-          this.loadGroups();
-          this.loadHabits();
-          this.settings = {
-            hideCompleted: JSON.parse(localStorage.getItem("hideCompletedHabits")) || false,
-          };
+          this.habitOrder = [];
+          this.groupOrder = [];
+          this.groups = new Set();
+          this.settings = { hideCompleted: false };
+          this.groupToggles = {}; // Add this to track group expansion state
+        }
+
+        async init() {
+          await this.checkAuth();
+          await this.loadData();
           this.setupEventListeners();
           this.renderUI();
+        }
+
+        async checkAuth() {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+          this.userId = session.user.id;
+        }
+
+        async loadData() {
+          const { data, error } = await supabase
+            .from('habits')
+            .select('data')
+            .eq('user_id', this.userId)
+            .single();
           
-          // Add debug logging
-          console.log('Initial load:', this.habits);
-        }
-
-        loadGroups() {
-          const stored = localStorage.getItem(this.GROUPS_STORAGE_KEY);
-          if (stored) {
-            this.groups = new Set(JSON.parse(stored));
+          if (error && error.code !== 'PGRST116') {
+            console.error('Error loading habits:', error);
+            return;
+          }
+  
+          if (data?.data) {
+            const d = data.data;
+            // Convert each loaded habit into a Habit instance to have the methods available
+            this.habits = (d.habits || []).map(habitData => new Habit(habitData));
+            this.habitOrder = d.habitOrder || [];
+            this.groupOrder = d.groupOrder || [];
+            this.groups = new Set(d.groups || []);
+            this.settings = d.settings || { hideCompleted: false };
           }
         }
 
-        saveGroups() {
-          localStorage.setItem(this.GROUPS_STORAGE_KEY, JSON.stringify([...this.groups]));
-        }
-
-        addGroup(groupName) {
-          if (groupName && !this.groups.has(groupName)) {
-            this.groups.add(groupName);
-            this.saveGroups();
-          }
-        }
-
-        loadHabits() {
+        async saveData() {
           try {
-            const stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-            console.log('Loading from storage:', stored); // Debug log
+            const dataToSave = {
+              habits: this.habits,
+              habitOrder: this.habitOrder,
+              groupOrder: this.groupOrder,
+              groups: Array.from(this.groups),
+              settings: this.settings,
+            };
+
+            // First try to update
+            const { error: updateError } = await supabase
+              .from('habits')
+              .update({ 
+                data: dataToSave,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', this.userId);
+
+            // If no existing record, insert instead
+            if (updateError) {
+              const { error: insertError } = await supabase
+                .from('habits')
+                .insert({ 
+                  user_id: this.userId,
+                  data: dataToSave,
+                  updated_at: new Date().toISOString()
+                });
+
+              if (insertError) {
+                console.error('Error saving habits:', insertError);
+              }
+            }
+          } catch (err) {
+            console.error('Error saving data:', err);
+          }
+        }
+
+        async addHabit(data) {
+          try {
+            const newHabit = new Habit(data);
+            this.habits.push(newHabit);
+            this.habitOrder.push(newHabit.id);
             
-            if (!stored) {
-              console.log('No data found in storage');
-              this.habits = [];
-              return;
+            // If the habit has a group, add it to groups Set
+            if (data.group) {
+              this.groups.add(data.group);
+              if (!this.groupOrder.includes(data.group)) {
+                this.groupOrder.push(data.group);
+              }
             }
 
-            const parsed = JSON.parse(stored);
-            console.log('Parsed data:', parsed); // Debug log
-            
-            this.habits = parsed.map(data => new Habit(data));
-            console.log('Loaded habits:', this.habits); // Debug log
-          } catch (e) {
-            console.error('Error loading habits:', e); // Error logging
-            this.habits = [];
+            await this.saveData();
+            this.renderUI();
+          } catch (err) {
+            console.error('Error adding habit:', err);
           }
         }
 
-        saveHabits() {
-          try {
-            // Add group to the saved data
-            const dataToSave = this.habits.map(habit => ({
-              id: habit.id,
-              name: habit.name,
-              group: habit.group,
-              history: habit.history
-            }));
-            
-            console.log('Saving habits:', dataToSave);
-            localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
-            
-            // Verify the save
-            const savedData = localStorage.getItem(this.LOCAL_STORAGE_KEY);
-            console.log('Verified saved data:', savedData);
-          } catch (e) {
-            console.error('Error saving habits:', e);
+        async updateHabit(updatedData) {
+          const index = this.habits.findIndex(h => h.id === updatedData.id);
+          if (index > -1) {
+            this.habits[index].name = updatedData.name;
+            this.habits[index].group = updatedData.group;
+            await this.saveData();
+            this.renderUI();
           }
+        }
+
+        async deleteHabit(id) {
+          this.habits = this.habits.filter(h => h.id !== id);
+          this.habitOrder = this.habitOrder.filter(hId => hId !== id);
+          await this.saveData();
+          this.renderUI();
+        }
+
+        async toggleToday(id, status) {
+          const habit = this.habits.find(h => h.id === id);
+          if (!habit) return;
+          const today = formatDate(new Date());
+          habit.toggleCompletion(today, status);
+          await this.saveData();
+          this.renderUI();
         }
 
         renderUI() {
@@ -763,7 +811,7 @@
                 
                 if (habit && habit.group !== newGroup) {
                   habit.group = newGroup === 'Ungrouped' ? '' : newGroup;
-                  this.saveHabits();
+                  this.saveData();
                 }
 
                 // Update habit order
@@ -778,48 +826,188 @@
         renderHeatmap() {
           const container = $("heatmap-container");
           if (!container) return;
-          container.innerHTML = "";
-          
-          const today = new Date();
-          const dates = [];
-          for (let i = 6; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(today.getDate() - i);
-            dates.push(formatDate(d));
-          }
-          
-          // Header row with weekday abbreviations
-          const headerRow = document.createElement("div");
-          headerRow.className = "grid grid-cols-[150px_1fr] items-center mb-2";
-          headerRow.innerHTML = `
-            <div></div>
-            <div class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-gray-600">
-              ${dates.map(d => `<div>${new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}</div>`).join("")}
-            </div>
-          `;
-          container.appendChild(headerRow);
-          
-          // Common row class for consistent spacing
-          const rowClass = "grid grid-cols-[150px_1fr] items-center mb-2";
-          
-          // Sort groups according to groupOrder
-          const groupedHabits = this.groupHabits();
-          const sortedGroups = Object.keys(groupedHabits).sort((a, b) => {
-            const indexA = this.groupOrder.indexOf(a);
-            const indexB = this.groupOrder.indexOf(b);
-            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
-            return indexA - indexB;
-          });
-          
-          // Render grouped habits
-          sortedGroups.forEach(groupName => {
-            const habits = groupedHabits[groupName];
-            const groupExpanded = this.groupToggles[groupName] || false;
+
+          try {
+            container.innerHTML = "";
             
-            // Sort habits within group according to habitOrder
-            habits.sort((a, b) => {
+            const today = new Date();
+            const dates = [];
+            for (let i = 6; i >= 0; i--) {
+              const d = new Date();
+              d.setDate(today.getDate() - i);
+              dates.push(formatDate(d));
+            }
+            
+            // Header row with weekday abbreviations
+            const headerRow = document.createElement("div");
+            headerRow.className = "grid grid-cols-[150px_1fr] items-center mb-2";
+            headerRow.innerHTML = `
+              <div></div>
+              <div class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-gray-600">
+                ${dates.map(d => `<div>${new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}</div>`).join("")}
+              </div>
+            `;
+            container.appendChild(headerRow);
+            
+            // Common row class for consistent spacing
+            const rowClass = "grid grid-cols-[150px_1fr] items-center mb-2";
+            
+            // Sort groups according to groupOrder
+            const groupedHabits = this.groupHabits();
+            const sortedGroups = Object.keys(groupedHabits).sort((a, b) => {
+              const indexA = this.groupOrder.indexOf(a);
+              const indexB = this.groupOrder.indexOf(b);
+              if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+            
+            // Render grouped habits
+            sortedGroups.forEach(groupName => {
+              const habits = groupedHabits[groupName];
+              const groupExpanded = this.groupToggles[groupName] || false;
+              
+              // Sort habits within group according to habitOrder
+              habits.sort((a, b) => {
+                const indexA = this.habitOrder.indexOf(a.id);
+                const indexB = this.habitOrder.indexOf(b.id);
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+              });
+              
+              // Group header row
+              const groupRow = document.createElement("div");
+              groupRow.className = rowClass;
+              
+              // Group header content
+              const groupHeader = document.createElement("div");
+              groupHeader.className = "flex items-center";
+              
+              const toggleButton = document.createElement("button");
+              toggleButton.className = "mr-2 text-blue-500 hover:text-blue-700 w-6";
+              toggleButton.textContent = groupExpanded ? "-" : "+";
+              toggleButton.addEventListener("click", () => {
+                this.groupToggles[groupName] = !groupExpanded;
+                this.renderHeatmap();
+              });
+              
+              const groupLabel = document.createElement("div");
+              groupLabel.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+              groupLabel.textContent = groupName;
+              
+              groupHeader.appendChild(toggleButton);
+              groupHeader.appendChild(groupLabel);
+              groupRow.appendChild(groupHeader);
+              
+              // Group heatmap cells
+              const aggregatedCellsContainer = document.createElement("div");
+              aggregatedCellsContainer.className = "grid grid-cols-7 gap-1";
+              
+              dates.forEach((date) => {
+                const cell = document.createElement("div");
+                cell.className = "heatmap-cell";
+                
+                const statuses = habits.map(h => h.getStatus(date));
+                const total = habits.length;
+                const completedCount = statuses.filter(s => s === "completed").length;
+                const failedCount = statuses.filter(s => s === "failed").length;
+                const noStatusCount = total - completedCount - failedCount;
+                
+                // Calculate percentages
+                const failedPercent = (failedCount / total) * 100;
+                const completedPercent = (completedCount / total) * 100;
+                const noStatusPercent = (noStatusCount / total) * 100;
+                
+                // Create gradient based on proportions with better colors
+                let gradient = [];
+                let currentPosition = 0;
+                
+                if (failedCount > 0) {
+                  gradient.push(`#fca5a5 ${currentPosition}% ${currentPosition + failedPercent}%`); // Lighter red
+                  currentPosition += failedPercent;
+                }
+                if (completedCount > 0) {
+                  gradient.push(`#86efac ${currentPosition}% ${currentPosition + completedPercent}%`); // Lighter green
+                  currentPosition += completedPercent;
+                }
+                if (noStatusCount > 0) {
+                  gradient.push(`#f3f4f6 ${currentPosition}% ${currentPosition + noStatusPercent}%`); // Lighter gray
+                }
+                
+                cell.style.background = gradient.length > 1 
+                  ? `linear-gradient(to right, ${gradient.join(', ')})`
+                  : gradient.length === 1 
+                    ? gradient[0].split(' ')[0] // Use solid color if only one status
+                    : '#f3f4f6'; // Default light gray if no statuses
+                
+                // Add a subtle border to make sections more distinct
+                cell.style.border = '2px solid white';
+                cell.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.1)';
+                
+                // Update the date number color to be more visible
+                cell.innerHTML = `<span class="text-xs text-gray-700">${new Date(date).getDate()}</span>`;
+                
+                // Add a more detailed tooltip
+                const completedPercentText = Math.round(completedPercent);
+                const failedPercentText = Math.round(failedPercent);
+                const noStatusPercentText = Math.round(noStatusPercent);
+                cell.title = `${completedCount} completed (${completedPercentText}%)
+${failedCount} failed (${failedPercentText}%)
+${noStatusCount} not marked (${noStatusPercentText}%)`;
+                
+                cell.addEventListener("click", () => {
+                  this.showGroupHabitsModal(groupName, date, habits);
+                });
+                
+                aggregatedCellsContainer.appendChild(cell);
+              });
+              
+              groupRow.appendChild(aggregatedCellsContainer);
+              container.appendChild(groupRow);
+              
+              // Render individual habits if group is expanded
+              if (groupExpanded) {
+                habits.forEach(habit => {
+                  const habitRow = document.createElement("div");
+                  habitRow.className = rowClass;
+                  
+                  const habitLabel = document.createElement("div");
+                  habitLabel.className = "pl-8 text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+                  habitLabel.textContent = habit.name;
+                  habitRow.appendChild(habitLabel);
+                  
+                  const cellsContainer = document.createElement("div");
+                  cellsContainer.className = "grid grid-cols-7 gap-1";
+                  
+                  dates.forEach((date) => {
+                    const cell = document.createElement("div");
+                    cell.className = "heatmap-cell";
+                    const status = habit.getStatus(date);
+                    let bgColor = status === "completed" ? "bg-green-500" : 
+                                 status === "failed" ? "bg-red-500" : "bg-gray-200";
+                    cell.classList.add(bgColor);
+                    cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
+                    
+                    cell.addEventListener("click", () => {
+                      this.cycleToday(habit.id, date);
+                    });
+                    
+                    cellsContainer.appendChild(cell);
+                  });
+                  
+                  habitRow.appendChild(cellsContainer);
+                  container.appendChild(habitRow);
+                });
+              }
+            });
+            
+            // Render ungrouped habits in order
+            const ungroupedHabits = this.habits.filter(habit => !habit.group || habit.group.trim() === "");
+            // Sort ungrouped habits according to habitOrder
+            ungroupedHabits.sort((a, b) => {
               const indexA = this.habitOrder.indexOf(a.id);
               const indexB = this.habitOrder.indexOf(b.id);
               if (indexA === -1 && indexB === -1) return 0;
@@ -828,239 +1016,296 @@
               return indexA - indexB;
             });
             
-            // Group header row
-            const groupRow = document.createElement("div");
-            groupRow.className = rowClass;
-            
-            // Group header content
-            const groupHeader = document.createElement("div");
-            groupHeader.className = "flex items-center";
-            
-            const toggleButton = document.createElement("button");
-            toggleButton.className = "mr-2 text-blue-500 hover:text-blue-700 w-6";
-            toggleButton.textContent = groupExpanded ? "-" : "+";
-            toggleButton.addEventListener("click", () => {
-              this.groupToggles[groupName] = !groupExpanded;
-              this.renderHeatmap();
-            });
-            
-            const groupLabel = document.createElement("div");
-            groupLabel.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
-            groupLabel.textContent = groupName;
-            
-            groupHeader.appendChild(toggleButton);
-            groupHeader.appendChild(groupLabel);
-            groupRow.appendChild(groupHeader);
-            
-            // Group heatmap cells
-            const aggregatedCellsContainer = document.createElement("div");
-            aggregatedCellsContainer.className = "grid grid-cols-7 gap-1";
-            
-            dates.forEach((date) => {
-              const cell = document.createElement("div");
-              cell.className = "heatmap-cell";
+            ungroupedHabits.forEach(habit => {
+              const row = document.createElement("div");
+              row.className = rowClass;
               
-              const statuses = habits.map(h => h.getStatus(date));
-              const total = habits.length;
-              const completedCount = statuses.filter(s => s === "completed").length;
-              const failedCount = statuses.filter(s => s === "failed").length;
-              const noStatusCount = total - completedCount - failedCount;
+              const label = document.createElement("div");
+              label.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+              label.textContent = habit.name;
+              row.appendChild(label);
               
-              // Calculate percentages
-              const failedPercent = (failedCount / total) * 100;
-              const completedPercent = (completedCount / total) * 100;
-              const noStatusPercent = (noStatusCount / total) * 100;
+              const cellsContainer = document.createElement("div");
+              cellsContainer.className = "grid grid-cols-7 gap-1";
               
-              // Create gradient based on proportions with better colors
-              let gradient = [];
-              let currentPosition = 0;
-              
-              if (failedCount > 0) {
-                gradient.push(`#fca5a5 ${currentPosition}% ${currentPosition + failedPercent}%`); // Lighter red
-                currentPosition += failedPercent;
-              }
-              if (completedCount > 0) {
-                gradient.push(`#86efac ${currentPosition}% ${currentPosition + completedPercent}%`); // Lighter green
-                currentPosition += completedPercent;
-              }
-              if (noStatusCount > 0) {
-                gradient.push(`#f3f4f6 ${currentPosition}% ${currentPosition + noStatusPercent}%`); // Lighter gray
-              }
-              
-              cell.style.background = gradient.length > 1 
-                ? `linear-gradient(to right, ${gradient.join(', ')})`
-                : gradient.length === 1 
-                  ? gradient[0].split(' ')[0] // Use solid color if only one status
-                  : '#f3f4f6'; // Default light gray if no statuses
-              
-              // Add a subtle border to make sections more distinct
-              cell.style.border = '2px solid white';
-              cell.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.1)';
-              
-              // Update the date number color to be more visible
-              cell.innerHTML = `<span class="text-xs text-gray-700">${new Date(date).getDate()}</span>`;
-              
-              // Add a more detailed tooltip
-              const completedPercentText = Math.round(completedPercent);
-              const failedPercentText = Math.round(failedPercent);
-              const noStatusPercentText = Math.round(noStatusPercent);
-              cell.title = `${completedCount} completed (${completedPercentText}%)
-${failedCount} failed (${failedPercentText}%)
-${noStatusCount} not marked (${noStatusPercentText}%)`;
-              
-              cell.addEventListener("click", () => {
-                this.showGroupHabitsModal(groupName, date, habits);
-              });
-              
-              aggregatedCellsContainer.appendChild(cell);
-            });
-            
-            groupRow.appendChild(aggregatedCellsContainer);
-            container.appendChild(groupRow);
-            
-            // Render individual habits if group is expanded
-            if (groupExpanded) {
-              habits.forEach(habit => {
-                const habitRow = document.createElement("div");
-                habitRow.className = rowClass;
+              dates.forEach((date) => {
+                const cell = document.createElement("div");
+                cell.className = "heatmap-cell";
+                const status = habit.getStatus(date);
+                let bgColor = status === "completed" ? "bg-green-500" : 
+                             status === "failed" ? "bg-red-500" : "bg-gray-200";
+                cell.classList.add(bgColor);
+                cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
                 
-                const habitLabel = document.createElement("div");
-                habitLabel.className = "pl-8 text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
-                habitLabel.textContent = habit.name;
-                habitRow.appendChild(habitLabel);
-                
-                const cellsContainer = document.createElement("div");
-                cellsContainer.className = "grid grid-cols-7 gap-1";
-                
-                dates.forEach((date) => {
-                  const cell = document.createElement("div");
-                  cell.className = "heatmap-cell";
-                  const status = habit.getStatus(date);
-                  let bgColor = status === "completed" ? "bg-green-500" : 
-                               status === "failed" ? "bg-red-500" : "bg-gray-200";
-                  cell.classList.add(bgColor);
-                  cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
-                  
-                  cell.addEventListener("click", () => {
-                    this.cycleToday(habit.id, date);
-                  });
-                  
-                  cellsContainer.appendChild(cell);
+                cell.addEventListener("click", () => {
+                  this.cycleToday(habit.id, date);
                 });
                 
-                habitRow.appendChild(cellsContainer);
-                container.appendChild(habitRow);
+                cellsContainer.appendChild(cell);
               });
+              
+              row.appendChild(cellsContainer);
+              container.appendChild(row);
+            });
+          } catch (err) {
+            console.error('Error rendering heatmap:', err);
+            container.innerHTML = '<div class="text-red-500">Error rendering heatmap</div>';
+          }
+        }
+
+        groupHabits() {
+          const groups = {};
+          this.habits.forEach(habit => {
+            if (habit.group && habit.group.trim() !== "") { // only group habits that have a valid group name
+              if (!groups[habit.group]) {
+                groups[habit.group] = [];
+              }
+              groups[habit.group].push(habit);
             }
           });
-          
-          // Render ungrouped habits in order
-          const ungroupedHabits = this.habits.filter(habit => !habit.group || habit.group.trim() === "");
-          // Sort ungrouped habits according to habitOrder
-          ungroupedHabits.sort((a, b) => {
-            const indexA = this.habitOrder.indexOf(a.id);
-            const indexB = this.habitOrder.indexOf(b.id);
-            if (indexA === -1 && indexB === -1) return 0;
-            if (indexA === -1) return 1;
-            if (indexB === -1) return -1;
-            return indexA - indexB;
-          });
-          
-          ungroupedHabits.forEach(habit => {
-            const row = document.createElement("div");
-            row.className = rowClass;
-            
-            const label = document.createElement("div");
-            label.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
-            label.textContent = habit.name;
-            row.appendChild(label);
-            
-            const cellsContainer = document.createElement("div");
-            cellsContainer.className = "grid grid-cols-7 gap-1";
-            
-            dates.forEach((date) => {
-              const cell = document.createElement("div");
-              cell.className = "heatmap-cell";
-              const status = habit.getStatus(date);
-              let bgColor = status === "completed" ? "bg-green-500" : 
-                           status === "failed" ? "bg-red-500" : "bg-gray-200";
-              cell.classList.add(bgColor);
-              cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
-              
-              cell.addEventListener("click", () => {
-                this.cycleToday(habit.id, date);
-              });
-              
-              cellsContainer.appendChild(cell);
-            });
-            
-            row.appendChild(cellsContainer);
-            container.appendChild(row);
-          });
+          return groups;
         }
 
-        addHabit(data) {
-          const newHabit = new Habit(data);
-          this.habits.push(newHabit);
-          this.habitOrder.push(newHabit.id); // Add to order
-          this.saveHabits();
-          this.saveOrder();
-          this.renderUI();
+        showGroupHabitsModal(groupName, date, habits) {
+          const modal = $('group-habits-modal');
+          const title = $('group-habits-title');
+          const list = $('group-habits-list');
+          
+          title.textContent = `${groupName} - ${new Date(date).toLocaleDateString()}`;
+          
+          list.innerHTML = habits.map(habit => {
+            const status = habit.getStatus(date);
+            return `
+              <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium">${habit.name}</span>
+                  <div class="flex gap-2">
+                    <button 
+                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'completed')"
+                      class="px-3 py-1 rounded text-sm ${
+                        status === 'completed' ? 'bg-green-500 text-white' : 'bg-gray-200'
+                      }"
+                    >
+                      Done
+                    </button>
+                    <button 
+                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'failed')"
+                      class="px-3 py-1 rounded text-sm ${
+                        status === 'failed' ? 'bg-red-500 text-white' : 'bg-gray-200'
+                      }"
+                    >
+                      Failed
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          modal.classList.remove('hidden');
         }
 
-        updateHabit(updatedData) {
-          const index = this.habits.findIndex((h) => h.id === updatedData.id);
-          if (index > -1) {
-            this.habits[index].name = updatedData.name;
-            this.habits[index].group = updatedData.group;
-            this.saveHabits();
-            this.saveOrder();
+        toggleHabitInGroup(habitId, date, status) {
+          const habit = this.habits.find(h => h.id === habitId);
+          if (habit) {
+            habit.toggleCompletion(date, status);
+            this.saveData();
             this.renderUI();
+            
+            // Update the modal content using the actual group
+            const groupName = habit.group || 'Ungrouped';
+            const groupedHabits = this.groupHabits()[groupName];
+            this.showGroupHabitsModal(groupName, date, groupedHabits);
           }
         }
 
-        deleteHabit(id) {
-          this.habits = this.habits.filter((h) => h.id !== id);
-          this.habitOrder = this.habitOrder.filter(hId => hId !== id);
-          this.saveHabits();
-          this.saveOrder();
-          this.renderUI();
+        showNewGroupInput(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          $(`${prefix}new-group-input`).classList.remove('hidden');
+          $(`${prefix}new-group-name`).focus();
         }
 
-        toggleToday(id, status) {
-          const habit = this.habits.find((h) => h.id === id);
-          if (!habit) return;
-          const today = formatDate(new Date());
-          habit.toggleCompletion(today, status);
-          this.saveHabits();
-          this.saveOrder();
-          this.renderUI();
+        hideNewGroupInput(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          $(`${prefix}new-group-input`).classList.add('hidden');
+          $(`${prefix}new-group-name`).value = '';
         }
 
-        // New: Cycles through statuses for a given habit on a given date.
-        cycleToday(habitId, date) {
-          const habit = this.habits.find((h) => h.id === habitId);
-          if (!habit) return;
-          const currentStatus = habit.getStatus(date) || "";
-          let newStatus;
-          if (currentStatus === "") {
-            newStatus = "completed";
-          } else if (currentStatus === "completed") {
-            newStatus = "failed";
-          } else if (currentStatus === "failed") {
-            newStatus = "";
+        addGroup(groupName) {
+          if (groupName && !this.groups.has(groupName)) {
+            this.groups.add(groupName);
+            // Add to groupOrder if not already present
+            if (!this.groupOrder.includes(groupName)) {
+              this.groupOrder.push(groupName);
+            }
+            this.saveData(); // Save the updated groups
           }
+        }
 
-          if (newStatus === "") {
-            habit.unmark(date);
-          } else if (newStatus === "completed") {
-            habit.markCompleted(date);
-          } else if (newStatus === "failed") {
-            habit.markFailed(date);
+        addNewGroup(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          const newGroupName = $(`${prefix}new-group-name`).value.trim();
+          if (newGroupName) {
+            this.addGroup(newGroupName);
+            this.updateGroupDropdowns();
+            $(`${prefix}habit-group`).value = newGroupName;
+            this.hideNewGroupInput(mode);
           }
-          this.saveHabits();
-          this.saveOrder();
-          this.renderUI();
+        }
+
+        updateGroupDropdowns() {
+          const dropdowns = ['habit-group', 'edit-habit-group'];
+          const sortedGroups = [...this.groups].sort();
+          
+          dropdowns.forEach(id => {
+            const dropdown = $(id);
+            if (dropdown) {
+              const currentValue = dropdown.value;
+              dropdown.innerHTML = '<option value="">No Group</option>' +
+                sortedGroups.map(group => 
+                  `<option value="${group}" ${currentValue === group ? 'selected' : ''}>${group}</option>`
+                ).join('');
+            }
+          });
+        }
+
+        // Add this method to save the order
+        saveOrder() {
+          localStorage.setItem("habitOrder", JSON.stringify(this.habitOrder));
+          localStorage.setItem("groupOrder", JSON.stringify(this.groupOrder));
+        }
+
+        setupEventListeners() {
+          // Open add habit modal
+          $("add-habit-btn").addEventListener("click", () => this.openAddHabitModal());
+
+          // Close modals when clicking on .modal-close buttons
+          document.querySelectorAll(".modal-close").forEach((btn) => {
+            btn.addEventListener("click", () => this.closeAllModals());
+          });
+
+          // Close modals on pressing the Escape key
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              this.closeAllModals();
+            }
+          });
+
+          // Add habit form submit
+          $("add-habit-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+              name: $("habit-name").value.trim(),
+              group: $("habit-group").value.trim()
+            };
+            if (data.name) {
+              await this.addHabit(data);
+              this.closeAllModals();
+            }
+          });
+
+          // Edit habit form submit
+          $("edit-habit-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const data = {
+              id: $("edit-habit-id").value,
+              name: $("edit-habit-name").value.trim(),
+              group: $("edit-habit-group").value.trim()
+            };
+            if (data.name) {
+              await this.updateHabit(data);
+              this.closeAllModals();
+            }
+          });
+
+          // Delete habit button in edit modal
+          $("delete-habit-btn").addEventListener("click", () => {
+            const id = $("edit-habit-id").value;
+            if (confirm("Are you sure you want to delete this habit?")) {
+              this.deleteHabit(id);
+              this.closeAllModals();
+            }
+          });
+
+          // Settings button
+          $("settings-btn").addEventListener("click", () => {
+            $("settings-modal").classList.remove("hidden");
+            $("hide-completed-habits").checked = this.settings.hideCompleted;
+          });
+
+          // Settings toggle change
+          $("hide-completed-habits").addEventListener("change", async (e) => {
+            this.settings.hideCompleted = e.target.checked;
+            await this.saveData();
+            this.renderUI();
+          });
+
+          // Export data
+          $("export-data").addEventListener("click", () => {
+            const dataStr = JSON.stringify(this.habits);
+            const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+            const link = document.createElement("a");
+            link.setAttribute("href", dataUri);
+            link.setAttribute("download", "habit_tracker_data.json");
+            link.click();
+          });
+
+          // Import data
+          $("import-data-btn").addEventListener("click", () => {
+            $("import-data").click();
+          });
+
+          $("import-data").addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+              try {
+                const imported = JSON.parse(evt.target.result);
+                if (Array.isArray(imported)) {
+                  if (confirm("This will replace your current data. Continue?")) {
+                    this.habits = imported.map((data) => new Habit(data));
+                    await this.saveData();
+                    this.renderUI();
+                    alert("Data imported successfully!");
+                  }
+                } else {
+                  throw new Error("Invalid format");
+                }
+              } catch (err) {
+                alert("Error importing data. Please check the file.");
+              }
+            };
+            reader.readAsText(file);
+            e.target.value = "";
+          });
+
+          // Update the add-selected-habits-btn click handler
+          $("add-selected-habits-btn").addEventListener("click", () => {
+            // Handle current group habits (unchecking removes from group)
+            const currentGroupCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.current-group");
+            currentGroupCheckboxes.forEach((checkbox) => {
+              const habit = this.habits.find(h => h.id === checkbox.value);
+              if (habit) {
+                if (!checkbox.checked) {
+                  // Remove from group if unchecked
+                  habit.group = "";
+                }
+              }
+            });
+
+            // Handle available habits (checking adds to group)
+            const availableCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.available");
+            availableCheckboxes.forEach((checkbox) => {
+              if (checkbox.checked) {
+                this.addExistingHabitToGroup(checkbox.value, this.currentSelectGroup);
+              }
+            });
+
+            this.saveData();
+            this.renderUI();
+            this.closeSelectHabitModal();
+          });
         }
 
         openAddHabitModal() {
@@ -1149,8 +1394,7 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
           const habit = this.habits.find(h => h.id === habitId);
           if (habit) {
             habit.group = targetGroupName;
-            this.saveHabits();
-            this.saveOrder();
+            this.saveData();
             this.renderUI();
           }
         }
@@ -1158,259 +1402,13 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
         closeSelectHabitModal() {
           $("select-habit-modal").classList.add("hidden");
         }
-
-        setupEventListeners() {
-          // Open add habit modal
-          $("add-habit-btn").addEventListener("click", () => this.openAddHabitModal());
-
-          // Close modals when clicking on .modal-close buttons
-          document.querySelectorAll(".modal-close").forEach((btn) => {
-            btn.addEventListener("click", () => this.closeAllModals());
-          });
-
-          // Close modals on pressing the Escape key
-          document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") {
-              this.closeAllModals();
-            }
-          });
-
-          // Add habit form submit
-          $("add-habit-form").addEventListener("submit", (e) => {
-            e.preventDefault();
-            const data = {
-              name: $("habit-name").value.trim(),
-              group: $("habit-group").value.trim()
-            };
-            if (data.name) {
-              this.addHabit(data);
-              this.closeAllModals();
-            }
-          });
-
-          // Edit habit form submit
-          $("edit-habit-form").addEventListener("submit", (e) => {
-            e.preventDefault();
-            const data = {
-              id: $("edit-habit-id").value,
-              name: $("edit-habit-name").value.trim(),
-              group: $("edit-habit-group").value.trim()
-            };
-            if (data.name) {
-              this.updateHabit(data);
-              this.closeAllModals();
-            }
-          });
-
-          // Delete habit button in edit modal
-          $("delete-habit-btn").addEventListener("click", () => {
-            const id = $("edit-habit-id").value;
-            if (confirm("Are you sure you want to delete this habit?")) {
-              this.deleteHabit(id);
-              this.closeAllModals();
-            }
-          });
-
-          // Settings button
-          $("settings-btn").addEventListener("click", () => {
-            $("settings-modal").classList.remove("hidden");
-            $("hide-completed-habits").checked = this.settings.hideCompleted;
-          });
-
-          // Settings toggle change
-          $("hide-completed-habits").addEventListener("change", (e) => {
-            this.settings.hideCompleted = e.target.checked;
-            localStorage.setItem("hideCompletedHabits", JSON.stringify(this.settings.hideCompleted));
-            this.renderUI();
-          });
-
-          // Export data
-          $("export-data").addEventListener("click", () => {
-            const dataStr = JSON.stringify(this.habits);
-            const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
-            const link = document.createElement("a");
-            link.setAttribute("href", dataUri);
-            link.setAttribute("download", "habit_tracker_data.json");
-            link.click();
-          });
-
-          // Import data
-          $("import-data-btn").addEventListener("click", () => {
-            $("import-data").click();
-          });
-
-          $("import-data").addEventListener("change", (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-              try {
-                const imported = JSON.parse(evt.target.result);
-                if (Array.isArray(imported)) {
-                  if (confirm("This will replace your current data. Continue?")) {
-                    this.habits = imported.map((data) => new Habit(data));
-                    this.saveHabits();
-                    this.saveOrder();
-                    this.renderUI();
-                    alert("Data imported successfully!");
-                  }
-                } else {
-                  throw new Error("Invalid format");
-                }
-              } catch (err) {
-                alert("Error importing data. Please check the file.");
-              }
-            };
-            reader.readAsText(file);
-            e.target.value = "";
-          });
-
-          // Update the add-selected-habits-btn click handler
-          $("add-selected-habits-btn").addEventListener("click", () => {
-            // Handle current group habits (unchecking removes from group)
-            const currentGroupCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.current-group");
-            currentGroupCheckboxes.forEach((checkbox) => {
-              const habit = this.habits.find(h => h.id === checkbox.value);
-              if (habit) {
-                if (!checkbox.checked) {
-                  // Remove from group if unchecked
-                  habit.group = "";
-                }
-              }
-            });
-
-            // Handle available habits (checking adds to group)
-            const availableCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.available");
-            availableCheckboxes.forEach((checkbox) => {
-              if (checkbox.checked) {
-                this.addExistingHabitToGroup(checkbox.value, this.currentSelectGroup);
-              }
-            });
-
-            this.saveHabits();
-            this.saveOrder();
-            this.renderUI();
-            this.closeSelectHabitModal();
-          });
-        }
-
-        groupHabits() {
-          const groups = {};
-          this.habits.forEach(habit => {
-            if (habit.group && habit.group.trim() !== "") { // only group habits that have a valid group name
-              if (!groups[habit.group]) {
-                groups[habit.group] = [];
-              }
-              groups[habit.group].push(habit);
-            }
-          });
-          return groups;
-        }
-
-        showGroupHabitsModal(groupName, date, habits) {
-          const modal = $('group-habits-modal');
-          const title = $('group-habits-title');
-          const list = $('group-habits-list');
-          
-          title.textContent = `${groupName} - ${new Date(date).toLocaleDateString()}`;
-          
-          list.innerHTML = habits.map(habit => {
-            const status = habit.getStatus(date);
-            return `
-              <div class="p-3 bg-gray-50 rounded-lg">
-                <div class="flex items-center justify-between">
-                  <span class="font-medium">${habit.name}</span>
-                  <div class="flex gap-2">
-                    <button 
-                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'completed')"
-                      class="px-3 py-1 rounded text-sm ${
-                        status === 'completed' ? 'bg-green-500 text-white' : 'bg-gray-200'
-                      }"
-                    >
-                      Done
-                    </button>
-                    <button 
-                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'failed')"
-                      class="px-3 py-1 rounded text-sm ${
-                        status === 'failed' ? 'bg-red-500 text-white' : 'bg-gray-200'
-                      }"
-                    >
-                      Failed
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('');
-          
-          modal.classList.remove('hidden');
-        }
-
-        toggleHabitInGroup(habitId, date, status) {
-          const habit = this.habits.find(h => h.id === habitId);
-          if (habit) {
-            habit.toggleCompletion(date, status);
-            this.saveHabits();
-            this.saveOrder();
-            this.renderUI();
-            
-            // Update the modal content using the actual group
-            const groupName = habit.group || 'Ungrouped';
-            const groupedHabits = this.groupHabits()[groupName];
-            this.showGroupHabitsModal(groupName, date, groupedHabits);
-          }
-        }
-
-        showNewGroupInput(mode = 'add') {
-          const prefix = mode === 'edit' ? 'edit-' : '';
-          $(`${prefix}new-group-input`).classList.remove('hidden');
-          $(`${prefix}new-group-name`).focus();
-        }
-
-        hideNewGroupInput(mode = 'add') {
-          const prefix = mode === 'edit' ? 'edit-' : '';
-          $(`${prefix}new-group-input`).classList.add('hidden');
-          $(`${prefix}new-group-name`).value = '';
-        }
-
-        addNewGroup(mode = 'add') {
-          const prefix = mode === 'edit' ? 'edit-' : '';
-          const newGroupName = $(`${prefix}new-group-name`).value.trim();
-          if (newGroupName) {
-            this.addGroup(newGroupName);
-            this.updateGroupDropdowns();
-            $(`${prefix}habit-group`).value = newGroupName;
-            this.hideNewGroupInput(mode);
-          }
-        }
-
-        updateGroupDropdowns() {
-          const dropdowns = ['habit-group', 'edit-habit-group'];
-          const sortedGroups = [...this.groups].sort();
-          
-          dropdowns.forEach(id => {
-            const dropdown = $(id);
-            if (dropdown) {
-              const currentValue = dropdown.value;
-              dropdown.innerHTML = '<option value="">No Group</option>' +
-                sortedGroups.map(group => 
-                  `<option value="${group}" ${currentValue === group ? 'selected' : ''}>${group}</option>`
-                ).join('');
-            }
-          });
-        }
-
-        // Add this method to save the order
-        saveOrder() {
-          localStorage.setItem("habitOrder", JSON.stringify(this.habitOrder));
-          localStorage.setItem("groupOrder", JSON.stringify(this.groupOrder));
-        }
       }
 
       // Initialize the app
       let habitManager;
       document.addEventListener("DOMContentLoaded", () => {
         habitManager = new HabitManager();
+        habitManager.init();
       });
     </script>
   </body>
