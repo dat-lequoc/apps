@@ -111,7 +111,7 @@
               email, 
               password,
               options: {
-                emailRedirectTo: window.location.origin // Add redirect URL
+                emailRedirectTo: 'https://dat-lequoc.github.io/apps/'
               }
             });
             if (signUpResponse.error) {
@@ -145,7 +145,7 @@
     document.getElementById("github-login-button").addEventListener("click", async () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "github",
-        options: { redirectTo: window.location.origin }
+        options: { redirectTo: 'https://dat-lequoc.github.io/apps/' }
       });
       if (error) {
         authMessage.textContent = `GitHub sign in failed: ${error.message}`;
