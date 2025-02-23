@@ -27,7 +27,7 @@
     }
   </style>
 </head>
-<body>
+<body class="bg-gray-100 p-6 font-sans">
   <h1>User Portal</h1>
 
   <!-- Authentication Section -->
@@ -56,7 +56,7 @@
   </div>
 
   <script>
-    // Initialize the Supabase client (replace placeholders with your values)
+    // Initialize Supabase client (using the same URL and anon key as in index.html)
     const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
     const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
@@ -72,25 +72,32 @@
     const habitsAppBtn   = document.getElementById("habits-app-btn");
     const readingAppBtn  = document.getElementById("reading-app-btn");
 
-    // Check authentication status on page load
+    // Check user authentication status immediately
     async function checkAuth() {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        showHub();
-      } else {
-        showAuth();
+      if (!session) {
+        window.location.href = 'index.html'; // redirect to login
       }
     }
+    checkAuth();
 
-    function showHub() {
-      authContainer.classList.add("hidden");
-      hubContainer.classList.remove("hidden");
-    }
+    // Listen for auth state changes and redirect if the user logs out
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        window.location.href = 'index.html';
+      }
+    });
 
-    function showAuth() {
-      authContainer.classList.remove("hidden");
-      hubContainer.classList.add("hidden");
-    }
+    // After the DOM is loaded, attach a logout event to the logout button
+    document.addEventListener("DOMContentLoaded", () => {
+      const logoutBtn = document.getElementById("logout-btn");
+      if (logoutBtn) {
+        logoutBtn.addEventListener("click", async () => {
+          await supabase.auth.signOut();
+          window.location.href = 'index.html';
+        });
+      }
+    });
 
     // Handle authentication form submission for sign in / sign up
     authForm.addEventListener("submit", async (e) => {
@@ -135,12 +142,6 @@
       }
     });
 
-    // Logout handler
-    logoutButton.addEventListener("click", async () => {
-      await supabase.auth.signOut();
-      showAuth();
-    });
-
     // GitHub OAuth sign in handler
     document.getElementById("github-login-button").addEventListener("click", async () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -149,15 +150,6 @@
       });
       if (error) {
         authMessage.textContent = `GitHub sign in failed: ${error.message}`;
-      }
-    });
-
-    // Listen for authentication state changes (e.g., auto-login on page refresh)
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        showHub();
-      } else {
-        showAuth();
       }
     });
 
@@ -172,9 +164,6 @@
     readingAppBtn.addEventListener("click", () => {
       window.location.href = "reading.html";
     });
-
-    // Check auth on initial load
-    checkAuth();
   </script>
 </body>
 </html> 
