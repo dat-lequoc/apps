@@ -869,12 +869,16 @@
               collapsedBooks: Array.from(this.collapsedBooks),
               bookOrder: this.books.map(book => book.title),
               settings: this.settings
-            }
+            },
+            updated_at: new Date().toISOString()
           };
 
           const { error } = await supabase
             .from('reading')
-            .upsert(payload);
+            .upsert(payload, { 
+              onConflict: 'user_id',
+              ignoreDuplicates: false 
+            });
 
           if (error) throw error;
         } catch (err) {
