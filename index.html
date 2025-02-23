@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Portal</title>
+  <!-- Include the Supabase JS library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 1rem;
+    }
+    #app-selection button {
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>User Portal</h1>
+
+  <!-- Authentication Section -->
+  <div id="auth-container">
+    <h2>Login / Sign Up</h2>
+    <form id="auth-form">
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Submit</button>
+    </form>
+    <button id="github-login-button">Sign in with GitHub</button>
+    <div id="auth-message"></div>
+  </div>
+
+  <!-- Hub (Dashboard) Section -->
+  <div id="hub-container" class="hidden">
+    <h2>Welcome!</h2>
+    <p>Select an application to continue:</p>
+    <div id="app-selection">
+      <button id="notes-app-btn">Notes</button>
+      <button id="habits-app-btn">Habits</button>
+      <button id="reading-app-btn">Reading</button>
+    </div>
+    <br />
+    <button id="logout-button">Logout</button>
+  </div>
+
+  <script>
+    // Initialize the Supabase client (replace placeholders with your values)
+    const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // DOM Elements
+    const authContainer = document.getElementById("auth-container");
+    const hubContainer   = document.getElementById("hub-container");
+    const authForm       = document.getElementById("auth-form");
+    const authMessage    = document.getElementById("auth-message");
+    const logoutButton   = document.getElementById("logout-button");
+
+    const notesAppBtn    = document.getElementById("notes-app-btn");
+    const habitsAppBtn   = document.getElementById("habits-app-btn");
+    const readingAppBtn  = document.getElementById("reading-app-btn");
+
+    // Check authentication status on page load
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        showHub();
+      } else {
+        showAuth();
+      }
+    }
+
+    function showHub() {
+      authContainer.classList.add("hidden");
+      hubContainer.classList.remove("hidden");
+    }
+
+    function showAuth() {
+      authContainer.classList.remove("hidden");
+      hubContainer.classList.add("hidden");
+    }
+
+    // Handle authentication form submission for sign in / sign up
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      
+      // Clear previous messages
+      authMessage.textContent = "Processing...";
+
+      try {
+        // Attempt sign in first
+        let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          // If sign in fails due to invalid credentials, try sign up
+          if (error.message.includes("Invalid login credentials")) {
+            const signUpResponse = await supabase.auth.signUp({ 
+              email, 
+              password,
+              options: {
+                emailRedirectTo: window.location.origin // Add redirect URL
+              }
+            });
+            if (signUpResponse.error) {
+              authMessage.textContent = `Sign up failed: ${signUpResponse.error.message}`;
+              return;
+            }
+            authMessage.textContent = "Sign-up successful! Please check your email for confirmation.";
+            return;
+          }
+          authMessage.textContent = `Sign in failed: ${error.message}`;
+          return;
+        }
+
+        // Success - clear message and update UI
+        authMessage.textContent = "";
+        checkAuth();
+        
+      } catch (err) {
+        console.error("Auth error:", err);
+        authMessage.textContent = "An unexpected error occurred. Please try again.";
+      }
+    });
+
+    // Logout handler
+    logoutButton.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      showAuth();
+    });
+
+    // GitHub OAuth sign in handler
+    document.getElementById("github-login-button").addEventListener("click", async () => {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) {
+        authMessage.textContent = `GitHub sign in failed: ${error.message}`;
+      }
+    });
+
+    // Listen for authentication state changes (e.g., auto-login on page refresh)
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        showHub();
+      } else {
+        showAuth();
+      }
+    });
+
+    // Navigation buttons to launch the individual apps
+    notesAppBtn.addEventListener("click", () => {
+      // Assuming your notes app is in login_example.html; adjust if needed.
+      window.location.href = "login_example.html";
+    });
+    habitsAppBtn.addEventListener("click", () => {
+      window.location.href = "habits.html";
+    });
+    readingAppBtn.addEventListener("click", () => {
+      window.location.href = "reading.html";
+    });
+
+    // Check auth on initial load
+    checkAuth();
+  </script>
+</body>
+</html> 

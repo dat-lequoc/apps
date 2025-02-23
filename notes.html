@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notes App</title>
+  <!-- Include the Supabase JS library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    input, button, textarea {
+      padding: 10px;
+      margin: 5px;
+      font-size: 1rem;
+    }
+    textarea {
+      width: 100%;
+      min-height: 100px;
+    }
+    #notes-list li {
+      margin-bottom: 15px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .note-title {
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .note-content {
+      white-space: pre-wrap;
+    }
+    .note-meta {
+      font-size: 0.8em;
+      color: #666;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Notes App</h1>
+  <a href="index.html">← Back to Hub</a>
+
+  <div id="app-container">
+    <h2>Your Notes</h2>
+    <form id="note-form">
+      <input type="text" id="note-title" placeholder="Note title" required />
+      <textarea id="note-content" placeholder="Enter note content" required></textarea>
+      <button type="submit">Add Note</button>
+    </form>
+    <ul id="notes-list"></ul>
+  </div>
+
+  <script>
+    // Initialize the Supabase client
+    const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // DOM Elements
+    const noteForm = document.getElementById('note-form');
+    const notesList = document.getElementById('notes-list');
+
+    // Check if user is authenticated
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = 'index.html';
+        return;
+      }
+      loadNotes();
+    }
+
+    // Handle note submission
+    noteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('note-title').value;
+      const content = document.getElementById('note-content').value;
+      
+      // Clear form
+      document.getElementById('note-title').value = '';
+      document.getElementById('note-content').value = '';
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Insert note with JSON data
+      const noteData = {
+        title: title,
+        content: content,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('notes')
+        .insert([{ 
+          user_id: session.user.id,
+          data: noteData
+        }]);
+
+      if (error) {
+        console.error('Error inserting note:', error);
+      } else {
+        loadNotes();
+      }
+    });
+
+    // Load and display notes
+    async function loadNotes() {
+      const { data: notes, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading notes:', error);
+        return;
+      }
+
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div class="note-title">${note.data.title}</div>
+          <div class="note-content">${note.data.content}</div>
+          <div class="note-meta">Created: ${new Date(note.data.created_at).toLocaleString()}</div>
+        `;
+        notesList.appendChild(li);
+      });
+    }
+
+    // Check auth on initial load
+    checkAuth();
+  </script>
+</body>
+</html>
