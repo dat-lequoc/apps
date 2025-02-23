@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+    />
+    <title>Daily Habit Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+      /* Floating add button */
+      .add-habit-btn {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 3rem;
+        height: 3rem;
+        background: #3b82f6;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+        z-index: 50;
+      }
+      .add-habit-btn:hover {
+        transform: scale(1.1);
+      }
+      /* Modal close button styles */
+      .modal-close-btn {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f3f4f6;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        padding: 0;
+        color: #6b7280;
+      }
+      .modal-close-btn:hover {
+        background-color: #e5e7eb;
+        color: #374151;
+        transform: scale(1.05);
+      }
+      .modal-close-btn:active {
+        transform: scale(0.95);
+      }
+      .modal-close-btn svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+      /* Heatmap cell styles */
+      .heatmap-cell {
+        height: clamp(36px, 10vw, 48px);
+        border: 1px solid #e5e7eb;
+        cursor: pointer;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem;
+        width: 100%;
+      }
+      .heatmap-cell:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .heatmap-row {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.25rem;
+      }
+      /* Habit entry styles - updated for compact/single-line display */
+      .habit-entry {
+        background-color: #f9fafb;
+        padding: 0.5rem 1rem; /* reduced vertical padding */
+        border-radius: 0.5rem;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 0.5rem; /* reduced bottom margin */
+        position: relative;
+      }
+      /* Ensure habit title has no extra margin */
+      .habit-title {
+        margin: 0;
+      }
+      .habit-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+      }
+      .habit-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+      .streak-indicator {
+        font-size: 0.875rem;
+        background-color: #10b981;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+      }
+      .habit-completed {
+        text-decoration: line-through;
+        opacity: 0.6;
+      }
+      /* Toggle switch (for settings) */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 3rem;
+        height: 1.5rem;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-switch .slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #e5e7eb;
+        transition: 0.3s;
+        border-radius: 9999px;
+      }
+      .toggle-switch .slider:before {
+        position: absolute;
+        content: "";
+        height: 1.25rem;
+        width: 1.25rem;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+      .toggle-switch input:checked + .slider {
+        background-color: #3b82f6;
+      }
+      .toggle-switch input:checked + .slider:before {
+        transform: translateX(1.5rem);
+      }
+      /* Responsive adjustments */
+      @media (max-width: 640px) {
+        .habit-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .habit-title {
+          margin-bottom: 0.5rem;
+        }
+      }
+      /* Drag and drop styles */
+      .sortable-ghost {
+        opacity: 0.4;
+        background: #c7d2fe;
+      }
+
+      .sortable-drag {
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .drag-handle {
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .drag-handle:active {
+        cursor: grabbing;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 p-3 sm:p-6 font-sans">
+    <!-- Wrap content in a container for a centered max-width layout -->
+    <div class="container mx-auto max-w-4xl">
+      <!-- Updated Header with a gradient background -->
+      <header class="mb-6 flex items-center justify-between bg-gradient-to-r from-blue-400 to-blue-600 p-4 rounded shadow">
+        <h1 class="text-2xl font-bold text-white">Daily Habit Tracker</h1>
+        <button id="settings-btn" class="w-10 h-10 flex items-center justify-center border border-gray-200 bg-white rounded-full shadow hover:bg-gray-50 transition" aria-label="Open Settings">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M11.049 2.927c.3-.921 1.603-.921 1.902 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c.921.3.921 1.603 0 1.902a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.3.921-1.603.921-1.902 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-.921-.3-.921-1.603 0-1.902a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <!-- Main Content -->
+      <main class="grid gap-3 sm:gap-6">
+        <!-- Streaks Visualization Section -->
+        <section id="streaks-visualization" class="bg-white p-3 sm:p-4 rounded shadow">
+          <div id="heatmap-container"></div>
+        </section>
+
+        <!-- Habit List Section -->
+        <section id="habit-list" class="bg-white p-3 sm:p-4 rounded shadow">
+          <h2 class="text-xl font-semibold mb-3 sm:mb-4">My Habits</h2>
+          <div id="habit-entries"></div>
+        </section>
+
+        <!-- Data Management -->
+        <section id="data-management" class="bg-white p-3 sm:p-4 rounded shadow">
+          <h2 class="text-xl font-semibold mb-3 sm:mb-4">Data Management</h2>
+          <div class="flex items-center gap-2 sm:gap-3">
+            <button id="export-data" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 transition text-sm">
+              Export Data
+            </button>
+            <input type="file" id="import-data" accept=".json" class="hidden" />
+            <button id="import-data-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 transition text-sm">
+              Import Data
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Floating Add Habit Button with tooltip -->
+    <button id="add-habit-btn" class="add-habit-btn" title="Add New Habit">+</button>
+
+    <!-- Add Habit Modal -->
+    <div id="add-habit-modal" class="modal fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="add-habit-title">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="add-habit-title" class="text-lg font-semibold">Add New Habit</h2>
+          <button type="button" class="modal-close modal-close-btn" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form id="add-habit-form" class="space-y-4">
+          <div>
+            <label for="habit-name" class="block text-sm font-medium text-gray-700">Habit Name</label>
+            <input type="text" id="habit-name" required class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="habit-group" class="block text-sm font-medium text-gray-700">Group</label>
+            <div class="flex gap-2">
+              <select id="habit-group" class="mt-1 p-2 flex-1 border rounded focus:ring-blue-500 focus:border-blue-500">
+                <option value="">No Group</option>
+              </select>
+              <button type="button" onclick="habitManager.showNewGroupInput()" class="mt-1 px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                New Group
+              </button>
+            </div>
+            <div id="new-group-input" class="hidden mt-2">
+              <input type="text" id="new-group-name" placeholder="Enter new group name" class="p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" />
+              <div class="mt-1 flex gap-2">
+                <button type="button" onclick="habitManager.addNewGroup()" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Add Group
+                </button>
+                <button type="button" onclick="habitManager.hideNewGroupInput()" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none">
+            Add Habit
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Habit Modal -->
+    <div id="edit-habit-modal" class="modal fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="edit-habit-title">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="edit-habit-title" class="text-lg font-semibold">Edit Habit</h2>
+          <button type="button" class="modal-close modal-close-btn" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form id="edit-habit-form" class="space-y-4">
+          <input type="hidden" id="edit-habit-id" />
+          <div>
+            <label for="edit-habit-name" class="block text-sm font-medium text-gray-700">Habit Name</label>
+            <input type="text" id="edit-habit-name" required class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label for="edit-habit-group" class="block text-sm font-medium text-gray-700">Group</label>
+            <div class="flex gap-2">
+              <select id="edit-habit-group" class="mt-1 p-2 flex-1 border rounded focus:ring-blue-500 focus:border-blue-500">
+                <option value="">No Group</option>
+              </select>
+              <button type="button" onclick="habitManager.showNewGroupInput('edit')" class="mt-1 px-3 py-2 bg-gray-100 rounded hover:bg-gray-200">
+                New Group
+              </button>
+            </div>
+            <div id="edit-new-group-input" class="hidden mt-2">
+              <input type="text" id="edit-new-group-name" placeholder="Enter new group name" class="p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" />
+              <div class="mt-1 flex gap-2">
+                <button type="button" onclick="habitManager.addNewGroup('edit')" class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                  Add Group
+                </button>
+                <button type="button" onclick="habitManager.hideNewGroupInput('edit')" class="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="flex justify-between">
+            <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none">
+              Save Changes
+            </button>
+            <button type="button" id="delete-habit-btn" title="Delete Habit" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none">
+              Delete
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="settings-title" class="text-lg font-semibold">Settings</h2>
+          <button type="button" class="modal-close modal-close-btn" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <label for="hide-completed-habits" class="text-sm text-gray-700">Hide Completed Habits</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="hide-completed-habits" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add this just before the closing </body> tag -->
+    <div id="group-habits-modal" class="modal fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="group-habits-title" class="text-lg font-semibold"></h2>
+          <button type="button" class="modal-close modal-close-btn" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div id="group-habits-list" class="space-y-3">
+          <!-- Habits will be inserted here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Select Habit Modal -->
+    <div id="select-habit-modal" class="modal fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50" role="dialog" aria-modal="true" aria-labelledby="select-habit-title">
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 id="select-habit-title" class="text-lg font-semibold">Select Habit</h2>
+          <button type="button" class="modal-close modal-close-btn" aria-label="Close">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div id="select-habit-list" class="space-y-3">
+          <!-- Habit items with checkboxes will be inserted here -->
+        </div>
+        <div class="mt-4 flex justify-end space-x-2">
+          <button type="button" id="add-selected-habits-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 transition">
+            Save Changes
+          </button>
+          <button type="button" class="modal-close bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600 transition">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Helper functions
+      const $ = (id) => document.getElementById(id);
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      // Habit class to store habit data and compute streaks
+      class Habit {
+        constructor(data) {
+          this.id = data.id || Date.now().toString();
+          this.name = data.name;
+          this.group = data.group || ''; // Store group explicitly
+          
+          // Convert array history to object format if needed
+          if (Array.isArray(data.history)) {
+            this.history = {};
+            data.history.forEach(date => {
+              this.history[date] = "completed";
+            });
+          } else {
+            this.history = data.history || {};
+          }
+          
+          console.log('Created habit:', this); // Debug log
+        }
+
+        markCompleted(dateStr) {
+          this.history[dateStr] = "completed";
+          console.log(`Marked ${this.name} as completed on ${dateStr}`); // Debug log
+        }
+
+        markFailed(dateStr) {
+          this.history[dateStr] = "failed";
+          console.log(`Marked ${this.name} as failed on ${dateStr}`); // Debug log
+        }
+
+        unmark(dateStr) {
+          delete this.history[dateStr];
+          console.log(`Unmarked ${this.name} on ${dateStr}`); // Debug log
+        }
+
+        getStatus(dateStr) {
+          return this.history[dateStr];
+        }
+
+        isCompletedOn(dateStr) {
+          return this.history[dateStr] === "completed";
+        }
+
+        isFailedOn(dateStr) {
+          return this.history[dateStr] === "failed";
+        }
+
+        toggleCompletion(dateStr, status) {
+          const currentStatus = this.getStatus(dateStr);
+          if (currentStatus === status) {
+            this.unmark(dateStr);
+          } else {
+            if (status === "completed") {
+              this.markCompleted(dateStr);
+            } else if (status === "failed") {
+              this.markFailed(dateStr);
+            }
+          }
+        }
+
+        // Compute current streak (consecutive days up to today)
+        getCurrentStreak() {
+          const today = new Date();
+          let streak = 0;
+          let current = new Date(today);
+          while (this.isCompletedOn(formatDate(current))) {
+            streak++;
+            current.setDate(current.getDate() - 1);
+          }
+          return streak;
+        }
+
+        // Compute longest streak from history
+        getLongestStreak() {
+          if (Object.keys(this.history).length === 0) return 0;
+          // sort dates ascending
+          const dates = Object.keys(this.history).sort();
+          let longest = 1;
+          let currentStreak = 1;
+          for (let i = 1; i < dates.length; i++) {
+            const prev = new Date(dates[i - 1]);
+            const curr = new Date(dates[i]);
+            const diff = (curr - prev) / (1000 * 60 * 60 * 24);
+            if (diff === 1) {
+              currentStreak++;
+            } else {
+              currentStreak = 1;
+            }
+            longest = Math.max(longest, currentStreak);
+          }
+          return longest;
+        }
+      }
+
+      // HabitManager class to manage habit list and UI
+      class HabitManager {
+        constructor() {
+          // Test localStorage availability
+          try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+            console.log('localStorage is available');
+          } catch (e) {
+            console.error('localStorage is not available:', e);
+            alert('Your browser does not support or has disabled local storage. Your data will not persist.');
+          }
+          
+          this.habits = [];
+          this.groups = new Set(); // Store unique groups
+          this.groupToggles = {}; 
+          this.LOCAL_STORAGE_KEY = "habitTrackerHabits";
+          this.GROUPS_STORAGE_KEY = "habitTrackerGroups";
+          this.habitOrder = JSON.parse(localStorage.getItem("habitOrder")) || [];
+          this.groupOrder = JSON.parse(localStorage.getItem("groupOrder")) || [];
+          this.loadGroups();
+          this.loadHabits();
+          this.settings = {
+            hideCompleted: JSON.parse(localStorage.getItem("hideCompletedHabits")) || false,
+          };
+          this.setupEventListeners();
+          this.renderUI();
+          
+          // Add debug logging
+          console.log('Initial load:', this.habits);
+        }
+
+        loadGroups() {
+          const stored = localStorage.getItem(this.GROUPS_STORAGE_KEY);
+          if (stored) {
+            this.groups = new Set(JSON.parse(stored));
+          }
+        }
+
+        saveGroups() {
+          localStorage.setItem(this.GROUPS_STORAGE_KEY, JSON.stringify([...this.groups]));
+        }
+
+        addGroup(groupName) {
+          if (groupName && !this.groups.has(groupName)) {
+            this.groups.add(groupName);
+            this.saveGroups();
+          }
+        }
+
+        loadHabits() {
+          try {
+            const stored = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+            console.log('Loading from storage:', stored); // Debug log
+            
+            if (!stored) {
+              console.log('No data found in storage');
+              this.habits = [];
+              return;
+            }
+
+            const parsed = JSON.parse(stored);
+            console.log('Parsed data:', parsed); // Debug log
+            
+            this.habits = parsed.map(data => new Habit(data));
+            console.log('Loaded habits:', this.habits); // Debug log
+          } catch (e) {
+            console.error('Error loading habits:', e); // Error logging
+            this.habits = [];
+          }
+        }
+
+        saveHabits() {
+          try {
+            // Add group to the saved data
+            const dataToSave = this.habits.map(habit => ({
+              id: habit.id,
+              name: habit.name,
+              group: habit.group,
+              history: habit.history
+            }));
+            
+            console.log('Saving habits:', dataToSave);
+            localStorage.setItem(this.LOCAL_STORAGE_KEY, JSON.stringify(dataToSave));
+            
+            // Verify the save
+            const savedData = localStorage.getItem(this.LOCAL_STORAGE_KEY);
+            console.log('Verified saved data:', savedData);
+          } catch (e) {
+            console.error('Error saving habits:', e);
+          }
+        }
+
+        renderUI() {
+          console.log('Rendering UI with habits:', this.habits); // Debug log
+          this.renderHabitEntries();
+          this.renderHeatmap();
+        }
+
+        renderHabitEntries() {
+          const container = $("habit-entries");
+          if (!container) {
+            console.error('Habit entries container not found!');
+            return;
+          }
+          
+          if (this.habits.length === 0) {
+            container.innerHTML = `<p class="text-center text-gray-500 py-4">No habits added yet. Click the + button to add one!</p>`;
+            return;
+          }
+
+          // Filter habits if hideCompleted is enabled
+          const filteredHabits = this.settings.hideCompleted
+            ? this.habits.filter((habit) => !habit.isCompletedOn(formatDate(new Date())))
+            : this.habits;
+
+          // Group the habits
+          const groupedHabits = {};
+          filteredHabits.forEach(habit => {
+            const groupName = habit.group || 'Ungrouped';
+            if (!groupedHabits[groupName]) {
+              groupedHabits[groupName] = [];
+            }
+            groupedHabits[groupName].push(habit);
+          });
+
+          // Sort groups according to groupOrder
+          const sortedGroups = Object.keys(groupedHabits).sort((a, b) => {
+            const indexA = this.groupOrder.indexOf(a);
+            const indexB = this.groupOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+
+          let html = '<div id="sortable-groups">';
+          
+          // Render grouped habits
+          sortedGroups.forEach(groupName => {
+            const habits = groupedHabits[groupName];
+            
+            // Sort habits within group according to habitOrder
+            habits.sort((a, b) => {
+              const indexA = this.habitOrder.indexOf(a.id);
+              const indexB = this.habitOrder.indexOf(b.id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+
+            html += `
+              <div class="group-container mb-6" data-group="${groupName}">
+                <div class="flex items-center justify-between mt-4 mb-2">
+                  <div class="flex items-center">
+                    <span class="drag-handle mr-2 text-gray-400 hover:text-gray-600">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9h8M8 15h8" />
+                      </svg>
+                    </span>
+                    <h3 class="text-lg font-semibold">${groupName}</h3>
+                  </div>
+                  ${groupName !== 'Ungrouped' ? 
+                    `<button onclick="habitManager.openSelectHabitModal('${groupName}')" class="text-blue-500 hover:text-blue-700 text-sm">+ Add Habit</button>` 
+                    : ''
+                  }
+                </div>
+                <div class="sortable-habits space-y-2">
+                  ${habits.map(habit => `
+                    <div class="habit-entry relative" data-id="${habit.id}">
+                      <span class="drag-handle absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9h8M8 15h8" />
+                        </svg>
+                      </span>
+                      <div class="pl-8">
+                        <div class="habit-header">
+                          <div class="flex-1">
+                            <h3 class="habit-title ${habit.isCompletedOn(formatDate(new Date())) ? 'habit-completed' : ''}">${habit.name}</h3>
+                          </div>
+                          <div class="flex items-center gap-2">
+                            <div class="flex gap-1">
+                              <button 
+                                onclick="habitManager.toggleToday('${habit.id}', 'completed')" 
+                                class="px-2 py-1 border rounded text-sm ${
+                                  habit.isCompletedOn(formatDate(new Date())) ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'
+                                }"
+                              >
+                                ${habit.isCompletedOn(formatDate(new Date())) ? "Done" : "Done"}
+                              </button>
+                              <button 
+                                onclick="habitManager.toggleToday('${habit.id}', 'failed')" 
+                                class="px-2 py-1 border rounded text-sm ${
+                                  habit.isFailedOn(formatDate(new Date())) ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'
+                                }"
+                              >
+                                ${habit.isFailedOn(formatDate(new Date())) ? "Failed" : "Failed"}
+                              </button>
+                              <button
+                                onclick="habitManager.openEditHabitModal('${habit.id}')"
+                                class="px-2 py-1 border rounded text-sm bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                title="Edit Habit"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div class="text-xs text-gray-700 whitespace-nowrap">
+                              <span>Current: ${habit.getCurrentStreak()}d</span> |
+                              <span>Longest: ${habit.getLongestStreak()}d</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          });
+
+          html += '</div>';
+          container.innerHTML = html;
+
+          // Initialize Sortable for groups
+          new Sortable($('sortable-groups'), {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            dragClass: 'sortable-drag',
+            onEnd: (evt) => {
+              const groups = Array.from(evt.to.children).map(el => 
+                el.dataset.group
+              );
+              this.groupOrder = groups;
+              this.saveOrder();
+            }
+          });
+
+          // Initialize Sortable for habits within each group
+          document.querySelectorAll('.sortable-habits').forEach(el => {
+            new Sortable(el, {
+              animation: 150,
+              handle: '.drag-handle',
+              ghostClass: 'sortable-ghost',
+              dragClass: 'sortable-drag',
+              group: 'habits', // This allows dragging between groups
+              onEnd: (evt) => {
+                // Update habit group if moved to different group
+                const habitId = evt.item.dataset.id;
+                const newGroup = evt.to.closest('.group-container').dataset.group;
+                const habit = this.habits.find(h => h.id === habitId);
+                
+                if (habit && habit.group !== newGroup) {
+                  habit.group = newGroup === 'Ungrouped' ? '' : newGroup;
+                  this.saveHabits();
+                }
+
+                // Update habit order
+                const allHabits = Array.from(document.querySelectorAll('.habit-entry')).map(el => el.dataset.id);
+                this.habitOrder = allHabits;
+                this.saveOrder();
+              }
+            });
+          });
+        }
+
+        renderHeatmap() {
+          const container = $("heatmap-container");
+          if (!container) return;
+          container.innerHTML = "";
+          
+          const today = new Date();
+          const dates = [];
+          for (let i = 6; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            dates.push(formatDate(d));
+          }
+          
+          // Header row with weekday abbreviations
+          const headerRow = document.createElement("div");
+          headerRow.className = "grid grid-cols-[150px_1fr] items-center mb-2";
+          headerRow.innerHTML = `
+            <div></div>
+            <div class="grid grid-cols-7 gap-1 text-center text-sm font-medium text-gray-600">
+              ${dates.map(d => `<div>${new Date(d).toLocaleDateString(undefined, { weekday: 'short' })}</div>`).join("")}
+            </div>
+          `;
+          container.appendChild(headerRow);
+          
+          // Common row class for consistent spacing
+          const rowClass = "grid grid-cols-[150px_1fr] items-center mb-2";
+          
+          // Sort groups according to groupOrder
+          const groupedHabits = this.groupHabits();
+          const sortedGroups = Object.keys(groupedHabits).sort((a, b) => {
+            const indexA = this.groupOrder.indexOf(a);
+            const indexB = this.groupOrder.indexOf(b);
+            if (indexA === -1 && indexB === -1) return a.localeCompare(b);
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+          
+          // Render grouped habits
+          sortedGroups.forEach(groupName => {
+            const habits = groupedHabits[groupName];
+            const groupExpanded = this.groupToggles[groupName] || false;
+            
+            // Sort habits within group according to habitOrder
+            habits.sort((a, b) => {
+              const indexA = this.habitOrder.indexOf(a.id);
+              const indexB = this.habitOrder.indexOf(b.id);
+              if (indexA === -1 && indexB === -1) return 0;
+              if (indexA === -1) return 1;
+              if (indexB === -1) return -1;
+              return indexA - indexB;
+            });
+            
+            // Group header row
+            const groupRow = document.createElement("div");
+            groupRow.className = rowClass;
+            
+            // Group header content
+            const groupHeader = document.createElement("div");
+            groupHeader.className = "flex items-center";
+            
+            const toggleButton = document.createElement("button");
+            toggleButton.className = "mr-2 text-blue-500 hover:text-blue-700 w-6";
+            toggleButton.textContent = groupExpanded ? "-" : "+";
+            toggleButton.addEventListener("click", () => {
+              this.groupToggles[groupName] = !groupExpanded;
+              this.renderHeatmap();
+            });
+            
+            const groupLabel = document.createElement("div");
+            groupLabel.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+            groupLabel.textContent = groupName;
+            
+            groupHeader.appendChild(toggleButton);
+            groupHeader.appendChild(groupLabel);
+            groupRow.appendChild(groupHeader);
+            
+            // Group heatmap cells
+            const aggregatedCellsContainer = document.createElement("div");
+            aggregatedCellsContainer.className = "grid grid-cols-7 gap-1";
+            
+            dates.forEach((date) => {
+              const cell = document.createElement("div");
+              cell.className = "heatmap-cell";
+              
+              const statuses = habits.map(h => h.getStatus(date));
+              const total = habits.length;
+              const completedCount = statuses.filter(s => s === "completed").length;
+              const failedCount = statuses.filter(s => s === "failed").length;
+              const noStatusCount = total - completedCount - failedCount;
+              
+              // Calculate percentages
+              const failedPercent = (failedCount / total) * 100;
+              const completedPercent = (completedCount / total) * 100;
+              const noStatusPercent = (noStatusCount / total) * 100;
+              
+              // Create gradient based on proportions with better colors
+              let gradient = [];
+              let currentPosition = 0;
+              
+              if (failedCount > 0) {
+                gradient.push(`#fca5a5 ${currentPosition}% ${currentPosition + failedPercent}%`); // Lighter red
+                currentPosition += failedPercent;
+              }
+              if (completedCount > 0) {
+                gradient.push(`#86efac ${currentPosition}% ${currentPosition + completedPercent}%`); // Lighter green
+                currentPosition += completedPercent;
+              }
+              if (noStatusCount > 0) {
+                gradient.push(`#f3f4f6 ${currentPosition}% ${currentPosition + noStatusPercent}%`); // Lighter gray
+              }
+              
+              cell.style.background = gradient.length > 1 
+                ? `linear-gradient(to right, ${gradient.join(', ')})`
+                : gradient.length === 1 
+                  ? gradient[0].split(' ')[0] // Use solid color if only one status
+                  : '#f3f4f6'; // Default light gray if no statuses
+              
+              // Add a subtle border to make sections more distinct
+              cell.style.border = '2px solid white';
+              cell.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.1)';
+              
+              // Update the date number color to be more visible
+              cell.innerHTML = `<span class="text-xs text-gray-700">${new Date(date).getDate()}</span>`;
+              
+              // Add a more detailed tooltip
+              const completedPercentText = Math.round(completedPercent);
+              const failedPercentText = Math.round(failedPercent);
+              const noStatusPercentText = Math.round(noStatusPercent);
+              cell.title = `${completedCount} completed (${completedPercentText}%)
+${failedCount} failed (${failedPercentText}%)
+${noStatusCount} not marked (${noStatusPercentText}%)`;
+              
+              cell.addEventListener("click", () => {
+                this.showGroupHabitsModal(groupName, date, habits);
+              });
+              
+              aggregatedCellsContainer.appendChild(cell);
+            });
+            
+            groupRow.appendChild(aggregatedCellsContainer);
+            container.appendChild(groupRow);
+            
+            // Render individual habits if group is expanded
+            if (groupExpanded) {
+              habits.forEach(habit => {
+                const habitRow = document.createElement("div");
+                habitRow.className = rowClass;
+                
+                const habitLabel = document.createElement("div");
+                habitLabel.className = "pl-8 text-sm text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+                habitLabel.textContent = habit.name;
+                habitRow.appendChild(habitLabel);
+                
+                const cellsContainer = document.createElement("div");
+                cellsContainer.className = "grid grid-cols-7 gap-1";
+                
+                dates.forEach((date) => {
+                  const cell = document.createElement("div");
+                  cell.className = "heatmap-cell";
+                  const status = habit.getStatus(date);
+                  let bgColor = status === "completed" ? "bg-green-500" : 
+                               status === "failed" ? "bg-red-500" : "bg-gray-200";
+                  cell.classList.add(bgColor);
+                  cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
+                  
+                  cell.addEventListener("click", () => {
+                    this.cycleToday(habit.id, date);
+                  });
+                  
+                  cellsContainer.appendChild(cell);
+                });
+                
+                habitRow.appendChild(cellsContainer);
+                container.appendChild(habitRow);
+              });
+            }
+          });
+          
+          // Render ungrouped habits in order
+          const ungroupedHabits = this.habits.filter(habit => !habit.group || habit.group.trim() === "");
+          // Sort ungrouped habits according to habitOrder
+          ungroupedHabits.sort((a, b) => {
+            const indexA = this.habitOrder.indexOf(a.id);
+            const indexB = this.habitOrder.indexOf(b.id);
+            if (indexA === -1 && indexB === -1) return 0;
+            if (indexA === -1) return 1;
+            if (indexB === -1) return -1;
+            return indexA - indexB;
+          });
+          
+          ungroupedHabits.forEach(habit => {
+            const row = document.createElement("div");
+            row.className = rowClass;
+            
+            const label = document.createElement("div");
+            label.className = "text-sm font-medium text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap";
+            label.textContent = habit.name;
+            row.appendChild(label);
+            
+            const cellsContainer = document.createElement("div");
+            cellsContainer.className = "grid grid-cols-7 gap-1";
+            
+            dates.forEach((date) => {
+              const cell = document.createElement("div");
+              cell.className = "heatmap-cell";
+              const status = habit.getStatus(date);
+              let bgColor = status === "completed" ? "bg-green-500" : 
+                           status === "failed" ? "bg-red-500" : "bg-gray-200";
+              cell.classList.add(bgColor);
+              cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
+              
+              cell.addEventListener("click", () => {
+                this.cycleToday(habit.id, date);
+              });
+              
+              cellsContainer.appendChild(cell);
+            });
+            
+            row.appendChild(cellsContainer);
+            container.appendChild(row);
+          });
+        }
+
+        addHabit(data) {
+          const newHabit = new Habit(data);
+          this.habits.push(newHabit);
+          this.habitOrder.push(newHabit.id); // Add to order
+          this.saveHabits();
+          this.saveOrder();
+          this.renderUI();
+        }
+
+        updateHabit(updatedData) {
+          const index = this.habits.findIndex((h) => h.id === updatedData.id);
+          if (index > -1) {
+            this.habits[index].name = updatedData.name;
+            this.habits[index].group = updatedData.group;
+            this.saveHabits();
+            this.saveOrder();
+            this.renderUI();
+          }
+        }
+
+        deleteHabit(id) {
+          this.habits = this.habits.filter((h) => h.id !== id);
+          this.habitOrder = this.habitOrder.filter(hId => hId !== id);
+          this.saveHabits();
+          this.saveOrder();
+          this.renderUI();
+        }
+
+        toggleToday(id, status) {
+          const habit = this.habits.find((h) => h.id === id);
+          if (!habit) return;
+          const today = formatDate(new Date());
+          habit.toggleCompletion(today, status);
+          this.saveHabits();
+          this.saveOrder();
+          this.renderUI();
+        }
+
+        // New: Cycles through statuses for a given habit on a given date.
+        cycleToday(habitId, date) {
+          const habit = this.habits.find((h) => h.id === habitId);
+          if (!habit) return;
+          const currentStatus = habit.getStatus(date) || "";
+          let newStatus;
+          if (currentStatus === "") {
+            newStatus = "completed";
+          } else if (currentStatus === "completed") {
+            newStatus = "failed";
+          } else if (currentStatus === "failed") {
+            newStatus = "";
+          }
+
+          if (newStatus === "") {
+            habit.unmark(date);
+          } else if (newStatus === "completed") {
+            habit.markCompleted(date);
+          } else if (newStatus === "failed") {
+            habit.markFailed(date);
+          }
+          this.saveHabits();
+          this.saveOrder();
+          this.renderUI();
+        }
+
+        openAddHabitModal() {
+          $("add-habit-modal").classList.remove("hidden");
+          $("add-habit-form").reset();
+          this.updateGroupDropdowns();
+        }
+
+        closeAllModals() {
+          document.querySelectorAll(".modal").forEach((modal) => modal.classList.add("hidden"));
+        }
+
+        openEditHabitModal(id) {
+          const habit = this.habits.find((h) => h.id === id);
+          if (!habit) return;
+          $("edit-habit-id").value = habit.id;
+          $("edit-habit-name").value = habit.name;
+          $("edit-habit-group").value = habit.group;
+          this.updateGroupDropdowns();
+          $("edit-habit-modal").classList.remove("hidden");
+        }
+
+        // NEW: Open select habit modal to add an existing habit to the group
+        openSelectHabitModal(targetGroupName) {
+          this.currentSelectGroup = targetGroupName;
+          const modal = $("select-habit-modal");
+          const title = $("select-habit-title");
+          title.textContent = `Manage Habits in ${targetGroupName}`;
+          const listContainer = $("select-habit-list");
+          listContainer.innerHTML = "";
+
+          // Get current habits in the group and ungrouped habits
+          const currentGroupHabits = this.habits.filter(habit => habit.group === targetGroupName);
+          const ungroupedHabits = this.habits.filter(habit => !habit.group || habit.group === "");
+          
+          // Create sections for current and available habits
+          if (currentGroupHabits.length > 0) {
+            listContainer.innerHTML += `
+              <div class="mb-4">
+                <h3 class="font-medium text-gray-700 mb-2">Current Habits in Group</h3>
+                <div class="space-y-2">
+                  ${currentGroupHabits.map(habit => `
+                    <label class="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <input type="checkbox" 
+                        value="${habit.id}" 
+                        checked
+                        class="select-habit-checkbox current-group"
+                      >
+                      <span>${habit.name}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          if (ungroupedHabits.length > 0) {
+            listContainer.innerHTML += `
+              <div>
+                <h3 class="font-medium text-gray-700 mb-2">Available Habits</h3>
+                <div class="space-y-2">
+                  ${ungroupedHabits.map(habit => `
+                    <label class="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                      <input type="checkbox" 
+                        value="${habit.id}" 
+                        class="select-habit-checkbox available"
+                      >
+                      <span>${habit.name}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          if (currentGroupHabits.length === 0 && ungroupedHabits.length === 0) {
+            listContainer.innerHTML = `
+              <p class="text-gray-500">No habits available to manage.</p>
+            `;
+          }
+
+          modal.classList.remove("hidden");
+        }
+
+        addExistingHabitToGroup(habitId, targetGroupName) {
+          const habit = this.habits.find(h => h.id === habitId);
+          if (habit) {
+            habit.group = targetGroupName;
+            this.saveHabits();
+            this.saveOrder();
+            this.renderUI();
+          }
+        }
+
+        closeSelectHabitModal() {
+          $("select-habit-modal").classList.add("hidden");
+        }
+
+        setupEventListeners() {
+          // Open add habit modal
+          $("add-habit-btn").addEventListener("click", () => this.openAddHabitModal());
+
+          // Close modals when clicking on .modal-close buttons
+          document.querySelectorAll(".modal-close").forEach((btn) => {
+            btn.addEventListener("click", () => this.closeAllModals());
+          });
+
+          // Close modals on pressing the Escape key
+          document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+              this.closeAllModals();
+            }
+          });
+
+          // Add habit form submit
+          $("add-habit-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const data = {
+              name: $("habit-name").value.trim(),
+              group: $("habit-group").value.trim()
+            };
+            if (data.name) {
+              this.addHabit(data);
+              this.closeAllModals();
+            }
+          });
+
+          // Edit habit form submit
+          $("edit-habit-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const data = {
+              id: $("edit-habit-id").value,
+              name: $("edit-habit-name").value.trim(),
+              group: $("edit-habit-group").value.trim()
+            };
+            if (data.name) {
+              this.updateHabit(data);
+              this.closeAllModals();
+            }
+          });
+
+          // Delete habit button in edit modal
+          $("delete-habit-btn").addEventListener("click", () => {
+            const id = $("edit-habit-id").value;
+            if (confirm("Are you sure you want to delete this habit?")) {
+              this.deleteHabit(id);
+              this.closeAllModals();
+            }
+          });
+
+          // Settings button
+          $("settings-btn").addEventListener("click", () => {
+            $("settings-modal").classList.remove("hidden");
+            $("hide-completed-habits").checked = this.settings.hideCompleted;
+          });
+
+          // Settings toggle change
+          $("hide-completed-habits").addEventListener("change", (e) => {
+            this.settings.hideCompleted = e.target.checked;
+            localStorage.setItem("hideCompletedHabits", JSON.stringify(this.settings.hideCompleted));
+            this.renderUI();
+          });
+
+          // Export data
+          $("export-data").addEventListener("click", () => {
+            const dataStr = JSON.stringify(this.habits);
+            const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+            const link = document.createElement("a");
+            link.setAttribute("href", dataUri);
+            link.setAttribute("download", "habit_tracker_data.json");
+            link.click();
+          });
+
+          // Import data
+          $("import-data-btn").addEventListener("click", () => {
+            $("import-data").click();
+          });
+
+          $("import-data").addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+              try {
+                const imported = JSON.parse(evt.target.result);
+                if (Array.isArray(imported)) {
+                  if (confirm("This will replace your current data. Continue?")) {
+                    this.habits = imported.map((data) => new Habit(data));
+                    this.saveHabits();
+                    this.saveOrder();
+                    this.renderUI();
+                    alert("Data imported successfully!");
+                  }
+                } else {
+                  throw new Error("Invalid format");
+                }
+              } catch (err) {
+                alert("Error importing data. Please check the file.");
+              }
+            };
+            reader.readAsText(file);
+            e.target.value = "";
+          });
+
+          // Update the add-selected-habits-btn click handler
+          $("add-selected-habits-btn").addEventListener("click", () => {
+            // Handle current group habits (unchecking removes from group)
+            const currentGroupCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.current-group");
+            currentGroupCheckboxes.forEach((checkbox) => {
+              const habit = this.habits.find(h => h.id === checkbox.value);
+              if (habit) {
+                if (!checkbox.checked) {
+                  // Remove from group if unchecked
+                  habit.group = "";
+                }
+              }
+            });
+
+            // Handle available habits (checking adds to group)
+            const availableCheckboxes = document.querySelectorAll("#select-habit-list .select-habit-checkbox.available");
+            availableCheckboxes.forEach((checkbox) => {
+              if (checkbox.checked) {
+                this.addExistingHabitToGroup(checkbox.value, this.currentSelectGroup);
+              }
+            });
+
+            this.saveHabits();
+            this.saveOrder();
+            this.renderUI();
+            this.closeSelectHabitModal();
+          });
+        }
+
+        groupHabits() {
+          const groups = {};
+          this.habits.forEach(habit => {
+            if (habit.group && habit.group.trim() !== "") { // only group habits that have a valid group name
+              if (!groups[habit.group]) {
+                groups[habit.group] = [];
+              }
+              groups[habit.group].push(habit);
+            }
+          });
+          return groups;
+        }
+
+        showGroupHabitsModal(groupName, date, habits) {
+          const modal = $('group-habits-modal');
+          const title = $('group-habits-title');
+          const list = $('group-habits-list');
+          
+          title.textContent = `${groupName} - ${new Date(date).toLocaleDateString()}`;
+          
+          list.innerHTML = habits.map(habit => {
+            const status = habit.getStatus(date);
+            return `
+              <div class="p-3 bg-gray-50 rounded-lg">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium">${habit.name}</span>
+                  <div class="flex gap-2">
+                    <button 
+                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'completed')"
+                      class="px-3 py-1 rounded text-sm ${
+                        status === 'completed' ? 'bg-green-500 text-white' : 'bg-gray-200'
+                      }"
+                    >
+                      Done
+                    </button>
+                    <button 
+                      onclick="habitManager.toggleHabitInGroup('${habit.id}', '${date}', 'failed')"
+                      class="px-3 py-1 rounded text-sm ${
+                        status === 'failed' ? 'bg-red-500 text-white' : 'bg-gray-200'
+                      }"
+                    >
+                      Failed
+                    </button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+          
+          modal.classList.remove('hidden');
+        }
+
+        toggleHabitInGroup(habitId, date, status) {
+          const habit = this.habits.find(h => h.id === habitId);
+          if (habit) {
+            habit.toggleCompletion(date, status);
+            this.saveHabits();
+            this.saveOrder();
+            this.renderUI();
+            
+            // Update the modal content using the actual group
+            const groupName = habit.group || 'Ungrouped';
+            const groupedHabits = this.groupHabits()[groupName];
+            this.showGroupHabitsModal(groupName, date, groupedHabits);
+          }
+        }
+
+        showNewGroupInput(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          $(`${prefix}new-group-input`).classList.remove('hidden');
+          $(`${prefix}new-group-name`).focus();
+        }
+
+        hideNewGroupInput(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          $(`${prefix}new-group-input`).classList.add('hidden');
+          $(`${prefix}new-group-name`).value = '';
+        }
+
+        addNewGroup(mode = 'add') {
+          const prefix = mode === 'edit' ? 'edit-' : '';
+          const newGroupName = $(`${prefix}new-group-name`).value.trim();
+          if (newGroupName) {
+            this.addGroup(newGroupName);
+            this.updateGroupDropdowns();
+            $(`${prefix}habit-group`).value = newGroupName;
+            this.hideNewGroupInput(mode);
+          }
+        }
+
+        updateGroupDropdowns() {
+          const dropdowns = ['habit-group', 'edit-habit-group'];
+          const sortedGroups = [...this.groups].sort();
+          
+          dropdowns.forEach(id => {
+            const dropdown = $(id);
+            if (dropdown) {
+              const currentValue = dropdown.value;
+              dropdown.innerHTML = '<option value="">No Group</option>' +
+                sortedGroups.map(group => 
+                  `<option value="${group}" ${currentValue === group ? 'selected' : ''}>${group}</option>`
+                ).join('');
+            }
+          });
+        }
+
+        // Add this method to save the order
+        saveOrder() {
+          localStorage.setItem("habitOrder", JSON.stringify(this.habitOrder));
+          localStorage.setItem("groupOrder", JSON.stringify(this.groupOrder));
+        }
+      }
+
+      // Initialize the app
+      let habitManager;
+      document.addEventListener("DOMContentLoaded", () => {
+        habitManager = new HabitManager();
+      });
+    </script>
+  </body>
+</html>

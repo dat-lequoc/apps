@@ -1,0 +1,1880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A Year of Reading</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .add-book-btn {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 3rem;
+      height: 3rem;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+      z-index: 50;
+    }
+    .add-book-btn:hover {
+      transform: scale(1.1);
+    }
+    
+    /* Add new modal close button styles */
+    .modal-close-btn {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f3f4f6;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      color: #6b7280;
+    }
+    
+    .modal-close-btn:hover {
+      background-color: #e5e7eb;
+      color: #374151;
+      transform: scale(1.05);
+    }
+    
+    .modal-close-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .modal-close-btn svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+    .heatmap-cell {
+      height: clamp(48px, 10vw, 64px);
+      border: 1px solid #e5e7eb;
+      cursor: pointer;
+      border-radius: 0.375rem;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem;
+      width: 100%;
+      min-width: 0;
+    }
+    .heatmap-cell:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    .heatmap-row {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 0.25rem;
+      flex: 1;
+    }
+    .book-label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0.375rem;
+      color: #374151;
+      background-color: #f3f4f6;
+      border-radius: 0.375rem;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      min-width: 80px;
+      max-width: 100px;
+      cursor: grab;
+    }
+    .book-label:active {
+      cursor: grabbing;
+    }
+    .completed-book {
+      border-left: 4px solid #10B981;
+    }
+    .book-content {
+      transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+      overflow: hidden;
+      opacity: 1;
+    }
+    .book-content.collapsed {
+      max-height: 0;
+      opacity: 0;
+      margin: 0;
+    }
+    .completed-indicator {
+      background-color: #10B981;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      margin-left: auto;
+    }
+    .in-progress-indicator {
+      background-color: #3B82F6;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      margin-left: auto;
+    }
+    .heatmap-book-row {
+      display: grid;
+      grid-template-columns: minmax(80px, 100px) 1fr;
+      gap: 0.25rem;
+      margin: 0.25rem 0;
+      width: 100%;
+    }
+    .book-entry {
+      transition: transform 0.2s, box-shadow 0.2s;
+      touch-action: none;
+      position: relative;
+      z-index: 1;
+    }
+    .book-entry.dragging {
+      opacity: 0.9;
+      background: #f3f4f6;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      position: relative;
+      z-index: 10;
+      transform: scale(1.02);
+      transition: none; /* Disable transition during drag */
+    }
+    .book-entry.drag-over {
+      transform: translateY(10px);
+    }
+    .book-entry.releasing {
+      transition: all 0.2s ease-out;
+    }
+    .drag-handle {
+      cursor: grab;
+      padding: 8px;
+      margin: -8px;
+      touch-action: none;
+    }
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+    @media (hover: none) {
+      .book-entry {
+        touch-action: pan-y; /* Allow vertical scrolling by default */
+      }
+      .book-entry.dragging {
+        touch-action: none; /* Prevent scrolling while dragging */
+      }
+    }
+
+    /* Toggle Switch Styles */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 3rem;
+      height: 1.5rem;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-switch .slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #e5e7eb;
+      transition: 0.3s;
+      border-radius: 9999px;
+    }
+    .toggle-switch .slider:before {
+      position: absolute;
+      content: "";
+      height: 1.25rem;
+      width: 1.25rem;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+    .toggle-switch input:checked + .slider {
+      background-color: #3b82f6;
+    }
+    .toggle-switch input:checked + .slider:before {
+      transform: translateX(1.5rem);
+    }
+
+    /* Settings Button Styles */
+    #settings-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #e5e7eb;
+      background-color: white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      border-radius: 9999px;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+    #settings-btn:hover {
+      background-color: #f3f4f6;
+      border-color: #d1d5db;
+      transform: scale(1.05);
+    }
+    #settings-btn:active {
+      background-color: #e5e7eb;
+      transform: scale(0.95);
+    }
+    #settings-btn svg {
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    /* Add new styles for paused books */
+    .paused-book {
+      opacity: 0.7;
+      background-color: #f3f4f6;
+    }
+    .paused-indicator {
+      background-color: #9CA3AF;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-6 font-sans">
+  <header class="mb-6 flex items-center justify-between">
+    <h1 class="text-xl font-bold">A Year of Reading</h1>
+    <button
+      id="settings-btn"
+      aria-label="Settings"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
+  </header>
+  <main class="grid gap-6">
+    <div
+      id="add-book-modal"
+      class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50"
+    >
+      <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">Add New Book</h2>
+          <button type="button" class="modal-close modal-close-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form id="add-book-form" class="space-y-3">
+          <div>
+            <label for="book-title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input
+              type="text"
+              id="book-title"
+              required
+              class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label for="total-pages" class="block text-sm font-medium text-gray-700">Total Pages</label>
+            <input
+              type="number"
+              id="total-pages"
+              required
+              class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <fieldset class="border p-3 rounded">
+            <legend class="text-sm font-medium">Goal</legend>
+            <div class="space-y-1">
+              <div>
+                <input type="radio" id="goal-date" name="goal-type" value="date" class="mr-1" />
+                <label for="goal-date" class="text-sm">Target Date</label>
+                <input
+                  type="date"
+                  id="target-date"
+                  class="mt-1 ml-2 p-1.5 border rounded text-sm"
+                  disabled
+                />
+              </div>
+              <div>
+                <input type="radio" id="goal-pages" name="goal-type" value="pages" class="mr-1" />
+                <label for="goal-pages" class="text-sm">Pages/Day</label>
+                <input
+                  type="number"
+                  id="pages-per-day"
+                  class="mt-1 ml-2 p-1.5 border rounded text-sm"
+                  disabled
+                />
+              </div>
+            </div>
+          </fieldset>
+          <div>
+            <label for="start-date" class="block text-sm font-medium text-gray-700">Start Date</label>
+            <input
+              type="date"
+              id="start-date"
+              required
+              class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Add Book
+          </button>
+        </form>
+      </div>
+    </div>
+    <button type="button" id="add-book-btn" class="add-book-btn">+</button>
+    <section id="book-list" class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-3">My Books</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="book-entries"></div>
+    </section>
+  </main>
+  <section id="stats-history" class="bg-white p-4 rounded shadow mt-6 md:mt-0">
+    <div id="weekly-heatmap" class="mb-6">
+      <h2 class="text-lg font-bold mb-4">This Week</h2>
+      <div id="heatmap-container"></div>
+    </div>
+  </section>
+
+  <!-- New Reading Challenge Section -->
+  <section id="reading-challenge" class="bg-white p-4 rounded shadow mt-6">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-bold">Reading Challenge <span id="challenge-year"></span></h2>
+      <button
+        id="edit-goal-btn"
+        class="text-blue-500 hover:text-blue-700 flex items-center gap-1"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+        </svg>
+        Edit Goal
+      </button>
+      <button
+        id="reset-goals-btn"
+        class="text-blue-500 hover:text-blue-700 flex items-center gap-1 ml-4"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" />
+        </svg>
+        Adjust Date Targets
+      </button>
+      <button id="update-todays-goal-btn" class="text-blue-500 hover:text-blue-700 flex items-center gap-1 ml-4">
+        Update Today's Goal
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <div class="flex justify-between items-center text-sm mb-2">
+          <span>Books Progress</span>
+          <span><span id="completed-books" class="font-medium">0</span>/<span id="yearly-goal" class="font-medium">52</span> books</span>
+        </div>
+        <div class="relative h-4 rounded-full bg-gray-200 overflow-hidden">
+          <div id="challenge-progress" class="absolute h-full bg-green-500 transition-all duration-500"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between items-center text-sm mb-2">
+          <span>Year Progress</span>
+          <span>Day <span id="current-day" class="font-medium">0</span>/365</span>
+        </div>
+        <div class="relative h-4 rounded-full bg-gray-200 overflow-hidden">
+          <div id="year-progress" class="absolute h-full bg-blue-500 transition-all duration-500"></div>
+        </div>
+      </div>
+      <div class="flex justify-between items-center text-sm pt-2">
+        <span>Week: <span id="current-week" class="font-medium">0</span>/52</span>
+        <span>On Track: <span id="on-track-status" class="font-medium">Yes</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- New Goal Edit Modal -->
+  <div
+    id="edit-goal-modal"
+    class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50"
+  >
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-semibold">Edit Reading Goal</h3>
+        <button type="button" class="modal-close modal-close-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="edit-goal-form" class="space-y-4">
+        <div>
+          <label for="yearly-goal-input" class="block text-sm font-medium text-gray-700">Books to read in <span id="current-year"></span></label>
+          <input
+            type="number"
+            id="yearly-goal-input"
+            min="1"
+            class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Save Goal
+        </button>
+      </form>
+    </div>
+  </div>
+  <div
+    id="edit-history-modal"
+    class="fixed z-10 inset-0 overflow-y-auto hidden"
+    aria-labelledby="modal-title"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
+      <div
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+      >
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">
+              Edit Reading History
+            </h3>
+            <button type="button" class="modal-close modal-close-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="mt-2">
+            <p class="text-sm text-gray-500">
+              Modify pages read for <span id="edit-date"></span> for book
+              <span id="edit-history-book-title"></span>.
+            </p>
+            <input
+              type="number"
+              id="edit-pages-read"
+              class="mt-2 p-2 border rounded w-full focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <button
+            type="button"
+            id="save-edit-history"
+            class="ml-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Save
+          </button>
+          <button
+            type="button"
+            class="modal-close mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="data-management" class="bg-white p-4 rounded shadow mt-6">
+    <h2 class="text-lg font-semibold mb-3">Data Management</h2>
+    <div class="flex space-x-2 items-center">
+      <button
+        type="button"
+        id="export-data"
+        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+      >
+        Export Data
+      </button>
+      <input type="file" id="import-data" accept=".json" class="hidden" />
+      <button
+        type="button"
+        id="import-data-button"
+        class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+      >
+        Import Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Moved Streaks and Statistics Section -->
+  <section class="grid grid-cols-2 gap-4 text-sm bg-white p-4 rounded shadow mt-6">
+    <div id="streaks">
+      <h3 class="font-semibold mb-1">Streaks</h3>
+      <p>Current: <span id="current-streak" class="font-medium">0</span> days</p>
+      <p>Longest: <span id="longest-streak" class="font-medium">0</span> days</p>
+      <p>Weekly Completion: <span id="weekly-completion" class="font-medium">0%</span></p>
+    </div>
+    <div id="historical-stats">
+      <h3 class="font-semibold mb-1">Statistics</h3>
+      <p>Avg Pages/Day: <span id="avg-pages" class="font-medium">0</span></p>
+      <p>Books Completed: <span id="total-books-completed" class="font-medium">0</span></p>
+      <p>Total Pages Read: <span id="total-pages-read" class="font-medium">0</span></p>
+      <p>Best Reading Day: <span id="best-day" class="font-medium"></span></p>
+    </div>
+  </section>
+
+  <div
+    id="edit-book-modal"
+    class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50"
+  >
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Edit Book</h2>
+        <button type="button" onclick="closeEditBookModal()" class="modal-close-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <form id="edit-book-form" class="space-y-3">
+        <input type="hidden" id="edit-book-index" />
+        <div>
+          <label for="edit-book-title" class="block text-sm font-medium text-gray-700">Title</label>
+          <input
+            type="text"
+            id="edit-book-title"
+            required
+            class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label for="edit-total-pages" class="block text-sm font-medium text-gray-700">Total Pages</label>
+          <input
+            type="number"
+            id="edit-total-pages"
+            required
+            class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <label for="edit-current-page" class="block text-sm font-medium text-gray-700">Current Page</label>
+          <input
+            type="number"
+            id="edit-current-page"
+            required
+            class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <fieldset class="border p-3 rounded">
+          <legend class="text-sm font-medium">Goal</legend>
+          <div class="space-y-1">
+            <div>
+              <input type="radio" id="edit-goal-date" name="edit-goal-type" value="date" class="mr-1" />
+              <label for="edit-goal-date" class="text-sm">Target Date</label>
+              <input
+                type="date"
+                id="edit-target-date"
+                class="mt-1 ml-2 p-1.5 border rounded text-sm"
+                disabled
+              />
+            </div>
+            <div>
+              <input
+                type="radio"
+                id="edit-goal-pages"
+                name="edit-goal-type"
+                value="pages"
+                class="mr-1"
+              />
+              <label for="edit-goal-pages" class="text-sm">Pages/Day</label>
+              <input
+                type="number"
+                id="edit-pages-per-day"
+                class="mt-1 ml-2 p-1.5 border rounded text-sm"
+                disabled
+              />
+            </div>
+          </div>
+        </fieldset>
+        <div>
+          <label for="edit-start-date" class="block text-sm font-medium text-gray-700">Start Date</label>
+          <input
+            type="date"
+            id="edit-start-date"
+            required
+            class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div class="flex justify-between space-x-2">
+          <button
+            type="submit"
+            class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Save Changes
+          </button>
+          <button
+            type="button"
+            onclick="bookManager.handleDeleteBook()"
+            class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            Delete Book
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div
+    id="settings-modal"
+    class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center hidden z-50"
+  >
+    <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-lg font-semibold">Settings</h2>
+        <button type="button" class="modal-close modal-close-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <label for="hide-completed-week" class="text-sm text-gray-700">Hide completed books in weekly view</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hide-completed-week">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="flex items-center justify-between">
+          <label for="hide-completed-books" class="text-sm text-gray-700">Hide completed books in My Books</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="hide-completed-books">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LOCAL_STORAGE_KEY = 'readingTrackerBooks';
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const dayIcons = ["☀️", "🌙", "⚡", "💧", "🔥", "🌟", "🌍"];
+
+    const $ = (id) => document.getElementById(id);
+    const formatDate = (date) => {
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const Utils = {
+      formatDate,
+      getDaysBetween(start, end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const oneDay = 24 * 60 * 60 * 1000;
+        return Math.round(Math.abs((startDate - endDate) / oneDay));
+      },
+      calculateProgressPercentage(currentPage, totalPages) {
+        return totalPages > 0 ? Math.floor((currentPage / totalPages) * 100) : 0;
+      },
+      calculateDailyGoal(remainingPages, remainingDays) {
+        return remainingDays > 0 ? Math.ceil(remainingPages / remainingDays) : remainingPages;
+      }
+    };
+
+    class Book {
+      constructor(data) {
+        this.title = data.title;
+        this.totalPages = data.totalPages;
+        this.currentPage = data.currentPage || 0;
+        this.startDate = data.startDate;
+        this.goalType = data.goalType;
+        this.targetDate = data.targetDate;
+        this.pagesPerDay = data.pagesPerDay;
+        this.readingHistory = data.readingHistory || [];
+        this.lockedDailyGoals = data.lockedDailyGoals || {};
+        this.status = data.status || 'active';
+      }
+
+      updateProgress(currentPageTotal, date) {
+        if (currentPageTotal < 0 || currentPageTotal > this.totalPages) {
+          throw new Error("Invalid page number");
+        }
+        const existingEntryIndex = this.readingHistory.findIndex((item) => item.date === date);
+        const sortedHistory = [...this.readingHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const previousTotal = sortedHistory.find((entry) => entry.date < date)?.totalPages || 0;
+        const pagesReadToday = currentPageTotal - previousTotal;
+
+        if (existingEntryIndex > -1) {
+          if (currentPageTotal === 0) {
+            this.readingHistory.splice(existingEntryIndex, 1);
+          } else {
+            this.readingHistory[existingEntryIndex] = {
+              date,
+              pagesRead: Math.max(0, pagesReadToday),
+              totalPages: currentPageTotal
+            };
+          }
+        } else if (currentPageTotal > 0) {
+          this.readingHistory.push({
+            date,
+            pagesRead: Math.max(0, pagesReadToday),
+            totalPages: currentPageTotal
+          });
+        }
+        this.currentPage = currentPageTotal;
+      }
+
+      getProgress() {
+        const percentage = Utils.calculateProgressPercentage(this.currentPage, this.totalPages);
+        return {
+          percentage,
+          isCompleted: this.currentPage === this.totalPages,
+          currentPage: this.currentPage,
+          totalPages: this.totalPages
+        };
+      }
+
+      calculateDailyGoalFromYesterday(today) {
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = formatDate(yesterday);
+        
+        // Get pages read up to yesterday
+        const sortedHistory = [...this.readingHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+        const pagesAsOfYesterday = sortedHistory.find(entry => entry.date <= yesterdayStr)?.totalPages || 0;
+        
+        // Calculate remaining pages from yesterday's progress
+        const pagesRemaining = this.totalPages - pagesAsOfYesterday;
+        
+        if (this.goalType === "pages") return this.pagesPerDay;
+        if (this.goalType === "date" && this.targetDate) {
+          const remainingDays = Utils.getDaysBetween(today, this.targetDate);
+          return Utils.calculateDailyGoal(pagesRemaining, remainingDays);
+        }
+        return 0;
+      }
+
+      lockDailyGoalFor(dateStr) {
+        const todayStr = formatDate(new Date());
+        if (dateStr === todayStr) {
+          this.lockedDailyGoals[todayStr] = this.calculateDailyGoalFromYesterday(todayStr);
+          return this.lockedDailyGoals[todayStr];
+        }
+        if (!this.lockedDailyGoals[dateStr]) {
+          this.lockedDailyGoals[dateStr] = this.calculateDailyGoalFromYesterday(dateStr);
+        }
+        return this.lockedDailyGoals[dateStr];
+      }
+
+      getDailyGoal(currentDate) {
+        const dateStr = formatDate(new Date(currentDate));
+        return this.lockDailyGoalFor(dateStr);
+      }
+    }
+
+    class BookManager {
+      constructor() {
+        this.books = [];
+        this.$bookEntries = $("book-entries");
+        this.yearlyGoal = parseInt(localStorage.getItem('yearlyReadingGoal')) || 52;
+        this.collapsedBooks = new Set(JSON.parse(localStorage.getItem('collapsedBooks') || '[]'));
+        this.bookOrder = JSON.parse(localStorage.getItem('bookOrder') || '[]');
+        this.settings = {
+          hideCompletedWeek: JSON.parse(localStorage.getItem('hideCompletedWeek') ?? 'true'),
+          hideCompletedBooks: JSON.parse(localStorage.getItem('hideCompletedBooks') ?? 'false')
+        };
+        this.loadBooks();
+        this.setupEventListeners();
+      }
+
+      init() {
+        this.updateUI();
+        this.updateReadingChallenge();
+        document.getElementById('challenge-year').textContent = new Date().getFullYear();
+      }
+
+      loadBooks() {
+        try {
+          const savedBooks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+          this.books = savedBooks.map((b) => new Book(b));
+          
+          // Apply saved order if it exists
+          if (this.bookOrder.length > 0) {
+            const orderedBooks = [];
+            const bookMap = new Map(this.books.map(book => [book.title, book]));
+            
+            // First add books in the saved order
+            this.bookOrder.forEach(title => {
+              if (bookMap.has(title)) {
+                orderedBooks.push(bookMap.get(title));
+                bookMap.delete(title);
+              }
+            });
+            
+            // Then add any new books that weren't in the saved order
+            bookMap.forEach(book => orderedBooks.push(book));
+            
+            this.books = orderedBooks;
+          }
+        } catch {
+          this.books = [];
+        }
+      }
+
+      saveBooks() {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.books));
+        localStorage.setItem('collapsedBooks', JSON.stringify([...this.collapsedBooks]));
+        localStorage.setItem('bookOrder', JSON.stringify(this.books.map(book => book.title)));
+      }
+
+      refreshUI() {
+        this.saveBooks();
+        this.updateUI();
+      }
+
+      addBook(bookData) {
+        this.books.push(new Book(bookData));
+        this.refreshUI();
+      }
+
+      updateBook(index, bookData) {
+        const original = this.books[index];
+        // Create new book with cleared lockedDailyGoals if goal-related fields changed
+        const shouldClearGoals = original.goalType !== bookData.goalType ||
+                               original.targetDate !== bookData.targetDate ||
+                               original.pagesPerDay !== bookData.pagesPerDay;
+        this.books[index] = new Book({ 
+          ...original, 
+          ...bookData, 
+          readingHistory: original.readingHistory,
+          lockedDailyGoals: shouldClearGoals ? {} : original.lockedDailyGoals
+        });
+        this.refreshUI();
+      }
+
+      deleteBook(index) {
+        this.books.splice(index, 1);
+        this.refreshUI();
+      }
+
+      updateProgress(bookIndex, currentPageTotal, date) {
+        try {
+          this.books[bookIndex].updateProgress(currentPageTotal, date);
+          this.refreshUI();
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+
+      updateUI() {
+        this.displayBooks();
+        this.renderReadingHistoryHeatmap();
+        this.calculateStats();
+        this.updateReadingChallenge();
+      }
+
+      displayBooks() {
+        if (!this.$bookEntries) return;
+        if (this.books.length === 0) {
+          this.$bookEntries.innerHTML = `
+            <div class="text-center text-gray-500 py-4 col-span-2">
+              No books added yet. Click the + button to add your first book!
+            </div>
+          `;
+          return;
+        }
+        const today = formatDate(new Date());
+        try {
+          // Sort books: completed last, then by saved order/title
+          const booksWithIndices = this.books
+            .filter(book => !this.settings.hideCompletedBooks || book.currentPage !== book.totalPages)
+            .map((book, index) => ({ book, originalIndex: index }));
+          const sortedBooks = booksWithIndices.sort((a, b) => {
+            const aCompleted = a.book.currentPage === a.book.totalPages;
+            const bCompleted = b.book.currentPage === b.book.totalPages;
+            if (aCompleted === bCompleted) {
+              return a.originalIndex - b.originalIndex;
+            }
+            return bCompleted ? 1 : -1;
+          });
+
+          this.$bookEntries.innerHTML = sortedBooks
+            .map(({ book, originalIndex }) => {
+              const progress = book.getProgress();
+              const dailyGoal = book.getDailyGoal(today);
+              const todayReading =
+                book.readingHistory.find((item) => item.date === today)?.totalPages || book.currentPage;
+              
+              // Get yesterday's progress for target calculation
+              const yesterday = new Date(today);
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = formatDate(yesterday);
+              const sortedHistory = [...book.readingHistory].sort((a, b) => new Date(b.date) - new Date(a.date));
+              const pagesAsOfYesterday = sortedHistory.find(entry => entry.date <= yesterdayStr)?.totalPages || 0;
+              const targetPage = Math.min(pagesAsOfYesterday + dailyGoal, book.totalPages);
+              const isCollapsed = this.collapsedBooks.has(originalIndex.toString());
+
+              return `
+                <div
+                  class="bg-gray-50 p-3 rounded border ${progress.isCompleted ? "completed-book" : ""} ${book.status === 'paused' ? "paused-book" : ""} relative book-entry"
+                  data-book-index="${originalIndex}"
+                  data-book-title="${book.title}"
+                  draggable="true"
+                >
+                  <div class="flex justify-between items-center cursor-pointer book-header" data-index="${originalIndex}">
+                    <div class="flex items-center gap-2">
+                      <button type="button" class="drag-handle text-gray-400 hover:text-gray-600" aria-label="Drag to reorder">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M7 4a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1zM7 8a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1zM7 12a1 1 0 0 1 1-1h4a1 1 0 1 1 0 2H8a1 1 0 0 1-1-1z"/>
+                        </svg>
+                      </button>
+                      <h4 class="text-lg font-semibold truncate pr-8">${book.title}</h4>
+                    </div>
+                    <div class="flex items-center gap-2 absolute right-3 top-3">
+                      ${progress.isCompleted ? '<span class="completed-indicator">Completed</span>' : 
+                        book.status === 'paused' ? '<span class="paused-indicator">Paused</span>' :
+                        (progress.currentPage > 0 ? '<span class="in-progress-indicator">In Progress</span>' : '')}
+                      <button type="button" class="edit-book-btn text-blue-500 hover:text-blue-700" data-index="${originalIndex}">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  ${!progress.isCompleted ? `
+                    <div class="mt-2">
+                      <div id="collapsed-progress-${originalIndex}" class="${isCollapsed ? '' : 'hidden'}">
+                        <div class="relative h-2 rounded bg-blue-200">
+                          <div
+                            style="width:${progress.percentage}%"
+                            class="absolute h-full rounded bg-blue-500"
+                          ></div>
+                        </div>
+                      </div>
+                      <div id="book-content-${originalIndex}" class="book-content ${isCollapsed ? 'collapsed' : ''} mt-4">
+                        <div class="mt-2">
+                          <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm">Progress: ${progress.percentage}%</span>
+                          </div>
+                          <div class="relative h-2 rounded bg-blue-200">
+                            <div
+                              style="width:${progress.percentage}%"
+                              class="absolute h-full rounded bg-blue-500"
+                            ></div>
+                          </div>
+                          <p class="text-sm mt-1">Read: ${progress.currentPage} / ${progress.totalPages} pages</p>
+                          ${book.status !== 'paused' ? `
+                            <div class="mt-1 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                              <p class="text-sm font-medium text-blue-800">
+                                Today's Goal: Page ${targetPage}
+                              </p>
+                            </div>
+                          ` : `
+                            <div class="mt-1 p-2 bg-gray-50 border border-gray-200 rounded-md">
+                              <p class="text-sm font-medium text-gray-600">
+                                This book is currently paused
+                              </p>
+                            </div>
+                          `}
+                        </div>
+                      </div>
+                    </div>
+                  ` : `
+                    <div id="book-content-${originalIndex}" class="book-content collapsed mt-4">
+                      <div class="mt-2">
+                        <div class="flex items-center justify-between mb-1">
+                          <span class="text-sm">Progress: ${progress.percentage}%</span>
+                        </div>
+                        <div class="relative h-2 rounded bg-blue-200">
+                          <div
+                            style="width:${progress.percentage}%"
+                            class="absolute h-full rounded bg-blue-500"
+                          ></div>
+                        </div>
+                        <p class="text-sm mt-1">Read: ${progress.currentPage} / ${progress.totalPages} pages</p>
+                      </div>
+                    </div>
+                  `}
+                </div>
+              `;
+            })
+            .join("");
+        } catch {
+          this.$bookEntries.innerHTML = `
+            <div class="text-center text-red-500 py-4 col-span-2">
+              Error displaying books. Please try refreshing the page.
+            </div>
+          `;
+        }
+      }
+
+      setupEventListeners() {
+        if (this.$bookEntries) {
+          let draggedElement = null;
+          let initialY = 0;
+          let currentY = 0;
+          let yOffset = 0;
+          let lastKnownPosition = null;
+          let isDragHandleClick = false;
+
+          const getDragTarget = (element) => {
+            return element.closest(".book-entry") || element;
+          };
+
+          const startDragging = (e, target) => {
+            isDragHandleClick = true;
+            draggedElement = target;
+            draggedElement.classList.add("dragging");
+            
+            // Calculate initial position
+            if (e.type === "mousedown") {
+              initialY = e.clientY - yOffset;
+              lastKnownPosition = { x: e.clientX, y: e.clientY };
+            } else if (e.type === "touchstart") {
+              initialY = e.touches[0].clientY - yOffset;
+              lastKnownPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+            
+            // Set initial transform
+            draggedElement.style.transform = `translateY(${yOffset}px)`;
+          };
+
+          const drag = (e) => {
+            if (!draggedElement) return;
+            e.preventDefault();
+
+            // Calculate current position
+            if (e.type === "mousemove") {
+              currentY = e.clientY - initialY;
+              lastKnownPosition = { x: e.clientX, y: e.clientY };
+            } else if (e.type === "touchmove") {
+              currentY = e.touches[0].clientY - initialY;
+              lastKnownPosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+
+            yOffset = currentY;
+            draggedElement.style.transform = `translateY(${currentY}px)`;
+
+            // Find and highlight drop target
+            const dropTarget = findDropTarget(lastKnownPosition);
+            if (dropTarget && dropTarget !== draggedElement) {
+              document.querySelectorAll(".book-entry").forEach(entry => {
+                entry.classList.remove("drag-over");
+              });
+              dropTarget.classList.add("drag-over");
+            }
+          };
+
+          const endDragging = (e) => {
+            if (!draggedElement) return;
+
+            if (e.type === "touchend" && e.changedTouches && e.changedTouches.length > 0) {
+              lastKnownPosition = { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+            }
+
+            // Add releasing class for smooth animation back
+            draggedElement.classList.add("releasing");
+            
+            const dropTarget = findDropTarget(lastKnownPosition);
+            if (dropTarget && dropTarget !== draggedElement) {
+              // Get the indices and reorder
+              const draggedTitle = draggedElement.dataset.bookTitle;
+              const dropTargetTitle = dropTarget.dataset.bookTitle;
+              
+              const draggedIndex = this.books.findIndex(book => book.title === draggedTitle);
+              const dropTargetIndex = this.books.findIndex(book => book.title === dropTargetTitle);
+              
+              const [draggedBook] = this.books.splice(draggedIndex, 1);
+              this.books.splice(dropTargetIndex, 0, draggedBook);
+              
+              this.refreshUI();
+            } else {
+              // If no valid drop target, animate back to original position
+              draggedElement.style.transform = "";
+            }
+
+            // Clean up
+            draggedElement.classList.remove("dragging");
+            document.querySelectorAll(".book-entry").forEach(entry => {
+              entry.classList.remove("drag-over");
+            });
+
+            // Remove the releasing class after animation
+            setTimeout(() => {
+              if (draggedElement) {
+                draggedElement.classList.remove("releasing");
+              }
+            }, 200);
+
+            // Reset variables
+            draggedElement = null;
+            initialY = 0;
+            currentY = 0;
+            yOffset = 0;
+            lastKnownPosition = null;
+
+            // Reset drag handle click flag after a short delay
+            setTimeout(() => {
+              isDragHandleClick = false;
+            }, 100);
+          };
+
+          const findDropTarget = (position) => {
+            if (!position) return null;
+            const elements = document.elementsFromPoint(position.x, position.y);
+            return elements.find(el => el.classList.contains('book-entry') && el !== draggedElement);
+          };
+
+          // Mouse events
+          this.$bookEntries.addEventListener("mousedown", (e) => {
+            if (!e.target.closest('.drag-handle')) return;
+            const target = getDragTarget(e.target);
+            if (!target) return;
+            e.preventDefault();
+            startDragging(e, target);
+          });
+
+          document.addEventListener("mousemove", drag);
+          document.addEventListener("mouseup", endDragging);
+
+          // Touch events
+          this.$bookEntries.addEventListener("touchstart", (e) => {
+            if (!e.target.closest('.drag-handle')) return;
+            const target = getDragTarget(e.target);
+            if (!target) return;
+            startDragging(e, target);
+          }, { passive: false });
+
+          document.addEventListener("touchmove", drag, { passive: false });
+          document.addEventListener("touchend", endDragging);
+          document.addEventListener("touchcancel", endDragging);
+
+          // Click event handlers
+          this.$bookEntries.addEventListener("click", (e) => {
+            // If the click originated from a drag handle or we're dragging, ignore it
+            if (isDragHandleClick || draggedElement || e.target.closest('.drag-handle')) {
+              e.stopPropagation();
+              return;
+            }
+
+            const target = e.target;
+            const container = target.closest("[data-book-index]");
+            if (!container) return;
+            const bookIndex = container.dataset.bookIndex;
+
+            // Check if the click is on the edit button or its SVG child
+            const isEditButton = target.matches(".edit-book-btn, .edit-book-btn *, svg, path");
+            if (isEditButton) {
+              e.stopPropagation();
+              this.openEditBookModal(bookIndex);
+              return;
+            }
+
+            if (target.matches(".book-header, .book-header *:not(.drag-handle)")) {
+              this.toggleBookContent(bookIndex);
+            } else if (target.matches(".update-progress-btn, .update-progress-btn *")) {
+              const input = container.querySelector("input[type='number']");
+              this.updateProgress(bookIndex, parseInt(input.value, 10), formatDate(new Date()));
+            }
+          });
+        }
+
+        // Settings event listeners
+        const settingsBtn = $("settings-btn");
+        if (settingsBtn) {
+          settingsBtn.addEventListener("click", () => this.openSettingsModal());
+        }
+
+        const hideCompletedWeekToggle = $("hide-completed-week");
+        const hideCompletedBooksToggle = $("hide-completed-books");
+
+        if (hideCompletedWeekToggle) {
+          hideCompletedWeekToggle.checked = this.settings.hideCompletedWeek;
+          hideCompletedWeekToggle.addEventListener("change", (e) => {
+            this.settings.hideCompletedWeek = e.target.checked;
+            this.saveSettings();
+            this.updateUI();
+          });
+        }
+
+        if (hideCompletedBooksToggle) {
+          hideCompletedBooksToggle.checked = this.settings.hideCompletedBooks;
+          hideCompletedBooksToggle.addEventListener("change", (e) => {
+            this.settings.hideCompletedBooks = e.target.checked;
+            this.saveSettings();
+            this.updateUI();
+          });
+        }
+
+        const addBookForm = $("add-book-form");
+        if (addBookForm) {
+          addBookForm.addEventListener("submit", (e) => this.handleAddBook(e));
+        }
+
+        const editBookForm = $("edit-book-form");
+        if (editBookForm) {
+          editBookForm.addEventListener("submit", (e) => this.handleEditBook(e));
+        }
+
+        const addBookBtn = $("add-book-btn");
+        if (addBookBtn) {
+          addBookBtn.addEventListener("click", () => this.openAddBookModal());
+        }
+
+        document.querySelectorAll(".modal-close").forEach((btn) => {
+          btn.addEventListener("click", () => this.closeAllModals());
+        });
+
+        document.querySelectorAll('input[name="goal-type"]').forEach((radio) => {
+          radio.addEventListener("change", () => this.handleGoalTypeChange(radio));
+        });
+        document.querySelectorAll('input[name="edit-goal-type"]').forEach((radio) => {
+          radio.addEventListener("change", () => this.handleGoalTypeChange(radio, true));
+        });
+
+        const saveEditHistoryBtn = $("save-edit-history");
+        if (saveEditHistoryBtn) {
+          saveEditHistoryBtn.addEventListener("click", () => this.handleEditHistory());
+        }
+
+        const exportDataBtn = $("export-data");
+        if (exportDataBtn) {
+          exportDataBtn.addEventListener("click", () => this.exportData());
+        }
+
+        const importDataBtn = $("import-data-button");
+        const importDataInput = $("import-data");
+        if (importDataBtn && importDataInput) {
+          importDataBtn.addEventListener("click", () => importDataInput.click());
+          importDataInput.addEventListener("change", (e) => this.handleImport(e));
+        }
+
+        const editGoalBtn = $("edit-goal-btn");
+        if (editGoalBtn) {
+          editGoalBtn.addEventListener("click", () => this.openEditGoalModal());
+        }
+
+        const editGoalForm = $("edit-goal-form");
+        if (editGoalForm) {
+          editGoalForm.addEventListener("submit", (e) => this.handleEditGoal(e));
+        }
+
+        const resetGoalsBtn = $("reset-goals-btn");
+        if (resetGoalsBtn) {
+          resetGoalsBtn.addEventListener("click", () => {
+            if (confirm("Are you sure you want to reset book goals? This will set targets for active books and pause others.")) {
+              this.resetGoals();
+            }
+          });
+        }
+        const updateTodaysGoalBtn = $("update-todays-goal-btn");
+        if (updateTodaysGoalBtn) {
+          updateTodaysGoalBtn.addEventListener("click", () => {
+            const today = new Date();
+            const todayStr = formatDate(today);
+            console.log("Updating today's goal for date:", todayStr);
+            this.books.forEach(book => {
+              if (book.status !== 'paused') {
+                console.log("Before update for book", book.title, "lockedDailyGoals:", JSON.stringify(book.lockedDailyGoals));
+                delete book.lockedDailyGoals[todayStr];
+                const newGoal = book.getDailyGoal(today);
+                console.log("After update for book", book.title, "new goal:", newGoal, "lockedDailyGoals:", JSON.stringify(book.lockedDailyGoals));
+              }
+            });
+            this.saveBooks();
+            this.updateUI();
+            alert("Today's goals have been updated!");
+          });
+        }
+      }
+
+      toggleBookContent(index) {
+        const content = $(`book-content-${index}`);
+        const collapsedProgress = $(`collapsed-progress-${index}`);
+        if (content) {
+          const isCollapsing = !content.classList.contains("collapsed");
+          content.classList.toggle("collapsed");
+          if (collapsedProgress) {
+            collapsedProgress.classList.toggle("hidden", !isCollapsing);
+          }
+          if (isCollapsing) {
+            this.collapsedBooks.add(index.toString());
+          } else {
+            this.collapsedBooks.delete(index.toString());
+          }
+          this.saveBooks();
+        }
+      }
+
+      openAddBookModal() {
+        $("add-book-modal").classList.remove("hidden");
+        $("start-date").value = formatDate(new Date());
+      }
+
+      closeAddBookModal() {
+        $("add-book-modal").classList.add("hidden");
+        $("add-book-form").reset();
+      }
+
+      openEditBookModal(bookIndex) {
+        const book = this.books[bookIndex];
+        $("edit-book-index").value = bookIndex;
+        $("edit-book-title").value = book.title;
+        $("edit-total-pages").value = book.totalPages;
+        $("edit-current-page").value = book.currentPage;
+        $("edit-start-date").value = book.startDate;
+        $("edit-goal-date").checked = book.goalType === "date";
+        $("edit-goal-pages").checked = book.goalType === "pages";
+        $("edit-target-date").value = book.goalType === "date" ? book.targetDate : "";
+        $("edit-pages-per-day").value = book.goalType === "pages" ? book.pagesPerDay : "";
+        $("edit-target-date").disabled = book.goalType !== "date";
+        $("edit-pages-per-day").disabled = book.goalType !== "pages";
+        $("edit-book-modal").classList.remove("hidden");
+      }
+
+      closeEditBookModal() {
+        $("edit-book-modal").classList.add("hidden");
+      }
+
+      openEditModal(date, bookTitle) {
+        const book = this.books.find((b) => b.title === bookTitle);
+        if (!book) return;
+        const history = book.readingHistory.find((h) => h.date === date);
+        $("edit-date").textContent = date;
+        $("edit-history-book-title").textContent = bookTitle;
+        const sortedHistory = [...book.readingHistory].sort(
+          (a, b) => new Date(b.date) - new Date(a.date)
+        );
+        const currentEntry = history?.totalPages || sortedHistory.find((entry) => entry.date < date)?.totalPages || 0;
+        $("edit-pages-read").value = currentEntry;
+        $("edit-history-modal").classList.remove("hidden");
+      }
+
+      closeEditModal() {
+        $("edit-history-modal").classList.add("hidden");
+      }
+
+      closeAllModals() {
+        this.closeAddBookModal();
+        this.closeEditBookModal();
+        this.closeEditModal();
+        this.closeSettingsModal();
+      }
+
+      handleAddBook(event) {
+        event.preventDefault();
+        const formData = {
+          title: $("book-title").value,
+          totalPages: parseInt($("total-pages").value, 10),
+          startDate: $("start-date").value,
+          goalType: document.querySelector('input[name="goal-type"]:checked')?.value,
+          targetDate: $("target-date").value,
+          pagesPerDay: parseInt($("pages-per-day").value, 10)
+        };
+        if (!this.validateBookData(formData)) {
+          alert("Please fill in all required fields with valid values.");
+          return;
+        }
+        this.addBook(formData);
+        this.closeAddBookModal();
+      }
+
+      handleEditBook(event) {
+        event.preventDefault();
+        const bookIndex = parseInt($("edit-book-index").value, 10);
+        const formData = {
+          title: $("edit-book-title").value,
+          totalPages: parseInt($("edit-total-pages").value, 10),
+          currentPage: parseInt($("edit-current-page").value, 10),
+          startDate: $("edit-start-date").value,
+          goalType: document.querySelector('input[name="edit-goal-type"]:checked')?.value,
+          targetDate: $("edit-target-date").value,
+          pagesPerDay: parseInt($("edit-pages-per-day").value, 10)
+        };
+        if (!this.validateBookData(formData)) {
+          alert("Please fill in all required fields with valid values.");
+          return;
+        }
+        this.updateBook(bookIndex, formData);
+        this.closeEditBookModal();
+      }
+
+      validateBookData(data) {
+        return (
+          data.title &&
+          !isNaN(data.totalPages) &&
+          data.totalPages > 0 &&
+          data.startDate &&
+          data.goalType &&
+          ((data.goalType === "date" && data.targetDate) ||
+            (data.goalType === "pages" && !isNaN(data.pagesPerDay) && data.pagesPerDay > 0)) &&
+          (data.currentPage === undefined || (!isNaN(data.currentPage) && data.currentPage >= 0 && data.currentPage <= data.totalPages))
+        );
+      }
+
+      handleDeleteBook() {
+        const bookIndex = parseInt($("edit-book-index").value, 10);
+        if (confirm("Are you sure you want to delete this book? This action cannot be undone.")) {
+          this.deleteBook(bookIndex);
+          this.closeEditBookModal();
+        }
+      }
+
+      handleEditHistory() {
+        const currentPageTotal = parseInt($("edit-pages-read").value, 10);
+        if (isNaN(currentPageTotal)) return;
+        const bookTitle = $("edit-history-book-title").textContent;
+        const book = this.books.find((b) => b.title === bookTitle);
+        if (!book) return;
+        try {
+          book.updateProgress(currentPageTotal, $("edit-date").textContent);
+          this.saveBooks();
+          this.updateUI();
+          this.closeEditModal();
+        } catch (error) {
+          alert(error.message);
+        }
+      }
+
+      handleGoalTypeChange(radio, isEdit = false) {
+        const prefix = isEdit ? "edit-" : "";
+        const isDateGoal = radio.value === "date";
+        $(`${prefix}target-date`).disabled = !isDateGoal;
+        $(`${prefix}pages-per-day`).disabled = isDateGoal;
+        if (!isDateGoal) $(prefix + "target-date").value = "";
+        if (isDateGoal) $(prefix + "pages-per-day").value = "";
+      }
+
+      calculateStats() {
+        this.calculateStreaks();
+        this.calculateWeeklyCompletionRate();
+        this.calculateStatistics();
+      }
+
+      calculateStreaks() {
+        const allHistory = [];
+        this.books.forEach((b) => b.readingHistory.forEach((h) => allHistory.push(h)));
+        allHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        let currentStreak = 0;
+        let longestStreak = 0;
+        let tempStreak = 0;
+        let lastDate = null;
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        allHistory.forEach((item) => {
+          const currentDate = new Date(item.date);
+          if (lastDate) {
+            const diffDays = Utils.getDaysBetween(currentDate, lastDate);
+            if (diffDays === 1) {
+              tempStreak++;
+            } else if (diffDays > 1) {
+              longestStreak = Math.max(longestStreak, tempStreak);
+              tempStreak = 1;
+            }
+          } else if (formatDate(currentDate) === formatDate(yesterday)) {
+            tempStreak = 1;
+          }
+          lastDate = currentDate;
+        });
+        longestStreak = Math.max(longestStreak, tempStreak);
+
+        currentStreak = 0;
+        lastDate = new Date();
+        for (let i = 0; i < allHistory.length; i++) {
+          const historyItemDate = new Date(allHistory[allHistory.length - 1 - i].date);
+          const diffDays = Utils.getDaysBetween(lastDate, historyItemDate);
+          if (diffDays <= 1) {
+            currentStreak++;
+            lastDate = historyItemDate;
+          } else {
+            break;
+          }
+        }
+        $("current-streak").textContent = currentStreak;
+        $("longest-streak").textContent = longestStreak;
+      }
+
+      calculateWeeklyCompletionRate() {
+        const today = new Date();
+        let readingDays = 0;
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const formattedDate = formatDate(date);
+          const hasRead = this.books.some((book) =>
+            book.readingHistory.some((item) => item.date === formattedDate && item.pagesRead > 0)
+          );
+          if (hasRead) readingDays++;
+        }
+        const completionRate = Math.round((readingDays / 7) * 100);
+        $("weekly-completion").textContent = `${completionRate}%`;
+      }
+
+      calculateStatistics() {
+        const stats = this.books.reduce(
+          (acc, book) => {
+            acc.totalPagesRead += book.currentPage;
+            if (book.currentPage === book.totalPages) acc.totalBooksCompleted++;
+            book.readingHistory.forEach((item) => {
+              acc.totalReadingDays++;
+              const dayOfWeek = new Date(item.date).getDay();
+              acc.dayCounts[dayOfWeek] += item.pagesRead;
+            });
+            return acc;
+          },
+          {
+            totalPagesRead: 0,
+            totalBooksCompleted: 0,
+            totalReadingDays: 0,
+            dayCounts: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+          }
+        );
+
+        const averagePages = stats.totalReadingDays
+          ? Math.round(stats.totalPagesRead / stats.totalReadingDays)
+          : 0;
+        let bestDay = "";
+        let maxPages = 0;
+        Object.entries(stats.dayCounts).forEach(([day, pages]) => {
+          if (pages > maxPages) {
+            maxPages = pages;
+            bestDay = dayNames[parseInt(day, 10)];
+          }
+        });
+
+        $("avg-pages").textContent = averagePages;
+        $("total-books-completed").textContent = stats.totalBooksCompleted;
+        $("total-pages-read").textContent = stats.totalPagesRead;
+        $("best-day").textContent = bestDay;
+      }
+
+      renderReadingHistoryHeatmap() {
+        const heatmapContainer = $("heatmap-container");
+        if (!heatmapContainer) return;
+        heatmapContainer.innerHTML = "";
+
+        const today = new Date();
+        const dates = Array.from({ length: 7 }, (_, i) => {
+          const date = new Date(today);
+          date.setDate(today.getDate() - (6 - i));
+          return formatDate(date);
+        });
+
+        const headerRow = document.createElement("div");
+        headerRow.className = "grid grid-cols-[100px_1fr] items-start mb-2";
+        headerRow.innerHTML = `
+          <div></div>
+          <div class="grid grid-cols-7 gap-2 text-center text-sm font-medium text-gray-600">
+            ${dates
+              .map((date) => {
+                const d = new Date(date).getDay();
+                return `
+                  <div class="flex items-center justify-center gap-1">
+                    <span>${dayIcons[d]}</span>
+                    <span>${dayNames[d].slice(0, 3)}</span>
+                  </div>
+                `;
+              })
+              .join("")}
+          </div>
+        `;
+        heatmapContainer.appendChild(headerRow);
+
+        const booksToShow = this.books.filter(book => 
+          !this.settings.hideCompletedWeek || book.currentPage !== book.totalPages
+        );
+
+        booksToShow.forEach((book) => {
+          const bookRow = document.createElement("div");
+          bookRow.className = "heatmap-book-row";
+          const label = document.createElement("div");
+          const isCompleted = book.currentPage === book.totalPages;
+          label.className = `book-label ${isCompleted ? 'bg-green-100 border-green-500 text-green-800' : 'bg-gray-50 border-gray-200 text-gray-700'}`;
+          label.textContent = book.title;
+          bookRow.appendChild(label);
+
+          const heatmapRow = document.createElement("div");
+          heatmapRow.className = "heatmap-row";
+
+          dates.forEach((date) => {
+            const cell = document.createElement("div");
+            cell.className = "heatmap-cell";
+            cell.dataset.date = date;
+            cell.dataset.bookTitle = book.title;
+            const history = book.readingHistory.find((item) => item.date === date);
+            const pagesRead = history ? history.pagesRead : 0;
+            const totalPages = history ? history.totalPages : 0;
+            const dailyGoal = book.getDailyGoal(date);
+            const intensity = Math.min(pagesRead / 50, 1);
+            const cellDate = new Date(date);
+            const isInPast = cellDate < today && formatDate(cellDate) !== formatDate(today);
+            const isCompleted = book.currentPage === book.totalPages;
+            
+            let color;
+            if (isCompleted) {
+              color = `rgba(16, 185, 129, ${intensity})`; // Tailwind's green-500
+            } else {
+              color = isInPast && pagesRead < dailyGoal
+                ? `rgba(239, 68, 68, ${intensity})`
+                : `rgba(59, 130, 246, ${intensity})`;
+            }
+            cell.style.backgroundColor = color;
+            cell.innerHTML = `
+              <div class="text-[0.65rem] sm:text-xs font-medium ${intensity > 0.5 ? "text-white" : "text-gray-700"}">
+                ${cellDate.getDate()}
+              </div>
+              ${pagesRead > 0 ? `
+              <div class="text-[0.65rem] sm:text-xs ${intensity > 0.5 ? "text-white" : "text-gray-700"} truncate">
+                p.${totalPages}
+              </div>
+              ` : ''}
+            `;
+            cell.addEventListener("click", () => this.openEditModal(date, book.title));
+            this.addCellTooltip(cell, book.title, pagesRead, date);
+            heatmapRow.appendChild(cell);
+          });
+
+          bookRow.appendChild(heatmapRow);
+          heatmapContainer.appendChild(bookRow);
+        });
+      }
+
+      addCellTooltip(cell, bookTitle, pagesRead, date) {
+        cell.addEventListener("mouseover", (e) => {
+          const tooltip = document.createElement("div");
+          tooltip.textContent = `${bookTitle}: ${pagesRead} pages on ${date}`;
+          tooltip.className = "absolute bg-black text-white p-2 rounded text-xs z-10";
+          tooltip.style.top = `${e.clientY - 30}px`;
+          tooltip.style.left = `${e.clientX + 10}px`;
+          document.body.appendChild(tooltip);
+
+          const removeTooltip = () => {
+            if (document.body.contains(tooltip)) {
+              document.body.removeChild(tooltip);
+            }
+            cell.removeEventListener("mouseout", removeTooltip);
+          };
+          cell.addEventListener("mouseout", removeTooltip);
+        });
+      }
+
+      exportData() {
+        const dataStr = JSON.stringify(this.books);
+        const dataUri = "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
+        const exportFileDefaultName = "reading_tracker_data.json";
+        const linkElement = document.createElement("a");
+        linkElement.setAttribute("href", dataUri);
+        linkElement.setAttribute("download", exportFileDefaultName);
+        linkElement.click();
+      }
+
+      handleImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const importedData = JSON.parse(e.target.result);
+            if (Array.isArray(importedData)) {
+              if (confirm("This will replace your current data. Are you sure you want to continue?")) {
+                this.books = importedData.map((d) => new Book(d));
+                this.saveBooks();
+                this.updateUI();
+                alert("Data imported successfully!");
+              }
+            } else {
+              throw new Error("Invalid data format");
+            }
+          } catch {
+            alert(
+              "Error: Invalid file format. Please make sure you are importing a valid reading tracker data file."
+            );
+          }
+        };
+        reader.readAsText(file);
+        event.target.value = "";
+      }
+
+      openEditGoalModal() {
+        const modal = $("edit-goal-modal");
+        const yearInput = $("yearly-goal-input");
+        const yearSpan = $("current-year");
+        
+        yearSpan.textContent = new Date().getFullYear();
+        yearInput.value = this.yearlyGoal;
+        modal.classList.remove("hidden");
+      }
+
+      handleEditGoal(event) {
+        event.preventDefault();
+        const newGoal = parseInt($("yearly-goal-input").value);
+        if (newGoal > 0) {
+          this.yearlyGoal = newGoal;
+          localStorage.setItem('yearlyReadingGoal', newGoal);
+          this.updateReadingChallenge();
+          $("edit-goal-modal").classList.add("hidden");
+        }
+      }
+
+      updateReadingChallenge() {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), 0, 1);
+        const diff = now - start;
+        const oneDay = 1000 * 60 * 60 * 24;
+        const oneWeek = oneDay * 7;
+        
+        // Calculate days and weeks
+        const currentDay = Math.ceil(diff / oneDay);
+        const currentWeek = Math.ceil(diff / oneWeek);
+        
+        // Calculate year progress
+        const isLeapYear = new Date(now.getFullYear(), 1, 29).getMonth() === 1;
+        const daysInYear = isLeapYear ? 366 : 365;
+        const yearProgressPercentage = (currentDay / daysInYear) * 100;
+        
+        // Calculate books progress including partial progress
+        const booksProgress = this.books.reduce((total, book) => {
+          // For completed books, add 1
+          if (book.currentPage === book.totalPages) {
+            return total + 1;
+          }
+          // For in-progress books, add their fractional progress
+          return total + (book.currentPage / book.totalPages);
+        }, 0);
+        
+        const weeklyTarget = this.yearlyGoal / 52;
+        const expectedProgress = currentWeek * weeklyTarget;
+        const isOnTrack = booksProgress >= expectedProgress;
+        
+        const booksProgressPercentage = (booksProgress / this.yearlyGoal) * 100;
+        
+        // Update UI elements
+        $("yearly-goal").textContent = this.yearlyGoal;
+        $("current-week").textContent = currentWeek;
+        $("current-day").textContent = currentDay;
+        $("completed-books").textContent = booksProgress.toFixed(1);
+        $("on-track-status").textContent = isOnTrack ? "Yes" : "No";
+        $("on-track-status").className = `font-medium ${isOnTrack ? 'text-green-600' : 'text-red-600'}`;
+        
+        // Update progress bars
+        const booksProgressBar = $("challenge-progress");
+        const yearProgressBar = $("year-progress");
+        
+        booksProgressBar.style.width = `${booksProgressPercentage}%`;
+        yearProgressBar.style.width = `${yearProgressPercentage}%`;
+      }
+
+      openSettingsModal() {
+        $("settings-modal").classList.remove("hidden");
+      }
+
+      closeSettingsModal() {
+        $("settings-modal").classList.add("hidden");
+      }
+
+      saveSettings() {
+        localStorage.setItem('hideCompletedWeek', JSON.stringify(this.settings.hideCompletedWeek));
+        localStorage.setItem('hideCompletedBooks', JSON.stringify(this.settings.hideCompletedBooks));
+      }
+
+      resetGoals() {
+        const today = new Date();
+        const nextSunday = new Date(today);
+        nextSunday.setDate(today.getDate() + (7 - today.getDay()));
+        const nextSundayStr = formatDate(nextSunday);
+
+        // Get active (non-completed) books
+        const activeBooks = this.books.filter(book => book.currentPage !== book.totalPages);
+        
+        // Check if we're on track
+        const booksProgress = this.books.reduce((total, book) => {
+          return total + (book.currentPage === book.totalPages ? 1 : book.currentPage / book.totalPages);
+        }, 0);
+        
+        const currentWeek = Math.ceil((today - new Date(today.getFullYear(), 0, 1)) / (1000 * 60 * 60 * 24 * 7));
+        const weeklyTarget = this.yearlyGoal / 52;
+        const expectedProgress = currentWeek * weeklyTarget;
+        const isOnTrack = booksProgress >= expectedProgress;
+
+        // Reset goals based on progress
+        activeBooks.forEach((book, index) => {
+          // Clear locked daily goals since we're changing the goal
+          book.lockedDailyGoals = {};
+          
+          if (isOnTrack && index === 0) {
+            // If on track, set first book's target to next Sunday
+            book.goalType = 'date';
+            book.targetDate = nextSundayStr;
+            book.status = 'active';
+          } else if (!isOnTrack && (index === 0 || index === 1)) {
+            // If not on track, set first two books' target to next Sunday
+            book.goalType = 'date';
+            book.targetDate = nextSundayStr;
+            book.status = 'active';
+          } else {
+            // Pause other books
+            book.status = 'paused';
+          }
+        });
+
+        this.saveBooks();
+        this.updateUI();
+      }
+    }
+
+    let bookManager;
+
+    function initializeApp() {
+      try {
+        bookManager = new BookManager();
+        window.bookManager = bookManager;
+        bookManager.init();
+      } catch {}
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", initializeApp);
+    } else {
+      setTimeout(initializeApp, 0);
+    }
+
+    window.addEventListener("load", () => {
+      if (!bookManager) initializeApp();
+    });
+
+    function closeEditBookModal() {
+      $("edit-book-modal").classList.add("hidden");
+    }
+  </script>
+</body>
+</html>

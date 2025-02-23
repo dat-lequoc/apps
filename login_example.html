@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Supabase Auth &amp; Notes Demo</title>
+  <!-- Include the Supabase JS library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .hidden {
+      display: none;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      font-size: 1rem;
+    }
+    #notes-list li {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-bottom: 1px solid #ccc;
+    }
+    #auth-message {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Supabase Auth &amp; Notes Demo</h1>
+
+  <!-- Authentication Section -->
+  <div id="auth-container">
+    <h2>Login / Sign Up</h2>
+    <form id="auth-form">
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button type="submit">Submit</button>
+    </form>
+    <button id="github-login-button">Sign in with GitHub</button>
+    <div id="auth-message"></div>
+  </div>
+
+  <!-- App Section (only visible after auth) -->
+  <div id="app-container" class="hidden">
+    <button id="logout-button">Logout</button>
+    <h2>Your Notes</h2>
+    <form id="note-form">
+      <input type="text" id="note-content" placeholder="Enter note content" required />
+      <button type="submit">Add Note</button>
+    </form>
+    <ul id="notes-list"></ul>
+  </div>
+
+  <script>
+    // Initialize the Supabase client (replace placeholders with your values)
+    const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // DOM Elements
+    const authContainer = document.getElementById('auth-container');
+    const appContainer   = document.getElementById('app-container');
+    const authForm       = document.getElementById('auth-form');
+    const authMessage    = document.getElementById('auth-message');
+    const logoutButton   = document.getElementById('logout-button');
+    const noteForm       = document.getElementById('note-form');
+    const notesList      = document.getElementById('notes-list');
+
+    // Check authentication status on page load
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        showApp();
+      } else {
+        showAuth();
+      }
+    }
+
+    function showApp() {
+      authContainer.classList.add('hidden');
+      appContainer.classList.remove('hidden');
+      loadNotes();
+    }
+
+    function showAuth() {
+      authContainer.classList.remove('hidden');
+      appContainer.classList.add('hidden');
+    }
+
+    // Handle the auth form submission for sign up / log in
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      // Clear previous messages
+      authMessage.textContent = 'Processing...';
+
+      try {
+        // Try sign in first instead of sign up
+        let { data, error } = await supabase.auth.signInWithPassword({ 
+          email, 
+          password 
+        });
+
+        if (error) {
+          // If sign in fails, try sign up
+          if (error.message.includes('Invalid login credentials')) {
+            const signUpResponse = await supabase.auth.signUp({ 
+              email, 
+              password,
+              options: {
+                emailRedirectTo: window.location.origin // Add redirect URL
+              }
+            });
+            
+            if (signUpResponse.error) {
+              authMessage.textContent = `Sign up failed: ${signUpResponse.error.message}`;
+              console.error('Sign up error:', signUpResponse.error);
+              return;
+            }
+            
+            authMessage.textContent = 'Sign-up successful! Please check your email for confirmation.';
+            return;
+          }
+          
+          authMessage.textContent = `Sign in failed: ${error.message}`;
+          console.error('Sign in error:', error);
+          return;
+        }
+
+        // Success - clear message and check auth
+        authMessage.textContent = '';
+        checkAuth();
+        
+      } catch (err) {
+        console.error('Auth error:', err);
+        authMessage.textContent = 'An unexpected error occurred. Please try again.';
+      }
+    });
+
+    // Logout handler
+    logoutButton.addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      showAuth();
+    });
+
+    // GitHub OAuth sign in handler
+    document.getElementById('github-login-button').addEventListener('click', async () => {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) {
+        authMessage.textContent = `GitHub sign in failed: ${error.message}`;
+        console.error('GitHub sign in error:', error);
+      }
+    });
+
+    // Handle note submission – insert a new note into the "notes" table
+    noteForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const content = document.getElementById('note-content').value;
+      document.getElementById('note-content').value = '';
+
+      // Retrieve the current session to get the user id
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const user_id = session.user.id;
+
+      // Insert the note (the RLS policy will ensure the note belongs to the authenticated user)
+      const { data, error } = await supabase.from('notes').insert([{ content, user_id }]);
+      if (error) {
+        console.error('Error inserting note:', error);
+      } else {
+        loadNotes();
+      }
+    });
+
+    // Load and display notes for the authenticated user
+    async function loadNotes() {
+      const { data: notes, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error loading notes:', error);
+        return;
+      }
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const li = document.createElement('li');
+        li.textContent = note.content + " (created at: " + new Date(note.created_at).toLocaleString() + ")";
+        notesList.appendChild(li);
+      });
+    }
+
+    // Listen for authentication state changes (e.g., auto-login on page refresh)
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        showApp();
+      } else {
+        showAuth();
+      }
+    });
+
+    // Check auth status on initial page load
+    checkAuth();
+  </script>
+</body>
+</html>

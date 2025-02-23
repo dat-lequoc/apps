@@ -1,0 +1,1 @@
+- write short, concise, compact code
