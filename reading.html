@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>A Year of Reading</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     .add-book-btn {
       position: fixed;
@@ -261,10 +262,7 @@
 <body class="bg-gray-100 p-6 font-sans">
   <header class="mb-6 flex items-center justify-between">
     <h1 class="text-xl font-bold">A Year of Reading</h1>
-    <button
-      id="settings-btn"
-      aria-label="Settings"
-    >
+    <button id="settings-btn" aria-label="Settings">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -667,11 +665,30 @@
             <span class="slider"></span>
           </label>
         </div>
+        <div class="pt-4 mt-4 border-t border-gray-200">
+          <button
+            id="logout-btn"
+            class="w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
+    // Initialize Supabase client
+    const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // Utility function to get current user
+    async function getCurrentUser() {
+      const { data: { session } } = await supabase.auth.getSession();
+      return session?.user;
+    }
+
     const LOCAL_STORAGE_KEY = 'readingTrackerBooks';
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const dayIcons = ["☀️", "🌙", "⚡", "💧", "🔥", "🌟", "🌍"];
@@ -793,94 +810,112 @@
     }
 
     class BookManager {
-      constructor() {
+      constructor(user) {
+        this.user = user;
         this.books = [];
         this.$bookEntries = $("book-entries");
-        this.yearlyGoal = parseInt(localStorage.getItem('yearlyReadingGoal')) || 52;
-        this.collapsedBooks = new Set(JSON.parse(localStorage.getItem('collapsedBooks') || '[]'));
-        this.bookOrder = JSON.parse(localStorage.getItem('bookOrder') || '[]');
+        this.yearlyGoal = 52;
+        this.collapsedBooks = new Set();
+        this.bookOrder = [];
         this.settings = {
-          hideCompletedWeek: JSON.parse(localStorage.getItem('hideCompletedWeek') ?? 'true'),
-          hideCompletedBooks: JSON.parse(localStorage.getItem('hideCompletedBooks') ?? 'false')
+          hideCompletedWeek: true,
+          hideCompletedBooks: false
         };
-        this.loadBooks();
         this.setupEventListeners();
       }
 
-      init() {
+      async init() {
+        await this.loadBooks();
         this.updateUI();
         this.updateReadingChallenge();
         document.getElementById('challenge-year').textContent = new Date().getFullYear();
       }
 
-      loadBooks() {
+      async loadBooks() {
         try {
-          const savedBooks = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
-          this.books = savedBooks.map((b) => new Book(b));
-          
-          // Apply saved order if it exists
-          if (this.bookOrder.length > 0) {
-            const orderedBooks = [];
-            const bookMap = new Map(this.books.map(book => [book.title, book]));
-            
-            // First add books in the saved order
-            this.bookOrder.forEach(title => {
-              if (bookMap.has(title)) {
-                orderedBooks.push(bookMap.get(title));
-                bookMap.delete(title);
-              }
-            });
-            
-            // Then add any new books that weren't in the saved order
-            bookMap.forEach(book => orderedBooks.push(book));
-            
-            this.books = orderedBooks;
+          const { data, error } = await supabase
+            .from('reading')
+            .select('data')
+            .eq('user_id', this.user.id)
+            .single();
+
+          if (error) {
+            console.log('No existing data found, using defaults');
+            return;
           }
-        } catch {
-          this.books = [];
+
+          if (data?.data) {
+            this.books = (data.data.books || []).map(b => new Book(b));
+            this.yearlyGoal = data.data.yearlyGoal || 52;
+            this.collapsedBooks = new Set(data.data.collapsedBooks || []);
+            this.bookOrder = data.data.bookOrder || [];
+            this.settings = data.data.settings || {
+              hideCompletedWeek: true,
+              hideCompletedBooks: false
+            };
+          }
+        } catch (err) {
+          console.error('Error loading books:', err);
         }
       }
 
-      saveBooks() {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(this.books));
-        localStorage.setItem('collapsedBooks', JSON.stringify([...this.collapsedBooks]));
-        localStorage.setItem('bookOrder', JSON.stringify(this.books.map(book => book.title)));
+      async saveBooks() {
+        try {
+          const payload = {
+            user_id: this.user.id,
+            data: {
+              books: this.books,
+              yearlyGoal: this.yearlyGoal,
+              collapsedBooks: Array.from(this.collapsedBooks),
+              bookOrder: this.books.map(book => book.title),
+              settings: this.settings
+            }
+          };
+
+          const { error } = await supabase
+            .from('reading')
+            .upsert(payload);
+
+          if (error) throw error;
+        } catch (err) {
+          console.error('Error saving books:', err);
+        }
       }
 
-      refreshUI() {
-        this.saveBooks();
+      async refreshUI() {
+        await this.saveBooks();
         this.updateUI();
       }
 
-      addBook(bookData) {
+      async addBook(bookData) {
         this.books.push(new Book(bookData));
-        this.refreshUI();
+        await this.refreshUI();
       }
 
-      updateBook(index, bookData) {
+      async updateBook(index, bookData) {
         const original = this.books[index];
-        // Create new book with cleared lockedDailyGoals if goal-related fields changed
         const shouldClearGoals = original.goalType !== bookData.goalType ||
                                original.targetDate !== bookData.targetDate ||
                                original.pagesPerDay !== bookData.pagesPerDay;
-        this.books[index] = new Book({ 
-          ...original, 
-          ...bookData, 
+        
+        this.books[index] = new Book({
+          ...original,
+          ...bookData,
           readingHistory: original.readingHistory,
           lockedDailyGoals: shouldClearGoals ? {} : original.lockedDailyGoals
         });
-        this.refreshUI();
+        await this.refreshUI();
       }
 
-      deleteBook(index) {
+      async deleteBook(index) {
         this.books.splice(index, 1);
-        this.refreshUI();
+        await this.refreshUI();
       }
 
-      updateProgress(bookIndex, currentPageTotal, date) {
+      async updateProgress(bookIndex, currentPageTotal, date) {
         try {
           this.books[bookIndex].updateProgress(currentPageTotal, date);
-          this.refreshUI();
+          await this.refreshUI();
         } catch (error) {
           alert(error.message);
         }
@@ -1854,18 +1889,27 @@
 
     let bookManager;
 
-    function initializeApp() {
+    async function initializeApp() {
       try {
-        bookManager = new BookManager();
+        const user = await getCurrentUser();
+        if (!user) {
+          window.location.href = 'index.html';
+          return;
+        }
+        
+        bookManager = new BookManager(user);
         window.bookManager = bookManager;
-        bookManager.init();
-      } catch {}
+        await bookManager.init();
+      } catch (err) {
+        console.error('Error initializing app:', err);
+      }
     }
 
+    // Update event listeners to handle async operations
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", initializeApp);
     } else {
-      setTimeout(initializeApp, 0);
+      initializeApp();
     }
 
     window.addEventListener("load", () => {
