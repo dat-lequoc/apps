@@ -183,6 +183,83 @@
       .drag-handle:active {
         cursor: grabbing;
       }
+
+      /* Dark mode styles */
+      body.dark {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      body.dark .bg-white {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .text-gray-700 {
+        color: #e0e0e0;
+      }
+
+      body.dark .border {
+        border-color: #333;
+      }
+
+      body.dark .bg-gray-100 {
+        background-color: #121212;
+      }
+
+      body.dark .bg-gray-50 {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .text-gray-500 {
+        color: #a0a0a0;
+      }
+
+      body.dark .bg-gray-200 {
+        background-color: #333;
+      }
+
+      body.dark input, 
+      body.dark select {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border-color: #333;
+      }
+
+      body.dark .modal {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+
+      body.dark .modal-content {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .habit-entry {
+        background-color: #1e1e1e;
+        border-color: #333;
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 40;
+        min-width: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+      
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      }
     </style>
   </head>
   <body class="bg-gray-100 p-3 sm:p-6 font-sans">
@@ -401,6 +478,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Add this button after the opening <body> tag -->
+    <button id="theme-toggle" class="theme-toggle">Light</button>
 
     <script>
       // Initialize Supabase client
@@ -1409,6 +1489,29 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
       document.addEventListener("DOMContentLoaded", () => {
         habitManager = new HabitManager();
         habitManager.init();
+      });
+
+      // Theme handling
+      document.addEventListener('DOMContentLoaded', () => {
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.body.classList.add(theme);
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+        
+        themeToggle.addEventListener('click', () => {
+          if (document.body.classList.contains('dark')) {
+            document.body.classList.remove('dark');
+            document.body.classList.add('light');
+            localStorage.setItem('theme', 'light');
+            themeToggle.textContent = 'Dark';
+          } else {
+            document.body.classList.remove('light');
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            themeToggle.textContent = 'Light';
+          }
+        });
       });
     </script>
   </body>

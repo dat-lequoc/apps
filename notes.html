@@ -13,11 +13,20 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 15px;
+      margin: 0;
+      padding: 0;
       background: #f9f9f9;
       line-height: 1.6;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 800px;
+      padding: 15px;
+      margin: 0 auto;
+      box-sizing: border-box;
     }
     .hidden {
       display: none;
@@ -151,9 +160,11 @@
   </style>
 </head>
 <body>
-  <a href="index.html" class="back-link">← Back</a>
-  <button id="theme-toggle" class="theme-toggle">Light</button>
-  <div id="notes-container"></div>
+  <div class="container">
+    <a href="index.html" class="back-link">← Back</a>
+    <button id="theme-toggle" class="theme-toggle">Light</button>
+    <div id="notes-container"></div>
+  </div>
 
   <form id="note-form">
     <div class="form-container">

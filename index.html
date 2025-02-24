@@ -118,10 +118,65 @@
     #logout-button:hover {
       background-color: #f1f5f9;
     }
+
+    /* Dark mode styles */
+    body.dark {
+      --primary-color: #66aaff;
+      --background-color: #121212;
+      --text-color: #e0e0e0;
+      --border-color: #333;
+    }
+
+    body.dark .app-card {
+      background: #1e1e1e;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    body.dark input {
+      background: #1e1e1e;
+      color: #e0e0e0;
+      border-color: #333;
+    }
+
+    body.dark #github-login-button {
+      background-color: #333;
+    }
+
+    body.dark #logout-button {
+      color: #e0e0e0;
+      border-color: #333;
+    }
+
+    body.dark #logout-button:hover {
+      background-color: #333;
+    }
+
+    /* Theme toggle button */
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      min-width: 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    }
   </style>
 </head>
 <body>
   <h1>Personal Dashboard</h1>
+  <button id="theme-toggle" class="theme-toggle">Light</button>
 
   <!-- Authentication Section -->
   <div id="auth-container">
@@ -283,6 +338,29 @@
 
     // Check auth on initial load
     checkAuth();
+
+    // Theme handling
+    document.addEventListener('DOMContentLoaded', () => {
+      const theme = localStorage.getItem('theme') || 'dark';
+      document.body.classList.add(theme);
+      
+      const themeToggle = document.getElementById('theme-toggle');
+      themeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+      
+      themeToggle.addEventListener('click', () => {
+        if (document.body.classList.contains('dark')) {
+          document.body.classList.remove('dark');
+          document.body.classList.add('light');
+          localStorage.setItem('theme', 'light');
+          themeToggle.textContent = 'Dark';
+        } else {
+          document.body.classList.remove('light');
+          document.body.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+          themeToggle.textContent = 'Light';
+        }
+      });
+    });
   </script>
 </body>
 </html> 
