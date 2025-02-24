@@ -119,7 +119,15 @@ create table flashcards (
   last_reviewed timestamp with time zone,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  unique(user_id, word)
+  unique(user_id, word),
+  state text,
+  due timestamp with time zone,
+  stability double precision,
+  difficulty double precision,
+  elapsed_days double precision,
+  scheduled_days double precision,
+  reps integer,
+  lapses integer
 );
 
 -- Enable RLS on flashcards table
@@ -144,3 +152,16 @@ create policy "Users can update their own flashcards"
 create policy "Users can delete their own flashcards"
   on flashcards for delete
   using ( auth.uid() = user_id );
+
+-- Set default values for existing rows
+update flashcards
+set 
+  state = 'New',
+  due = now(),
+  stability = 0,
+  difficulty = 0,
+  elapsed_days = 0,
+  scheduled_days = 0,
+  reps = 0,
+  lapses = 0
+where state is null;

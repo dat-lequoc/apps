@@ -8,13 +8,14 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Supabase JS library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <!-- Removed FSRS library inclusion; it is now implemented from scratch -->
     <style>
       /* Simple custom styling can be added here if needed */
     </style>
   </head>
   <body class="bg-gray-50">
     <div class="max-w-4xl mx-auto p-6">
-      <h1 class="text-3xl font-bold mb-6">Flashcards App</h1>
+      <h1 id="app-title" class="text-3xl font-bold mb-6">Flashcards App</h1>
 
       <!-- Upload Section -->
       <section id="upload-section" class="mb-6 border p-4 rounded shadow bg-white">
@@ -33,6 +34,7 @@
         <p>Total Flashcards: <span id="total-count">0</span></p>
         <p>To Review: <span id="to-review-count">0</span></p>
         <p>Mastered: <span id="mastered-count">0</span></p>
+        <p>Reviewed Today: <span id="reviewed-today-count">0</span></p>
       </section>
 
       <!-- Review Section (Start Review button) -->
@@ -43,7 +45,10 @@
       </section>
 
       <!-- Active Review UI -->
-      <section id="active-review" class="hidden border p-4 rounded shadow bg-white">
+      <section id="active-review" class="hidden border p-4 rounded shadow bg-white relative">
+        <button id="exit-review-btn" class="absolute top-2 right-2 text-sm bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
+          Exit Review
+        </button>
         <div id="card-container" class="mb-4">
           <!-- Question card -->
           <div class="bg-gray-50 p-6 rounded-lg mb-4 min-h-[200px] flex flex-col justify-center">
@@ -63,11 +68,11 @@
         </div>
         <div id="feedback-buttons" class="hidden">
           <div class="flex gap-2">
-            <button id="incorrect-btn" class="bg-red-500 text-white py-3 px-4 rounded hover:bg-red-600 flex-1">
-              Incorrect
+            <button id="again-btn" class="bg-red-500 text-white py-3 px-4 rounded hover:bg-red-600 flex-1">
+              Again
             </button>
-            <button id="correct-btn" class="bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 flex-1">
-              Correct
+            <button id="good-btn" class="bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 flex-1">
+              Good
             </button>
           </div>
         </div>
@@ -75,7 +80,121 @@
       </section>
     </div>
 
-    <script>
+    <script type="module">
+      // --- FSRS Implementation (from scratch) ---
+      // Remove external FSRS import and implement internally based on the provided tutorial
+
+      // FSRS parameters
+      const W = [
+        0.40255, 1.18385, 3.173, 15.69105,
+        7.1949, 0.5345, 1.4604, 0.0046,
+        1.54575, 0.1192, 1.01925, 1.9395,
+        0.11, 0.29605, 2.2698, 0.2315,
+        2.9898, 0.51655, 0.6621
+      ];
+
+      const F = 19.0 / 81.0;
+      const C = -0.5;
+
+      // Grade enumeration
+      const Grade = {
+        Forgot: 1,
+        Hard: 2,
+        Good: 3,
+        Easy: 4
+      };
+
+      function retrievability(t, s) {
+        return Math.pow(1 + F * (t / s), C);
+      }
+
+      function interval(r_d, s) {
+        return (s / F) * (Math.pow(r_d, 1 / C) - 1);
+      }
+
+      function s0(grade) {
+        if (grade === Grade.Forgot) return W[0];
+        if (grade === Grade.Hard) return W[1];
+        if (grade === Grade.Good) return W[2];
+        if (grade === Grade.Easy) return W[3];
+      }
+
+      function s_success(d, s, r, grade) {
+        let t_d = 11.0 - d;
+        let t_s = Math.pow(s, -W[9]);
+        let t_r = Math.exp(W[10] * (1.0 - r)) - 1.0;
+        let h = (grade === Grade.Hard) ? W[15] : 1.0;
+        let b = (grade === Grade.Easy) ? W[16] : 1.0;
+        let c_val = Math.exp(W[8]);
+        let alpha = 1.0 + t_d * t_s * t_r * h * b * c_val;
+        return s * alpha;
+      }
+
+      function s_fail(d, s, r) {
+        let d_f = Math.pow(d, -W[12]);
+        let s_f_val = Math.pow(s + 1.0, W[13]) - 1.0;
+        let r_f = Math.exp(W[14] * (1.0 - r));
+        let c_f = W[11];
+        const new_s = d_f * s_f_val * r_f * c_f;
+        return Math.min(new_s, s);
+      }
+
+      function updated_stability(d, s, r, grade) {
+        return (grade === Grade.Forgot)
+          ? s_fail(d, s, r)
+          : s_success(d, s, r, grade);
+      }
+
+      function clamp_d(d_val) {
+        return Math.max(1.0, Math.min(d_val, 10.0));
+      }
+
+      function d0(grade) {
+        return clamp_d(W[4] - Math.exp(W[5] * (grade - 1)) + 1.0);
+      }
+
+      function delta_d(grade) {
+        return -W[6] * (grade - 3);
+      }
+
+      function updated_difficulty(d, grade) {
+        const d0_easy = d0(Grade.Easy);
+        const new_d = W[7] * d0_easy + (1 - W[7]) * (d + delta_d(grade) * ((10 - d) / 9));
+        return clamp_d(new_d);
+      }
+
+      // FSRS repeat function: updates card state given a review grade
+      const fsrs = {
+        repeat: function(card, grade, now) {
+          const r_d = 0.9; // desired retention
+          const interval_before = Math.max(Math.round(interval(r_d, card.stability)), 1);
+          const r = retrievability(interval_before, card.stability);
+          const newStability = updated_stability(card.difficulty, card.stability, r, grade);
+          const newDifficulty = updated_difficulty(card.difficulty, grade);
+          const newInterval = Math.max(Math.round(interval(r_d, newStability)), 1);
+          const newDue = new Date(now.getTime() + newInterval * 24 * 60 * 60 * 1000).toISOString();
+          let newReps = card.reps;
+          let newLapses = card.lapses;
+          if (grade === Grade.Forgot) {
+            newLapses = card.lapses + 1;
+          } else {
+            newReps = card.reps + 1;
+          }
+          return {
+            state: "reviewed",
+            due: newDue,
+            stability: newStability,
+            difficulty: newDifficulty,
+            reps: newReps,
+            lapses: newLapses,
+            scheduled_days: newInterval,
+            elapsed_days: interval_before
+          };
+        }
+      };
+
+      // --- End FSRS Implementation ---
+
       // Initialize Supabase client (replace with your project's credentials)
       const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
@@ -99,8 +218,6 @@
       const cardContent = document.getElementById('card-content');
       const showAnswerBtn = document.getElementById('show-answer-btn');
       const feedbackButtons = document.getElementById('feedback-buttons');
-      const correctBtn = document.getElementById('correct-btn');
-      const incorrectBtn = document.getElementById('incorrect-btn');
       const reviewProgress = document.getElementById('review-progress');
 
       // Global variable for the current card being reviewed
@@ -130,17 +247,41 @@
           return;
         }
         flashcards = data || [];
+        // Initialize FSRS state for cards that don't have it
+        flashcards = flashcards.map(card => ({
+          ...card,
+          state: card.state || "new",
+          due: card.due || new Date().toISOString(),
+          stability: card.stability || s0(Grade.Good),
+          difficulty: card.difficulty || d0(Grade.Good),
+          elapsed_days: card.elapsed_days || 0,
+          scheduled_days: card.scheduled_days || 0,
+          reps: card.reps || 0,
+          lapses: card.lapses || 0,
+        }));
         updateStats();
       }
 
       // Update the statistics display based on flashcards loaded
       function updateStats() {
         const total = flashcards.length;
-        const toReview = flashcards.filter(card => card.review_count < masteryThreshold).length;
-        const mastered = total - toReview;
+        const now = new Date();
+        const toReview = flashcards.filter(card => new Date(card.due) <= now).length;
+        const mastered = flashcards.filter(card => card.reps >= masteryThreshold).length;
+        
+        // Calculate how many flashcards were reviewed today
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const reviewedToday = flashcards.filter(card => {
+          if (!card.last_reviewed) return false;
+          const lastReviewed = new Date(card.last_reviewed);
+          return lastReviewed >= todayStart;
+        }).length;
+        
         totalCountSpan.textContent = total;
         toReviewCountSpan.textContent = toReview;
         masteredCountSpan.textContent = mastered;
+        document.getElementById('reviewed-today-count').textContent = reviewedToday;
       }
 
       // Event handler: Upload flashcards from JSON or JSONL file
@@ -179,7 +320,8 @@
                 word: card.word,
                 phrase: card.phrase,
                 translation_answer: card.translation_answer || card.translationAnswer,
-                review_count: 0,
+                reps: 0,
+                lapses: 0,
                 last_reviewed: null
               });
             }
@@ -208,13 +350,14 @@
       startReviewBtn.addEventListener('click', async () => {
         // Reload flashcards first
         await loadFlashcards();
-        // Build the review queue (cards with review_count less than masteryThreshold)
-        reviewQueue = flashcards.filter(card => card.review_count < masteryThreshold);
+        // Build the review queue (cards with reps less than masteryThreshold)
+        reviewQueue = flashcards.filter(card => card.reps < masteryThreshold);
         if (reviewQueue.length === 0) {
           alert("All flashcards are mastered!");
           return;
         }
         // Hide upload / stats sections during review
+        document.getElementById('app-title').classList.add('hidden');
         document.getElementById('upload-section').classList.add('hidden');
         document.getElementById('stats-section').classList.add('hidden');
         document.getElementById('review-section').classList.add('hidden');
@@ -231,8 +374,34 @@
           showAnswerBtn.classList.add('hidden');
           feedbackButtons.classList.add('hidden');
           reviewProgress.textContent = '';
+          
+          // Return to main view after 3 seconds
+          setTimeout(() => {
+            // Show all main sections again
+            document.getElementById('app-title').classList.remove('hidden');
+            document.getElementById('upload-section').classList.remove('hidden');
+            document.getElementById('stats-section').classList.remove('hidden');
+            document.getElementById('review-section').classList.remove('hidden');
+            // Hide the review interface
+            activeReviewSection.classList.add('hidden');
+          }, 3000);
+          
           return;
         }
+
+        // Filter cards that are due for review
+        const now = new Date();
+        reviewQueue = reviewQueue.filter(card => new Date(card.due) <= now);
+
+        if (reviewQueue.length === 0) {
+          document.getElementById('card-question').innerHTML = "No more cards due for review!";
+          document.getElementById('answer-container').classList.add('hidden');
+          showAnswerBtn.classList.add('hidden');
+          feedbackButtons.classList.add('hidden');
+          reviewProgress.textContent = '';
+          return;
+        }
+
         const card = reviewQueue.shift();
         currentCard = card;
         // Display the prompt and handle HTML rendering
@@ -260,38 +429,110 @@
         feedbackButtons.classList.remove('hidden');
       });
 
-      // Event handler: If user marks the answer as Correct
-      correctBtn.addEventListener('click', async () => {
+      // Event handler for "good" button (treat as Grade.Good)
+      document.getElementById('good-btn').addEventListener('click', async () => {
         if (!currentCard) return;
-        const newCount = currentCard.review_count + 1;
+        
+        const now = new Date();
+        const card = {
+          state: currentCard.state || "new",
+          due: currentCard.due,
+          stability: currentCard.stability || s0(Grade.Good),
+          difficulty: currentCard.difficulty || d0(Grade.Good),
+          elapsed_days: currentCard.elapsed_days || 0,
+          scheduled_days: currentCard.scheduled_days || 0,
+          reps: currentCard.reps || 0,
+          lapses: currentCard.lapses || 0,
+        };
+
+        // Update using our FSRS implementation with Grade.Good
+        const result = fsrs.repeat(card, Grade.Good, now);
+
+        // Update the card in the database with the new FSRS state
         const { error } = await supabase
           .from('flashcards')
-          .update({ review_count: newCount, last_reviewed: new Date().toISOString() })
+          .update({
+            state: result.state,
+            due: result.due,
+            stability: result.stability,
+            difficulty: result.difficulty,
+            elapsed_days: result.elapsed_days,
+            scheduled_days: result.scheduled_days,
+            reps: result.reps,
+            lapses: result.lapses,
+            last_reviewed: now.toISOString()
+          })
           .eq('id', currentCard.id);
+
         if (error) {
           console.error("Error updating flashcard:", error);
         }
-        // Update local copy
-        currentCard.review_count = newCount;
+
+        // Update local copy and proceed to next card
+        Object.assign(currentCard, result);
         await loadFlashcards(); // update stats
         showNextCard();
       });
 
-      // Event handler: If user marks the answer as Incorrect
-      incorrectBtn.addEventListener('click', async () => {
+      // Event handler for "again" button (treat as Grade.Forgot)
+      document.getElementById('again-btn').addEventListener('click', async () => {
         if (!currentCard) return;
-        // For simplicity, update last_reviewed without increasing review_count.
+
+        const now = new Date();
+        const card = {
+          state: currentCard.state || "new",
+          due: currentCard.due,
+          stability: currentCard.stability || s0(Grade.Good),
+          difficulty: currentCard.difficulty || d0(Grade.Good),
+          elapsed_days: currentCard.elapsed_days || 0,
+          scheduled_days: currentCard.scheduled_days || 0,
+          reps: currentCard.reps || 0,
+          lapses: currentCard.lapses || 0,
+        };
+
+        // Update using our FSRS implementation with Grade.Forgot
+        const result = fsrs.repeat(card, Grade.Forgot, now);
+
+        // Update the card in the database with the new FSRS state
         const { error } = await supabase
           .from('flashcards')
-          .update({ last_reviewed: new Date().toISOString() })
+          .update({
+            state: result.state,
+            due: result.due,
+            stability: result.stability,
+            difficulty: result.difficulty,
+            elapsed_days: result.elapsed_days,
+            scheduled_days: result.scheduled_days,
+            reps: result.reps,
+            lapses: result.lapses,
+            last_reviewed: now.toISOString()
+          })
           .eq('id', currentCard.id);
+
         if (error) {
           console.error("Error updating flashcard:", error);
         }
-        // Optionally, you could put the card back to the queue (here we add it at the end)
+
+        Object.assign(currentCard, result);
+        // Place the card back in the review queue for another try
         reviewQueue.push(currentCard);
         await loadFlashcards(); // update stats
         showNextCard();
+      });
+
+      // Event handler: Exit Review Session
+      document.getElementById('exit-review-btn').addEventListener('click', () => {
+        // Show main sections again
+        document.getElementById('app-title').classList.remove('hidden');
+        document.getElementById('upload-section').classList.remove('hidden');
+        document.getElementById('stats-section').classList.remove('hidden');
+        document.getElementById('review-section').classList.remove('hidden');
+        // Hide the review interface
+        activeReviewSection.classList.add('hidden');
+        // Clear the remaining review queue
+        reviewQueue = [];
+        // Update statistics in case any changes occurred during the session
+        updateStats();
       });
 
       // Check for authentication on page load
