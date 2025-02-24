@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flashcards App</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+      /* Simple custom styling can be added here if needed */
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6">
+      <h1 class="text-3xl font-bold mb-6">Flashcards App</h1>
+
+      <!-- Upload Section -->
+      <section id="upload-section" class="mb-6 border p-4 rounded shadow bg-white">
+        <h2 class="text-xl font-semibold mb-2">Upload Flashcards</h2>
+        <input type="file" id="flashcards-file" accept=".json, .jsonl" class="mb-2 border p-2 rounded" />
+        <br />
+        <button id="upload-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+          Upload
+        </button>
+        <div id="upload-message" class="mt-2 text-sm text-gray-700"></div>
+      </section>
+
+      <!-- Statistics Section -->
+      <section id="stats-section" class="mb-6 border p-4 rounded shadow bg-white">
+        <h2 class="text-xl font-semibold mb-2">Statistics</h2>
+        <p>Total Flashcards: <span id="total-count">0</span></p>
+        <p>To Review: <span id="to-review-count">0</span></p>
+        <p>Mastered: <span id="mastered-count">0</span></p>
+      </section>
+
+      <!-- Review Section (Start Review button) -->
+      <section id="review-section" class="mb-6">
+        <button id="start-review-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+          Start Review
+        </button>
+      </section>
+
+      <!-- Active Review UI -->
+      <section id="active-review" class="hidden border p-4 rounded shadow bg-white">
+        <div id="card-container" class="mb-4">
+          <!-- Question card -->
+          <div class="bg-gray-50 p-6 rounded-lg mb-4 min-h-[200px] flex flex-col justify-center">
+            <div id="card-question" class="text-xl text-center"></div>
+          </div>
+          
+          <!-- Answer card (initially hidden) -->
+          <div id="answer-container" class="hidden">
+            <div class="bg-blue-50 p-6 rounded-lg mb-4 min-h-[200px] flex flex-col justify-center">
+              <div id="card-answer" class="text-xl text-center"></div>
+            </div>
+          </div>
+
+          <button id="show-answer-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 w-full">
+            Show Answer
+          </button>
+        </div>
+        <div id="feedback-buttons" class="hidden">
+          <div class="flex gap-2">
+            <button id="incorrect-btn" class="bg-red-500 text-white py-3 px-4 rounded hover:bg-red-600 flex-1">
+              Incorrect
+            </button>
+            <button id="correct-btn" class="bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 flex-1">
+              Correct
+            </button>
+          </div>
+        </div>
+        <div id="review-progress" class="mt-4 text-sm text-gray-700 text-center"></div>
+      </section>
+    </div>
+
+    <script>
+      // Initialize Supabase client (replace with your project's credentials)
+      const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      // Global variables to store user info, flashcards and review session data
+      let userId;
+      let flashcards = []; // loaded flashcards from DB
+      let reviewQueue = []; // queue for cards due for review
+      const masteryThreshold = 3; // flashcard is "mastered" after 3 correct reviews
+
+      // DOM Elements
+      const uploadFileInput = document.getElementById('flashcards-file');
+      const uploadBtn = document.getElementById('upload-btn');
+      const uploadMessage = document.getElementById('upload-message');
+      const totalCountSpan = document.getElementById('total-count');
+      const toReviewCountSpan = document.getElementById('to-review-count');
+      const masteredCountSpan = document.getElementById('mastered-count');
+      const startReviewBtn = document.getElementById('start-review-btn');
+      const activeReviewSection = document.getElementById('active-review');
+      const cardContent = document.getElementById('card-content');
+      const showAnswerBtn = document.getElementById('show-answer-btn');
+      const feedbackButtons = document.getElementById('feedback-buttons');
+      const correctBtn = document.getElementById('correct-btn');
+      const incorrectBtn = document.getElementById('incorrect-btn');
+      const reviewProgress = document.getElementById('review-progress');
+
+      // Global variable for the current card being reviewed
+      let currentCard = null;
+
+      // Check authentication on page load
+      async function checkAuth() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // Redirect back to login/dashboard if no session
+          window.location.href = 'index.html';
+          return;
+        }
+        userId = session.user.id;
+        // After auth, load the current flashcards
+        await loadFlashcards();
+      }
+
+      // Load flashcards for the current user from Supabase
+      async function loadFlashcards() {
+        const { data, error } = await supabase
+          .from('flashcards')
+          .select('*')
+          .eq('user_id', userId);
+        if (error) {
+          console.error("Error loading flashcards:", error);
+          return;
+        }
+        flashcards = data || [];
+        updateStats();
+      }
+
+      // Update the statistics display based on flashcards loaded
+      function updateStats() {
+        const total = flashcards.length;
+        const toReview = flashcards.filter(card => card.review_count < masteryThreshold).length;
+        const mastered = total - toReview;
+        totalCountSpan.textContent = total;
+        toReviewCountSpan.textContent = toReview;
+        masteredCountSpan.textContent = mastered;
+      }
+
+      // Event handler: Upload flashcards from JSON or JSONL file
+      uploadBtn.addEventListener('click', async () => {
+        const file = uploadFileInput.files[0];
+        if (!file) {
+          uploadMessage.textContent = 'Please select a JSON or JSONL file to upload.';
+          return;
+        }
+        try {
+          const text = await file.text();
+          let uploadedCards = [];
+          // If file content starts with '[', assume a JSON array; otherwise use JSONL processing.
+          if (text.trim().startsWith('[')) {
+            uploadedCards = JSON.parse(text);
+          } else {
+            // Process JSONL: split by newline and parse each line
+            uploadedCards = text
+              .trim()
+              .split(/\r?\n/)
+              .filter(line => line.trim() !== '')
+              .map(line => JSON.parse(line));
+          }
+          if (!Array.isArray(uploadedCards)) {
+            uploadMessage.textContent = 'Invalid format: JSON must be an array or JSONL format.';
+            return;
+          }
+          // Get existing words to check for duplication
+          const existingWords = flashcards.map(card => card.word);
+          const newCards = [];
+          uploadedCards.forEach(card => {
+            // Support both "translation_answer" (from jsonl) and "translationAnswer" keys.
+            if (!existingWords.includes(card.word)) {
+              newCards.push({
+                user_id: userId,
+                word: card.word,
+                phrase: card.phrase,
+                translation_answer: card.translation_answer || card.translationAnswer,
+                review_count: 0,
+                last_reviewed: null
+              });
+            }
+          });
+          if (newCards.length === 0) {
+            uploadMessage.textContent = 'No new flashcards to add (all duplicates).';
+          } else {
+            const { error } = await supabase
+              .from('flashcards')
+              .insert(newCards);
+            if (error) {
+              uploadMessage.textContent = 'Error uploading flashcards: ' + error.message;
+              return;
+            }
+            uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards.`;
+            // Reload flashcards after insertion
+            await loadFlashcards();
+          }
+        } catch (err) {
+          console.error(err);
+          uploadMessage.textContent = 'Error processing the file.';
+        }
+      });
+
+      // Event handler: Start review session.
+      startReviewBtn.addEventListener('click', async () => {
+        // Reload flashcards first
+        await loadFlashcards();
+        // Build the review queue (cards with review_count less than masteryThreshold)
+        reviewQueue = flashcards.filter(card => card.review_count < masteryThreshold);
+        if (reviewQueue.length === 0) {
+          alert("All flashcards are mastered!");
+          return;
+        }
+        // Hide upload / stats sections during review
+        document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('stats-section').classList.add('hidden');
+        document.getElementById('review-section').classList.add('hidden');
+        // Show the review interface
+        activeReviewSection.classList.remove('hidden');
+        showNextCard();
+      });
+
+      // Show the next card from the reviewQueue
+      function showNextCard() {
+        if (reviewQueue.length === 0) {
+          document.getElementById('card-question').innerHTML = "Review session completed!";
+          document.getElementById('answer-container').classList.add('hidden');
+          showAnswerBtn.classList.add('hidden');
+          feedbackButtons.classList.add('hidden');
+          reviewProgress.textContent = '';
+          return;
+        }
+        const card = reviewQueue.shift();
+        currentCard = card;
+        // Display the prompt and handle HTML rendering
+        document.getElementById('card-question').innerHTML = card.phrase;
+        // Reset the answer container
+        document.getElementById('answer-container').classList.add('hidden');
+        
+        // Format the answer with first line in bold
+        const answerLines = card.translation_answer.split('\n');
+        const formattedAnswer = `<strong class="text-2xl block mb-4">${answerLines[0]}</strong>` + 
+          (answerLines.slice(1).join('\n'));
+        
+        document.getElementById('card-answer').innerHTML = formattedAnswer;
+        // Reset the UI
+        showAnswerBtn.classList.remove('hidden');
+        feedbackButtons.classList.add('hidden');
+        reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
+      }
+
+      // Event handler: Reveal the answer
+      showAnswerBtn.addEventListener('click', () => {
+        if (!currentCard) return;
+        document.getElementById('answer-container').classList.remove('hidden');
+        showAnswerBtn.classList.add('hidden');
+        feedbackButtons.classList.remove('hidden');
+      });
+
+      // Event handler: If user marks the answer as Correct
+      correctBtn.addEventListener('click', async () => {
+        if (!currentCard) return;
+        const newCount = currentCard.review_count + 1;
+        const { error } = await supabase
+          .from('flashcards')
+          .update({ review_count: newCount, last_reviewed: new Date().toISOString() })
+          .eq('id', currentCard.id);
+        if (error) {
+          console.error("Error updating flashcard:", error);
+        }
+        // Update local copy
+        currentCard.review_count = newCount;
+        await loadFlashcards(); // update stats
+        showNextCard();
+      });
+
+      // Event handler: If user marks the answer as Incorrect
+      incorrectBtn.addEventListener('click', async () => {
+        if (!currentCard) return;
+        // For simplicity, update last_reviewed without increasing review_count.
+        const { error } = await supabase
+          .from('flashcards')
+          .update({ last_reviewed: new Date().toISOString() })
+          .eq('id', currentCard.id);
+        if (error) {
+          console.error("Error updating flashcard:", error);
+        }
+        // Optionally, you could put the card back to the queue (here we add it at the end)
+        reviewQueue.push(currentCard);
+        await loadFlashcards(); // update stats
+        showNextCard();
+      });
+
+      // Check for authentication on page load
+      checkAuth();
+    </script>
+  </body>
+</html> 

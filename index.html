@@ -214,8 +214,42 @@
         <h3>Notes</h3>
         <p>Capture your thoughts</p>
       </div>
+      <div class="app-card" id="flashcards-app-btn">
+        <div class="app-icon">🃏</div>
+        <h3>Flashcards</h3>
+        <p>Practice with flashcards</p>
+      </div>
     </div>
     <button id="logout-button">Sign Out</button>
+    <!-- New Settings button -->
+    <button id="settings-button">Settings</button>
+  </div>
+
+  <!-- Gemini API Settings Container -->
+  <div id="settings-container" class="hidden" style="border: 1px solid var(--border-color); padding: 16px; margin-top: 24px; border-radius: 8px;">
+    <h2>Gemini API Settings</h2>
+    <!-- Section to show saved settings -->
+    <div id="saved-api-section" class="hidden">
+      <p>Saved API Key: <span id="masked-api-key"></span></p>
+      <p>Preferred Model: <span id="saved-model"></span></p>
+      <button id="remove-api-key-button">Remove API Key</button>
+      <button id="change-api-key-button">Change API Key</button>
+    </div>
+    <!-- Form section to enter a new API key and select a model -->
+    <div id="api-form-section">
+      <form id="settings-form">
+        <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required />
+        <select id="geminiModelSelect">
+          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+          <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
+          <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
+          <option value="gemini-2.0-flash-thinking-exp-01-21">gemini-2.0-flash-thinking-exp-01-21</option>
+        </select>
+        <button type="submit" id="save-settings-button">Save</button>
+        <button type="button" id="cancel-settings-button">Cancel</button>
+      </form>
+    </div>
+    <div id="settings-message"></div>
   </div>
 
   <script>
@@ -335,6 +369,9 @@
       // Assuming your notes app is in login_example.html; adjust if needed.
       window.location.href = "notes.html";
     });
+    document.getElementById("flashcards-app-btn").addEventListener("click", () => {
+      window.location.href = "flashcards.html";
+    });
 
     // Check auth on initial load
     checkAuth();
@@ -352,14 +389,130 @@
           document.body.classList.remove('dark');
           document.body.classList.add('light');
           localStorage.setItem('theme', 'light');
-          themeToggle.textContent = '��';
+          themeToggle.textContent = '☀️';
         } else {
           document.body.classList.remove('light');
           document.body.classList.add('dark');
           localStorage.setItem('theme', 'dark');
-          themeToggle.textContent = '☀️';
+          themeToggle.textContent = '🌙';
         }
       });
+    });
+
+    // ---------------------------
+    // Gemini API Settings Handling
+    // ---------------------------
+
+    // Gemini API helper functions (inspired by llm.html)
+    const getApiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`;
+    const geminiRequest = async (apiKey, message, model) => {
+      const res = await fetch(`${getApiUrl(model)}${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: message }]
+          }]
+        })
+      });
+      return res.json();
+    };
+
+    // Load the current user's Gemini API settings from Supabase
+    async function loadUserSettings() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const userId = session.user.id;
+      const { data, error } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (data) {
+        showSavedSettings(data);
+      } else {
+        showSettingsForm();
+      }
+    }
+
+    function showSavedSettings(data) {
+      // Display a masked version of the API key (first 4 characters + "******")
+      const maskedKey = data.api_key.substring(0, 4) + "******";
+      document.getElementById("masked-api-key").textContent = maskedKey;
+      document.getElementById("saved-model").textContent = data.model;
+      document.getElementById("saved-api-section").classList.remove("hidden");
+      document.getElementById("api-form-section").classList.add("hidden");
+    }
+
+    function showSettingsForm() {
+      document.getElementById("saved-api-section").classList.add("hidden");
+      document.getElementById("api-form-section").classList.remove("hidden");
+    }
+
+    // Show the settings container when the Settings button is clicked
+    document.getElementById("settings-button").addEventListener("click", async () => {
+      document.getElementById("settings-container").classList.remove("hidden");
+      await loadUserSettings();
+    });
+
+    // Hide the settings container when clicking Cancel
+    document.getElementById("cancel-settings-button").addEventListener("click", () => {
+      document.getElementById("settings-container").classList.add("hidden");
+    });
+
+    // Handle settings form submission: validate and then save API key and model into Supabase
+    document.getElementById("settings-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const apiKey = document.getElementById("geminiApiKeyInput").value;
+      const model = document.getElementById("geminiModelSelect").value;
+      const settingsMessage = document.getElementById("settings-message");
+      settingsMessage.textContent = "Verifying API Key...";
+      try {
+        const data = await geminiRequest(apiKey, "ping, answer `pong` without additional text", model);
+        const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (responseText && responseText.includes("pong")) {
+          settingsMessage.textContent = "✅ API Key is valid";
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            settingsMessage.textContent = "User session expired, please sign in again.";
+            return;
+          }
+          const userId = session.user.id;
+          const { error } = await supabase
+            .from('user_settings')
+            .upsert({ user_id: userId, api_key: apiKey, model });
+          if (error) {
+            settingsMessage.textContent = "Error saving settings: " + error.message;
+          } else {
+            showSavedSettings({ api_key: apiKey, model });
+          }
+        } else {
+          settingsMessage.textContent = "❌ Invalid response from API";
+        }
+      } catch (err) {
+        settingsMessage.textContent = "❌ Invalid API key or connection error";
+        console.error(err);
+      }
+    });
+
+    // Handle removal of the existing API key from Supabase
+    document.getElementById("remove-api-key-button")?.addEventListener("click", async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const userId = session.user.id;
+      const { error } = await supabase.from('user_settings').delete().eq('user_id', userId);
+      const settingsMessage = document.getElementById("settings-message");
+      if (error) {
+        settingsMessage.textContent = "Error removing API key: " + error.message;
+      } else {
+        settingsMessage.textContent = "API key removed.";
+        showSettingsForm();
+      }
+    });
+
+    // When the user wants to change the API key from a saved state, display the form again
+    document.getElementById("change-api-key-button")?.addEventListener("click", () => {
+      showSettingsForm();
     });
   </script>
 </body>
