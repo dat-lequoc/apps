@@ -430,7 +430,7 @@
       });
 
       // Event handler for "good" button (treat as Grade.Good)
-      document.getElementById('good-btn').addEventListener('click', async () => {
+      document.getElementById('good-btn').addEventListener('click', () => {
         if (!currentCard) return;
         
         const now = new Date();
@@ -448,8 +448,13 @@
         // Update using our FSRS implementation with Grade.Good
         const result = fsrs.repeat(card, Grade.Good, now);
 
-        // Update the card in the database with the new FSRS state
-        const { error } = await supabase
+        // Update local copy immediately and update stats
+        Object.assign(currentCard, result);
+        updateStats();
+        showNextCard();
+
+        // Fire-and-forget DB update (non-blocking)
+        supabase
           .from('flashcards')
           .update({
             state: result.state,
@@ -462,20 +467,16 @@
             lapses: result.lapses,
             last_reviewed: now.toISOString()
           })
-          .eq('id', currentCard.id);
-
-        if (error) {
-          console.error("Error updating flashcard:", error);
-        }
-
-        // Update local copy and proceed to next card
-        Object.assign(currentCard, result);
-        await loadFlashcards(); // update stats
-        showNextCard();
+          .eq('id', currentCard.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error updating flashcard:", error);
+            }
+          });
       });
 
       // Event handler for "again" button (treat as Grade.Forgot)
-      document.getElementById('again-btn').addEventListener('click', async () => {
+      document.getElementById('again-btn').addEventListener('click', () => {
         if (!currentCard) return;
 
         const now = new Date();
@@ -493,8 +494,15 @@
         // Update using our FSRS implementation with Grade.Forgot
         const result = fsrs.repeat(card, Grade.Forgot, now);
 
-        // Update the card in the database with the new FSRS state
-        const { error } = await supabase
+        // Update local copy immediately and update stats
+        Object.assign(currentCard, result);
+        // Place the card back in the review queue for another try
+        reviewQueue.push(currentCard);
+        updateStats();
+        showNextCard();
+
+        // Fire-and-forget DB update (non-blocking)
+        supabase
           .from('flashcards')
           .update({
             state: result.state,
@@ -507,17 +515,12 @@
             lapses: result.lapses,
             last_reviewed: now.toISOString()
           })
-          .eq('id', currentCard.id);
-
-        if (error) {
-          console.error("Error updating flashcard:", error);
-        }
-
-        Object.assign(currentCard, result);
-        // Place the card back in the review queue for another try
-        reviewQueue.push(currentCard);
-        await loadFlashcards(); // update stats
-        showNextCard();
+          .eq('id', currentCard.id)
+          .then(({ error }) => {
+            if (error) {
+              console.error("Error updating flashcard:", error);
+            }
+          });
       });
 
       // Event handler: Exit Review Session
