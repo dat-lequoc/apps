@@ -176,7 +176,7 @@
 </head>
 <body>
   <h1>Personal Dashboard</h1>
-  <button id="theme-toggle" class="theme-toggle">Light</button>
+  <button id="theme-toggle" class="theme-toggle">🌙</button>
 
   <!-- Authentication Section -->
   <div id="auth-container">
@@ -345,19 +345,19 @@
       document.body.classList.add(theme);
       
       const themeToggle = document.getElementById('theme-toggle');
-      themeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
       
       themeToggle.addEventListener('click', () => {
         if (document.body.classList.contains('dark')) {
           document.body.classList.remove('dark');
           document.body.classList.add('light');
           localStorage.setItem('theme', 'light');
-          themeToggle.textContent = 'Dark';
+          themeToggle.textContent = '��';
         } else {
           document.body.classList.remove('light');
           document.body.classList.add('dark');
           localStorage.setItem('theme', 'dark');
-          themeToggle.textContent = 'Light';
+          themeToggle.textContent = '☀️';
         }
       });
     });

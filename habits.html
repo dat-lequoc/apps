@@ -356,6 +356,21 @@
               </div>
             </div>
           </div>
+
+          <!-- NEW: Incremental habit options -->
+          <div>
+            <label for="habit-step" class="block text-sm font-medium text-gray-700">Increment Value (optional)</label>
+            <input type="number" id="habit-step" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 100 or 1" />
+          </div>
+          <div>
+            <label for="habit-unit" class="block text-sm font-medium text-gray-700">Unit (optional)</label>
+            <input type="text" id="habit-unit" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. reps, h" />
+          </div>
+          <div>
+            <label for="habit-goal" class="block text-sm font-medium text-gray-700">Daily Goal (optional)</label>
+            <input type="number" id="habit-goal" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 100 for push-ups or 4 for deepwork" />
+          </div>
+
           <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none">
             Add Habit
           </button>
@@ -402,6 +417,21 @@
               </div>
             </div>
           </div>
+
+          <!-- NEW: Incremental habit options in Edit Modal -->
+          <div>
+            <label for="edit-habit-step" class="block text-sm font-medium text-gray-700">Increment Value (optional)</label>
+            <input type="number" id="edit-habit-step" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 100 or 1" />
+          </div>
+          <div>
+            <label for="edit-habit-unit" class="block text-sm font-medium text-gray-700">Unit (optional)</label>
+            <input type="text" id="edit-habit-unit" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. reps, h" />
+          </div>
+          <div>
+            <label for="edit-habit-goal" class="block text-sm font-medium text-gray-700">Daily Goal (optional)</label>
+            <input type="number" id="edit-habit-goal" class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 100 for push-ups or 4 for deepwork" />
+          </div>
+
           <div class="flex justify-between">
             <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700 focus:outline-none">
               Save Changes
@@ -479,7 +509,7 @@
       </div>
     </div>
 
-    <!-- Add this button after the opening <body> tag -->
+    <!-- Theme toggle button -->
     <button id="theme-toggle" class="theme-toggle">Light</button>
 
     <script>
@@ -515,6 +545,11 @@
             this.history = data.history || {};
           }
           
+          // NEW: Support for incremental habits
+          this.step = data.step || 0; // e.g. 100 for push-ups or 1 for deepwork increments
+          this.unit = data.unit || ""; // e.g. "reps" or "h"
+          this.dailyGoal = data.dailyGoal || 0; // Daily target (optional)
+          
           console.log('Created habit:', this); // Debug log
         }
 
@@ -534,15 +569,50 @@
         }
 
         getStatus(dateStr) {
+          if (this.step > 0) {
+            // This is an incremental habit.
+            const progress = Number(this.history[dateStr]) || 0;
+            if (this.dailyGoal > 0) {
+              if (progress >= this.dailyGoal) {
+                return "completed";
+              } else if (progress > 0) {
+                return "in-progress";
+              } else {
+                return null;
+              }
+            } else {
+              return progress > 0 ? "completed" : null;
+            }
+          }
           return this.history[dateStr];
         }
 
-        isCompletedOn(dateStr) {
-          return this.history[dateStr] === "completed";
+        // NEW: Increment method for an incremental habit.
+        increment(dateStr) {
+          if (this.step > 0) {
+            let currentVal = Number(this.history[dateStr]) || 0;
+            currentVal += this.step;
+            this.history[dateStr] = currentVal;
+            console.log(`Incremented ${this.name} on ${dateStr} by ${this.step}${this.unit}. New value: ${currentVal}`);
+          }
         }
 
-        isFailedOn(dateStr) {
-          return this.history[dateStr] === "failed";
+        // NEW: Decrement method for an incremental habit.
+        decrement(dateStr) {
+          if (this.step > 0) {
+            let currentVal = Number(this.history[dateStr]) || 0;
+            currentVal = Math.max(0, currentVal - this.step);
+            this.history[dateStr] = currentVal;
+            console.log(`Decremented ${this.name} on ${dateStr} by ${this.step}${this.unit}. New value: ${currentVal}`);
+          }
+        }
+
+        // NEW: Return current progress (only applicable for incremental habits)
+        getProgressForDate(dateStr) {
+          if (this.step > 0) {
+            return Number(this.history[dateStr]) || 0;
+          }
+          return null;
         }
 
         toggleCompletion(dateStr, status) {
@@ -589,6 +659,14 @@
             longest = Math.max(longest, currentStreak);
           }
           return longest;
+        }
+
+        isCompletedOn(dateStr) {
+          return this.getStatus(dateStr) === "completed";
+        }
+        
+        isFailedOn(dateStr) {
+          return this.getStatus(dateStr) === "failed";
         }
       }
 
@@ -813,40 +891,68 @@
                       <div class="pl-8">
                         <div class="habit-header">
                           <div class="flex-1">
-                            <h3 class="habit-title ${habit.isCompletedOn(formatDate(new Date())) ? 'habit-completed' : ''}">${habit.name}</h3>
+                            <h3 class="habit-title ${habit.step > 0 ? "" : (habit.isCompletedOn(formatDate(new Date())) ? 'habit-completed' : '')}">
+                              ${habit.name}
+                            </h3>
                           </div>
                           <div class="flex items-center gap-2">
-                            <div class="flex gap-1">
-                              <button 
-                                onclick="habitManager.toggleToday('${habit.id}', 'completed')" 
-                                class="px-2 py-1 border rounded text-sm ${
-                                  habit.isCompletedOn(formatDate(new Date())) ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'
-                                }"
-                              >
-                                ${habit.isCompletedOn(formatDate(new Date())) ? "Done" : "Done"}
-                              </button>
-                              <button 
-                                onclick="habitManager.toggleToday('${habit.id}', 'failed')" 
-                                class="px-2 py-1 border rounded text-sm ${
-                                  habit.isFailedOn(formatDate(new Date())) ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'
-                                }"
-                              >
-                                ${habit.isFailedOn(formatDate(new Date())) ? "Failed" : "Failed"}
-                              </button>
-                              <button
-                                onclick="habitManager.openEditHabitModal('${habit.id}')"
-                                class="px-2 py-1 border rounded text-sm bg-gray-200 hover:bg-gray-300 text-gray-800"
-                                title="Edit Habit"
-                              >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </button>
-                            </div>
-                            <div class="text-xs text-gray-700 whitespace-nowrap">
-                              <span>Current: ${habit.getCurrentStreak()}d</span> |
-                              <span>Longest: ${habit.getLongestStreak()}d</span>
-                            </div>
+                            ${habit.step > 0 ? `
+                              <div class="flex gap-1">
+                                <button 
+                                  onclick="habitManager.incrementHabit('${habit.id}')" 
+                                  class="px-2 py-1 border rounded text-sm bg-blue-500 text-white"
+                                >
+                                  + ${habit.step}${habit.unit}
+                                </button>
+                                <button 
+                                  onclick="habitManager.decrementHabit('${habit.id}')" 
+                                  class="px-2 py-1 border rounded text-sm bg-red-500 text-white"
+                                >
+                                  - ${habit.step}${habit.unit}
+                                </button>
+                                <button
+                                  onclick="habitManager.openEditHabitModal('${habit.id}')"
+                                  class="px-2 py-1 border rounded text-sm bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                  title="Edit Habit"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                              </div>
+                              <div class="text-xs text-gray-700 whitespace-nowrap">
+                                <span>Current: ${habit.getProgressForDate(formatDate(new Date()))}${habit.unit}${habit.dailyGoal > 0 ? ' / ' + habit.dailyGoal + habit.unit : ''}</span>
+                              </div>
+                            ` : `
+                              <div class="flex gap-1">
+                                <button 
+                                  onclick="habitManager.toggleToday('${habit.id}', 'completed')" 
+                                  class="px-2 py-1 border rounded text-sm ${habit.isCompletedOn(formatDate(new Date())) ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'}"
+                                >
+                                  Done
+                                </button>
+                                <button 
+                                  onclick="habitManager.toggleToday('${habit.id}', 'failed')" 
+                                  class="px-2 py-1 border rounded text-sm ${habit.isFailedOn(formatDate(new Date())) ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-800'}"
+                                >
+                                  Failed
+                                </button>
+                                <button
+                                  onclick="habitManager.openEditHabitModal('${habit.id}')"
+                                  class="px-2 py-1 border rounded text-sm bg-gray-200 hover:bg-gray-300 text-gray-800"
+                                  title="Edit Habit"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                              </div>
+                              <div class="text-xs text-gray-700 whitespace-nowrap">
+                                <span>Current: ${habit.getCurrentStreak()}d</span> | <span>Longest: ${habit.getLongestStreak()}d</span>
+                              </div>
+                            `}
                           </div>
                         </div>
                       </div>
@@ -989,55 +1095,49 @@
               dates.forEach((date) => {
                 const cell = document.createElement("div");
                 cell.className = "heatmap-cell";
-                
+
+                // Aggregate statuses for the group on the given date
                 const statuses = habits.map(h => h.getStatus(date));
                 const total = habits.length;
                 const completedCount = statuses.filter(s => s === "completed").length;
                 const failedCount = statuses.filter(s => s === "failed").length;
-                const noStatusCount = total - completedCount - failedCount;
-                
+                const inProgressCount = statuses.filter(s => s === "in-progress").length;
+                const noStatusCount = total - completedCount - failedCount - inProgressCount;
+
                 // Calculate percentages
                 const failedPercent = (failedCount / total) * 100;
+                const inProgressPercent = (inProgressCount / total) * 100;
                 const completedPercent = (completedCount / total) * 100;
                 const noStatusPercent = (noStatusCount / total) * 100;
-                
-                // Create gradient based on proportions with better colors
+
+                // Build gradient based on proportions
                 let gradient = [];
                 let currentPosition = 0;
-                
-                if (failedCount > 0) {
-                  gradient.push(`#fca5a5 ${currentPosition}% ${currentPosition + failedPercent}%`); // Lighter red
+                if (failedCount) {
+                  gradient.push(`#fca5a5 ${currentPosition}% ${currentPosition + failedPercent}%`);
                   currentPosition += failedPercent;
                 }
-                if (completedCount > 0) {
-                  gradient.push(`#86efac ${currentPosition}% ${currentPosition + completedPercent}%`); // Lighter green
+                if (inProgressCount) {
+                  gradient.push(`#facc15 ${currentPosition}% ${currentPosition + inProgressPercent}%`);
+                  currentPosition += inProgressPercent;
+                }
+                if (completedCount) {
+                  gradient.push(`#86efac ${currentPosition}% ${currentPosition + completedPercent}%`);
                   currentPosition += completedPercent;
                 }
-                if (noStatusCount > 0) {
-                  gradient.push(`#f3f4f6 ${currentPosition}% ${currentPosition + noStatusPercent}%`); // Lighter gray
+                if (noStatusCount) {
+                  gradient.push(`#f3f4f6 ${currentPosition}% ${currentPosition + noStatusPercent}%`);
                 }
                 
                 cell.style.background = gradient.length > 1 
                   ? `linear-gradient(to right, ${gradient.join(', ')})`
                   : gradient.length === 1 
-                    ? gradient[0].split(' ')[0] // Use solid color if only one status
-                    : '#f3f4f6'; // Default light gray if no statuses
-                
-                // Add a subtle border to make sections more distinct
+                    ? gradient[0].split(' ')[0]
+                    : '#f3f4f6';
                 cell.style.border = '2px solid white';
                 cell.style.boxShadow = 'inset 0 0 0 1px rgba(0,0,0,0.1)';
-                
-                // Update the date number color to be more visible
                 cell.innerHTML = `<span class="text-xs text-gray-700">${new Date(date).getDate()}</span>`;
-                
-                // Add a more detailed tooltip
-                const completedPercentText = Math.round(completedPercent);
-                const failedPercentText = Math.round(failedPercent);
-                const noStatusPercentText = Math.round(noStatusPercent);
-                cell.title = `${completedCount} completed (${completedPercentText}%)
-${failedCount} failed (${failedPercentText}%)
-${noStatusCount} not marked (${noStatusPercentText}%)`;
-                
+
                 cell.addEventListener("click", () => {
                   this.showGroupHabitsModal(groupName, date, habits);
                 });
@@ -1066,13 +1166,15 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
                     const cell = document.createElement("div");
                     cell.className = "heatmap-cell";
                     const status = habit.getStatus(date);
-                    let bgColor = status === "completed" ? "bg-green-500" : 
-                                 status === "failed" ? "bg-red-500" : "bg-gray-200";
+                    const bgColor = status === "completed" ? "bg-green-500" : 
+                                 status === "failed" ? "bg-red-500" : 
+                                 status === "in-progress" ? "bg-yellow-500" :
+                                 "bg-gray-200";
                     cell.classList.add(bgColor);
                     cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
                     
                     cell.addEventListener("click", () => {
-                      this.cycleToday(habit.id, date);
+                      this.showGroupHabitsModal(groupName, date, habits);
                     });
                     
                     cellsContainer.appendChild(cell);
@@ -1112,13 +1214,15 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
                 const cell = document.createElement("div");
                 cell.className = "heatmap-cell";
                 const status = habit.getStatus(date);
-                let bgColor = status === "completed" ? "bg-green-500" : 
-                             status === "failed" ? "bg-red-500" : "bg-gray-200";
+                const bgColor = status === "completed" ? "bg-green-500" : 
+                             status === "failed" ? "bg-red-500" : 
+                             status === "in-progress" ? "bg-yellow-500" :
+                             "bg-gray-200";
                 cell.classList.add(bgColor);
                 cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
                 
                 cell.addEventListener("click", () => {
-                  this.cycleToday(habit.id, date);
+                  this.showGroupHabitsModal(groupName, date, habits);
                 });
                 
                 cellsContainer.appendChild(cell);
@@ -1276,7 +1380,10 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
             e.preventDefault();
             const data = {
               name: $("habit-name").value.trim(),
-              group: $("habit-group").value.trim()
+              group: $("habit-group").value.trim(),
+              step: parseFloat($("habit-step").value) || 0,
+              unit: $("habit-unit").value.trim(),
+              dailyGoal: parseFloat($("habit-goal").value) || 0,
             };
             if (data.name) {
               await this.addHabit(data);
@@ -1290,7 +1397,10 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
             const data = {
               id: $("edit-habit-id").value,
               name: $("edit-habit-name").value.trim(),
-              group: $("edit-habit-group").value.trim()
+              group: $("edit-habit-group").value.trim(),
+              step: parseFloat($("edit-habit-step").value) || 0,
+              unit: $("edit-habit-unit").value.trim(),
+              dailyGoal: parseFloat($("edit-habit-goal").value) || 0,
             };
             if (data.name) {
               await this.updateHabit(data);
@@ -1482,6 +1592,26 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
         closeSelectHabitModal() {
           $("select-habit-modal").classList.add("hidden");
         }
+
+        // NEW: Method to increment an incremental habit (called by the + button)
+        incrementHabit(id) {
+          const habit = this.habits.find(h => h.id === id);
+          if (!habit) return;
+          const today = formatDate(new Date());
+          habit.increment(today);
+          this.saveData();
+          this.renderUI();
+        }
+
+        // NEW: Method to decrement an incremental habit (called by the - button)
+        decrementHabit(id) {
+          const habit = this.habits.find(h => h.id === id);
+          if (!habit) return;
+          const today = formatDate(new Date());
+          habit.decrement(today);
+          this.saveData();
+          this.renderUI();
+        }
       }
 
       // Initialize the app
@@ -1497,19 +1627,20 @@ ${noStatusCount} not marked (${noStatusPercentText}%)`;
         document.body.classList.add(theme);
         
         const themeToggle = document.getElementById('theme-toggle');
-        themeToggle.textContent = document.body.classList.contains('dark') ? 'Light' : 'Dark';
+        // Show sun emoji if dark (to switch to light), else moon emoji
+        themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
         
         themeToggle.addEventListener('click', () => {
           if (document.body.classList.contains('dark')) {
             document.body.classList.remove('dark');
             document.body.classList.add('light');
             localStorage.setItem('theme', 'light');
-            themeToggle.textContent = 'Dark';
+            themeToggle.textContent = '🌙';
           } else {
             document.body.classList.remove('light');
             document.body.classList.add('dark');
             localStorage.setItem('theme', 'dark');
-            themeToggle.textContent = 'Light';
+            themeToggle.textContent = '☀️';
           }
         });
       });
