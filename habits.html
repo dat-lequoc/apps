@@ -590,7 +590,8 @@
         // NEW: Increment method for an incremental habit.
         increment(dateStr) {
           if (this.step > 0) {
-            let currentVal = Number(this.history[dateStr]) || 0;
+            let currentVal = parseInt(this.history[dateStr]) || 0;
+            if (isNaN(currentVal)) currentVal = 0;
             currentVal += this.step;
             this.history[dateStr] = currentVal;
             console.log(`Incremented ${this.name} on ${dateStr} by ${this.step}${this.unit}. New value: ${currentVal}`);
@@ -600,7 +601,8 @@
         // NEW: Decrement method for an incremental habit.
         decrement(dateStr) {
           if (this.step > 0) {
-            let currentVal = Number(this.history[dateStr]) || 0;
+            let currentVal = parseInt(this.history[dateStr]) || 0;
+            if (isNaN(currentVal)) currentVal = 0;
             currentVal = Math.max(0, currentVal - this.step);
             this.history[dateStr] = currentVal;
             console.log(`Decremented ${this.name} on ${dateStr} by ${this.step}${this.unit}. New value: ${currentVal}`);
@@ -717,22 +719,36 @@
             this.groupOrder = d.groupOrder || [];
             this.groups = new Set(d.groups || []);
             this.settings = d.settings || { hideCompleted: false };
+            this.groupToggles = d.groupToggles || {};
           }
         }
 
         async saveData() {
           try {
+            // Create a serializable version of the habits
+            const serializableHabits = this.habits.map(habit => ({
+              id: habit.id,
+              name: habit.name,
+              group: habit.group,
+              history: habit.history,
+              step: habit.step,
+              unit: habit.unit,
+              dailyGoal: habit.dailyGoal
+            }));
+
             const dataToSave = {
-              habits: this.habits,
-              habitOrder: this.habitOrder,
-              groupOrder: this.groupOrder,
-              groups: Array.from(this.groups),
-              settings: this.settings,
-              user_id: this.userId, // include the user id for conflict resolution
+              data: {
+                habits: serializableHabits,
+                habitOrder: this.habitOrder,
+                groupOrder: this.groupOrder,
+                groups: Array.from(this.groups),
+                settings: this.settings,
+                groupToggles: this.groupToggles
+              },
+              user_id: this.userId,
               updated_at: new Date().toISOString()
             };
 
-            // Use upsert to update or insert the record in one call.
             const { error } = await supabase
               .from('habits')
               .upsert(dataToSave, { onConflict: 'user_id' });
@@ -988,6 +1004,7 @@
                 
                 if (habit && habit.group !== newGroup) {
                   habit.group = newGroup === 'Ungrouped' ? '' : newGroup;
+                  this.cleanUpEmptyGroups();
                   this.saveData();
                 }
 
@@ -1346,8 +1363,11 @@
 
         // Add this method to save the order
         saveOrder() {
+          // Update local storage for faster access
           localStorage.setItem("habitOrder", JSON.stringify(this.habitOrder));
           localStorage.setItem("groupOrder", JSON.stringify(this.groupOrder));
+          // Also save to Supabase
+          this.saveData();
         }
 
         setupEventListeners() {
@@ -1505,6 +1525,9 @@
           $("edit-habit-id").value = habit.id;
           $("edit-habit-name").value = habit.name;
           $("edit-habit-group").value = habit.group;
+          $("edit-habit-step").value = habit.step || "";
+          $("edit-habit-unit").value = habit.unit || "";
+          $("edit-habit-goal").value = habit.dailyGoal || "";
           this.updateGroupDropdowns();
           $("edit-habit-modal").classList.remove("hidden");
         }
@@ -1587,21 +1610,28 @@
         // NEW: Method to increment an incremental habit (called by the + button)
         incrementHabit(id) {
           const habit = this.habits.find(h => h.id === id);
-          if (!habit) return;
+          if (!habit || !habit.step || habit.step <= 0) return;
           const today = formatDate(new Date());
           habit.increment(today);
           this.saveData();
           this.renderUI();
         }
 
-        // NEW: Method to decrement an incremental habit (called by the - button)
-        decrementHabit(id) {
-          const habit = this.habits.find(h => h.id === id);
-          if (!habit) return;
-          const today = formatDate(new Date());
-          habit.decrement(today);
-          this.saveData();
-          this.renderUI();
+        cleanUpEmptyGroups() {
+          // Get all groups currently in use
+          const activeGroups = new Set();
+          this.habits.forEach(habit => {
+            if (habit.group && habit.group.trim() !== "") {
+              activeGroups.add(habit.group);
+            }
+          });
+          
+          // Remove groups that have no habits
+          const inactiveGroups = [...this.groups].filter(group => !activeGroups.has(group));
+          inactiveGroups.forEach(group => {
+            this.groups.delete(group);
+            this.groupOrder = this.groupOrder.filter(g => g !== group);
+          });
         }
       }
 
@@ -1618,7 +1648,7 @@
         document.body.classList.add(theme);
         
         const themeToggle = document.getElementById('theme-toggle');
-        // Show sun emoji if dark (to switch to light), else moon emoji
+        // Consistent display of the theme toggle button
         themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
         
         themeToggle.addEventListener('click', () => {
