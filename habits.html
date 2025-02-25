@@ -728,30 +728,17 @@
               groupOrder: this.groupOrder,
               groups: Array.from(this.groups),
               settings: this.settings,
+              user_id: this.userId, // include the user id for conflict resolution
+              updated_at: new Date().toISOString()
             };
 
-            // First, try to update the existing record
-            const { data: updateData, error: updateError } = await supabase
+            // Use upsert to update or insert the record in one call.
+            const { error } = await supabase
               .from('habits')
-              .update({
-                data: dataToSave,
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', this.userId);
+              .upsert(dataToSave, { onConflict: 'user_id' });
 
-            // If update fails or no row is updated, perform an insert
-            if (updateError || !updateData || updateData.length === 0) {
-              const { error: insertError } = await supabase
-                .from('habits')
-                .insert({
-                  user_id: this.userId,
-                  data: dataToSave,
-                  updated_at: new Date().toISOString()
-                });
-
-              if (insertError) {
-                console.error('Error saving habits:', insertError);
-              }
+            if (error) {
+              console.error('Error saving habits:', error);
             }
           } catch (err) {
             console.error('Error saving data:', err);
