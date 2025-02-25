@@ -730,20 +730,20 @@
               settings: this.settings,
             };
 
-            // First try to update
-            const { error: updateError } = await supabase
+            // First, try to update the existing record
+            const { data: updateData, error: updateError } = await supabase
               .from('habits')
-              .update({ 
+              .update({
                 data: dataToSave,
                 updated_at: new Date().toISOString()
               })
               .eq('user_id', this.userId);
 
-            // If no existing record, insert instead
-            if (updateError) {
+            // If update fails or no row is updated, perform an insert
+            if (updateError || !updateData || updateData.length === 0) {
               const { error: insertError } = await supabase
                 .from('habits')
-                .insert({ 
+                .insert({
                   user_id: this.userId,
                   data: dataToSave,
                   updated_at: new Date().toISOString()
@@ -782,8 +782,12 @@
         async updateHabit(updatedData) {
           const index = this.habits.findIndex(h => h.id === updatedData.id);
           if (index > -1) {
+            // Update habit properties, including incremental options
             this.habits[index].name = updatedData.name;
             this.habits[index].group = updatedData.group;
+            this.habits[index].step = updatedData.step;         // New: update step
+            this.habits[index].unit = updatedData.unit;         // New: update unit
+            this.habits[index].dailyGoal = updatedData.dailyGoal; // New: update dailyGoal
             await this.saveData();
             this.renderUI();
           }
@@ -1222,7 +1226,7 @@
                 cell.innerHTML = `<span class="text-xs text-white">${new Date(date).getDate()}</span>`;
                 
                 cell.addEventListener("click", () => {
-                  this.showGroupHabitsModal(groupName, date, habits);
+                  this.showGroupHabitsModal('Ungrouped', date, [habit]);
                 });
                 
                 cellsContainer.appendChild(cell);
