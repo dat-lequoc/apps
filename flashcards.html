@@ -85,6 +85,35 @@
         transform: translateY(-1px);
         box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
       }
+
+      .fixed-bottom-container {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        right: 20px;
+        z-index: 10;
+        max-width: 500px;
+        margin: 0 auto;
+      }
+      
+      @media (min-width: 768px) {
+        .fixed-bottom-container {
+          position: static;
+          max-width: none;
+          margin-bottom: 1rem;
+        }
+      }
+      
+      /* Add space at the bottom to prevent content from being hidden behind fixed buttons on mobile */
+      #active-review {
+        padding-bottom: 100px;
+      }
+      
+      @media (min-width: 768px) {
+        #active-review {
+          padding-bottom: 1rem;
+        }
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -137,18 +166,22 @@
             </div>
           </div>
 
-          <button id="show-answer-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 w-full">
-            Show Answer
-          </button>
-        </div>
-        <div id="feedback-buttons" class="hidden">
-          <div class="flex gap-2">
-            <button id="again-btn" class="bg-red-500 text-white py-3 px-4 rounded hover:bg-red-600 flex-1">
-              Again
+          <!-- Fixed position for show answer and feedback buttons -->
+          <div class="fixed-bottom-container">
+            <button id="show-answer-btn" class="bg-blue-500 text-white py-3 px-4 rounded hover:bg-blue-600 w-full mb-2">
+              Show Answer
             </button>
-            <button id="good-btn" class="bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 flex-1">
-              Good
-            </button>
+            
+            <div id="feedback-buttons" class="hidden w-full">
+              <div class="flex gap-2">
+                <button id="again-btn" class="bg-red-500 text-white py-3 px-4 rounded hover:bg-red-600 flex-1">
+                  Again
+                </button>
+                <button id="good-btn" class="bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 flex-1">
+                  Good
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         <div id="review-progress" class="mt-4 text-sm text-gray-700 text-center"></div>
