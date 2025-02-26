@@ -114,6 +114,15 @@
           padding-bottom: 1rem;
         }
       }
+
+      /* Progress bar dark mode styles */
+      body.dark .bg-gray-200 {
+        background-color: #333;
+      }
+
+      body.dark #progress-bar {
+        background-color: #3b82f6;
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -147,6 +156,13 @@
           Start Review
         </button>
       </section>
+
+      <!-- Move progress bar outside and above the active review section -->
+      <div id="progress-container" class="hidden mb-1">
+        <div class="w-full bg-gray-200 rounded-full h-1 dark:bg-gray-700">
+          <div id="progress-bar" class="bg-blue-600 h-1 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
 
       <!-- Active Review UI -->
       <section id="active-review" class="hidden border p-4 rounded shadow bg-white relative">
@@ -195,7 +211,6 @@
             </div>
           </div>
         </div>
-        <div id="review-progress" class="mt-4 text-sm text-gray-700 text-center"></div>
       </section>
     </div>
 
@@ -374,6 +389,9 @@
       let reviewQueue = []; // queue for cards due for review
       const masteryThreshold = 3; // flashcard is "mastered" after 3 correct reviews
 
+      // Add a new global variable to track total cards in review session
+      let initialReviewCount = 0;
+
       // DOM Elements
       const uploadFileInput = document.getElementById('flashcards-file');
       const uploadBtn = document.getElementById('upload-btn');
@@ -386,7 +404,6 @@
       const cardContent = document.getElementById('card-content');
       const showAnswerBtn = document.getElementById('show-answer-btn');
       const feedbackButtons = document.getElementById('feedback-buttons');
-      const reviewProgress = document.getElementById('review-progress');
 
       // Global variable for the current card being reviewed
       let currentCard = null;
@@ -563,15 +580,33 @@
           return;
         }
         
+        // Set initial review count for progress tracking
+        initialReviewCount = reviewQueue.length;
+        
         // Hide upload / stats sections during review
         document.getElementById('app-title').classList.add('hidden');
         document.getElementById('upload-section').classList.add('hidden');
         document.getElementById('stats-section').classList.add('hidden');
         document.getElementById('review-section').classList.add('hidden');
-        // Show the review interface
+        
+        // Show the review interface and progress bar
+        document.getElementById('progress-container').classList.remove('hidden');
         activeReviewSection.classList.remove('hidden');
+        
         showNextCard();
+        updateProgressBar();
       });
+
+      // Simpler update progress function
+      function updateProgressBar() {
+        if (initialReviewCount === 0) return;
+        
+        const completedCards = initialReviewCount - reviewQueue.length;
+        const progressPercentage = Math.round((completedCards / initialReviewCount) * 100);
+        
+        // Update progress bar width
+        document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
+      }
 
       // Show the next card from the reviewQueue
       function showNextCard() {
@@ -582,10 +617,11 @@
           feedbackButtons.classList.add('hidden');
           editCardBtn.classList.add('hidden');
           deleteCardBtn.classList.add('hidden');
-          reviewProgress.textContent = '';
+          
+          // Update progress bar to 100%
+          document.getElementById('progress-bar').style.width = "100%";
           
           // Return to main view after 3 seconds
-          reviewProgress.textContent = 'Returning to main view in 3 seconds...';
           setTimeout(() => {
             // Show all main sections again
             document.getElementById('app-title').classList.remove('hidden');
@@ -597,6 +633,9 @@
             // Reset button visibility
             editCardBtn.classList.remove('hidden');
             deleteCardBtn.classList.remove('hidden');
+            
+            // Also hide progress container
+            document.getElementById('progress-container').classList.add('hidden');
           }, 3000);
           
           return;
@@ -635,7 +674,9 @@
         // Reset the UI
         showAnswerBtn.classList.remove('hidden');
         feedbackButtons.classList.add('hidden');
-        reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
+        
+        // Update progress
+        updateProgressBar();
       }
 
       // Event handler: Reveal the answer
@@ -694,9 +735,8 @@
             
           if (error) {
             console.error("Error updating flashcard:", error);
-            reviewProgress.textContent = 'Error saving progress. Continuing...';
             setTimeout(() => {
-              reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
+              updateProgressBar();
             }, 2000);
           }
           
@@ -705,7 +745,6 @@
           
         } catch (err) {
           console.error("Error in review process:", err);
-          reviewProgress.textContent = 'An error occurred. Please try again.';
         }
       });
 
@@ -754,10 +793,6 @@
             
           if (error) {
             console.error("Error updating flashcard:", error);
-            reviewProgress.textContent = 'Error saving progress. Continuing...';
-            setTimeout(() => {
-              reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
-            }, 2000);
           }
           
           updateStats();
@@ -765,7 +800,6 @@
           
         } catch (err) {
           console.error("Error in review process:", err);
-          reviewProgress.textContent = 'An error occurred. Please try again.';
         }
       });
 
@@ -782,6 +816,12 @@
         reviewQueue = [];
         // Update statistics in case any changes occurred during the session
         updateStats();
+        
+        // Hide the progress container too
+        document.getElementById('progress-container').classList.add('hidden');
+        
+        // Reset progress bar when exiting
+        document.getElementById('progress-bar').style.width = "0%";
       });
 
       // Event handler: Open edit modal
@@ -916,7 +956,6 @@
             deleteCardBtn.classList.add('hidden');
             
             // Return to main view after 3 seconds
-            reviewProgress.textContent = 'Returning to main view in 3 seconds...';
             setTimeout(() => {
               // Show all main sections again
               document.getElementById('app-title').classList.remove('hidden');
