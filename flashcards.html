@@ -96,6 +96,11 @@
         margin: 0 auto;
       }
       
+      /* Fix to ensure review section is completely hidden when in review mode */
+      #review-section.hidden {
+        display: none !important;
+      }
+      
       @media (min-width: 768px) {
         .fixed-bottom-container {
           position: static;
@@ -651,6 +656,9 @@
         document.getElementById('upload-section').classList.add('hidden');
         document.getElementById('stats-section').classList.add('hidden');
         document.getElementById('review-section').classList.add('hidden');
+        
+        // Make sure any browse cards UI is hidden too
+        document.getElementById('browse-cards-section').classList.add('hidden');
         
         // Show the review interface and progress bar
         document.getElementById('progress-container').classList.remove('hidden');
