@@ -11,11 +11,86 @@
     <!-- Removed FSRS library inclusion; it is now implemented from scratch -->
     <style>
       /* Simple custom styling can be added here if needed */
+      /* Add dark mode styles */
+      body.dark {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      body.dark .bg-white,
+      body.dark .bg-gray-50 {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .text-gray-700 {
+        color: #e0e0e0;
+      }
+
+      body.dark .text-gray-500,
+      body.dark .text-sm.text-gray-700 {
+        color: #a0a0a0;
+      }
+
+      body.dark .border {
+        border-color: #333;
+      }
+
+      body.dark #app-title {
+        color: #66aaff;
+      }
+
+      body.dark input,
+      body.dark textarea,
+      body.dark select {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border-color: #333;
+      }
+
+      body.dark .bg-gray-200 {
+        background-color: #333;
+      }
+
+      body.dark .bg-gray-50 {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .bg-blue-50 {
+        background-color: #1a365d;
+      }
+
+      body.dark .modal {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 40;
+        min-width: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+      
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      }
     </style>
   </head>
   <body class="bg-gray-50">
     <div class="max-w-4xl mx-auto p-6">
       <h1 id="app-title" class="text-3xl font-bold mb-6">Flashcards App</h1>
+      <button id="theme-toggle" class="theme-toggle">☀️</button>
 
       <!-- Upload Section -->
       <section id="upload-section" class="mb-6 border p-4 rounded shadow bg-white">
@@ -223,6 +298,24 @@
       // Global variable for the current card being reviewed
       let currentCard = null;
 
+      // Function to play audio from base64 string
+      function playAudio(base64AudioData) {
+        if (!base64AudioData) {
+          console.log("No audio data available");
+          return;
+        }
+        
+        try {
+          // Create audio element
+          const audio = new Audio(`data:audio/mp3;base64,${base64AudioData}`);
+          audio.play().catch(error => {
+            console.error("Error playing audio:", error);
+          });
+        } catch (error) {
+          console.error("Error setting up audio:", error);
+        }
+      }
+
       // Check authentication on page load
       async function checkAuth() {
         const { data: { session } } = await supabase.auth.getSession();
@@ -322,7 +415,10 @@
                 translation_answer: card.translation_answer || card.translationAnswer,
                 reps: 0,
                 lapses: 0,
-                last_reviewed: null
+                last_reviewed: null,
+                ipa: card.ipa || null,
+                word_audio: card.wordAudio || null,
+                phrase_audio: card.phraseAudio || null
               });
             }
           });
@@ -337,6 +433,8 @@
               return;
             }
             uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards.`;
+            // Clear the file input
+            uploadFileInput.value = '';
             // Reload flashcards after insertion
             await loadFlashcards();
           }
@@ -350,12 +448,18 @@
       startReviewBtn.addEventListener('click', async () => {
         // Reload flashcards first
         await loadFlashcards();
-        // Build the review queue (cards with reps less than masteryThreshold)
-        reviewQueue = flashcards.filter(card => card.reps < masteryThreshold);
+        
+        // Build the review queue (cards that are due for review)
+        const now = new Date();
+        reviewQueue = flashcards.filter(card => 
+          new Date(card.due) <= now && card.reps < masteryThreshold
+        );
+        
         if (reviewQueue.length === 0) {
-          alert("All flashcards are mastered!");
+          alert("No cards due for review!");
           return;
         }
+        
         // Hide upload / stats sections during review
         document.getElementById('app-title').classList.add('hidden');
         document.getElementById('upload-section').classList.add('hidden');
@@ -376,6 +480,7 @@
           reviewProgress.textContent = '';
           
           // Return to main view after 3 seconds
+          reviewProgress.textContent = 'Returning to main view in 3 seconds...';
           setTimeout(() => {
             // Show all main sections again
             document.getElementById('app-title').classList.remove('hidden');
@@ -389,30 +494,30 @@
           return;
         }
 
-        // Filter cards that are due for review
-        const now = new Date();
-        reviewQueue = reviewQueue.filter(card => new Date(card.due) <= now);
-
-        if (reviewQueue.length === 0) {
-          document.getElementById('card-question').innerHTML = "No more cards due for review!";
-          document.getElementById('answer-container').classList.add('hidden');
-          showAnswerBtn.classList.add('hidden');
-          feedbackButtons.classList.add('hidden');
-          reviewProgress.textContent = '';
-          return;
-        }
-
+        // We already filtered for due cards when building the queue, no need to filter again
         const card = reviewQueue.shift();
         currentCard = card;
+        
         // Display the prompt and handle HTML rendering
         document.getElementById('card-question').innerHTML = card.phrase;
+        
+        // Play phrase audio if available
+        if (card.phrase_audio) {
+          playAudio(card.phrase_audio);
+        }
+        
         // Reset the answer container
         document.getElementById('answer-container').classList.add('hidden');
         
         // Format the answer with first line in bold
         const answerLines = card.translation_answer.split('\n');
-        const formattedAnswer = `<strong class="text-2xl block mb-4">${answerLines[0]}</strong>` + 
+        let formattedAnswer = `<strong class="text-2xl block mb-4">${answerLines[0]}</strong>` + 
           (answerLines.slice(1).join('\n'));
+        
+        // Add IPA if available
+        if (card.ipa) {
+          formattedAnswer = `<div class="text-xl block mb-2 text-gray-500">[${card.ipa}]</div>` + formattedAnswer;
+        }
         
         document.getElementById('card-answer').innerHTML = formattedAnswer;
         // Reset the UI
@@ -424,13 +529,19 @@
       // Event handler: Reveal the answer
       showAnswerBtn.addEventListener('click', () => {
         if (!currentCard) return;
+        
         document.getElementById('answer-container').classList.remove('hidden');
         showAnswerBtn.classList.add('hidden');
         feedbackButtons.classList.remove('hidden');
+        
+        // Play word audio when showing the answer
+        if (currentCard.word_audio) {
+          playAudio(currentCard.word_audio);
+        }
       });
 
       // Event handler for "good" button (treat as Grade.Good)
-      document.getElementById('good-btn').addEventListener('click', () => {
+      document.getElementById('good-btn').addEventListener('click', async () => {
         if (!currentCard) return;
         
         const now = new Date();
@@ -445,38 +556,49 @@
           lapses: currentCard.lapses || 0,
         };
 
-        // Update using our FSRS implementation with Grade.Good
-        const result = fsrs.repeat(card, Grade.Good, now);
+        try {
+          // Update using our FSRS implementation with Grade.Good
+          const result = fsrs.repeat(card, Grade.Good, now);
 
-        // Update local copy immediately and update stats
-        Object.assign(currentCard, result);
-        updateStats();
-        showNextCard();
-
-        // Fire-and-forget DB update (non-blocking)
-        supabase
-          .from('flashcards')
-          .update({
-            state: result.state,
-            due: result.due,
-            stability: result.stability,
-            difficulty: result.difficulty,
-            elapsed_days: result.elapsed_days,
-            scheduled_days: result.scheduled_days,
-            reps: result.reps,
-            lapses: result.lapses,
-            last_reviewed: now.toISOString()
-          })
-          .eq('id', currentCard.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error("Error updating flashcard:", error);
-            }
-          });
+          // Update local copy immediately and update stats
+          Object.assign(currentCard, result);
+          currentCard.last_reviewed = now.toISOString();
+          
+          // Update the database
+          const { error } = await supabase
+            .from('flashcards')
+            .update({
+              state: result.state,
+              due: result.due,
+              stability: result.stability,
+              difficulty: result.difficulty,
+              elapsed_days: result.elapsed_days,
+              scheduled_days: result.scheduled_days,
+              reps: result.reps,
+              lapses: result.lapses,
+              last_reviewed: now.toISOString()
+            })
+            .eq('id', currentCard.id);
+            
+          if (error) {
+            console.error("Error updating flashcard:", error);
+            reviewProgress.textContent = 'Error saving progress. Continuing...';
+            setTimeout(() => {
+              reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
+            }, 2000);
+          }
+          
+          updateStats();
+          showNextCard();
+          
+        } catch (err) {
+          console.error("Error in review process:", err);
+          reviewProgress.textContent = 'An error occurred. Please try again.';
+        }
       });
 
       // Event handler for "again" button (treat as Grade.Forgot)
-      document.getElementById('again-btn').addEventListener('click', () => {
+      document.getElementById('again-btn').addEventListener('click', async () => {
         if (!currentCard) return;
 
         const now = new Date();
@@ -491,36 +613,48 @@
           lapses: currentCard.lapses || 0,
         };
 
-        // Update using our FSRS implementation with Grade.Forgot
-        const result = fsrs.repeat(card, Grade.Forgot, now);
+        try {
+          // Update using our FSRS implementation with Grade.Forgot
+          const result = fsrs.repeat(card, Grade.Forgot, now);
 
-        // Update local copy immediately and update stats
-        Object.assign(currentCard, result);
-        // Place the card back in the review queue for another try
-        reviewQueue.push(currentCard);
-        updateStats();
-        showNextCard();
-
-        // Fire-and-forget DB update (non-blocking)
-        supabase
-          .from('flashcards')
-          .update({
-            state: result.state,
-            due: result.due,
-            stability: result.stability,
-            difficulty: result.difficulty,
-            elapsed_days: result.elapsed_days,
-            scheduled_days: result.scheduled_days,
-            reps: result.reps,
-            lapses: result.lapses,
-            last_reviewed: now.toISOString()
-          })
-          .eq('id', currentCard.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error("Error updating flashcard:", error);
-            }
-          });
+          // Update local copy immediately
+          Object.assign(currentCard, result);
+          currentCard.last_reviewed = now.toISOString();
+          
+          // Place the card back in the review queue for another try
+          reviewQueue.push(currentCard);
+          
+          // Update the database
+          const { error } = await supabase
+            .from('flashcards')
+            .update({
+              state: result.state,
+              due: result.due,
+              stability: result.stability,
+              difficulty: result.difficulty,
+              elapsed_days: result.elapsed_days,
+              scheduled_days: result.scheduled_days,
+              reps: result.reps,
+              lapses: result.lapses,
+              last_reviewed: now.toISOString()
+            })
+            .eq('id', currentCard.id);
+            
+          if (error) {
+            console.error("Error updating flashcard:", error);
+            reviewProgress.textContent = 'Error saving progress. Continuing...';
+            setTimeout(() => {
+              reviewProgress.textContent = `Cards remaining: ${reviewQueue.length}`;
+            }, 2000);
+          }
+          
+          updateStats();
+          showNextCard();
+          
+        } catch (err) {
+          console.error("Error in review process:", err);
+          reviewProgress.textContent = 'An error occurred. Please try again.';
+        }
       });
 
       // Event handler: Exit Review Session
@@ -536,6 +670,30 @@
         reviewQueue = [];
         // Update statistics in case any changes occurred during the session
         updateStats();
+      });
+
+      // Theme handling
+      document.addEventListener('DOMContentLoaded', () => {
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.body.classList.add(theme);
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        // Set initial button content based on theme
+        themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+        
+        themeToggle.addEventListener('click', () => {
+          if (document.body.classList.contains('dark')) {
+            document.body.classList.remove('dark');
+            document.body.classList.add('light');
+            localStorage.setItem('theme', 'light');
+            themeToggle.textContent = '🌙';
+          } else {
+            document.body.classList.remove('light');
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            themeToggle.textContent = '☀️';
+          }
+        });
       });
 
       // Check for authentication on page load

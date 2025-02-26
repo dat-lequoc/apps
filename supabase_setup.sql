@@ -127,7 +127,10 @@ create table flashcards (
   elapsed_days double precision,
   scheduled_days double precision,
   reps integer,
-  lapses integer
+  lapses integer,
+  ipa text,
+  word_audio text,
+  phrase_audio text
 );
 
 -- Enable RLS on flashcards table
