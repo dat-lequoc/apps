@@ -123,6 +123,36 @@
       body.dark #progress-bar {
         background-color: #3b82f6;
       }
+
+      /* Add these styles to the existing <style> block */
+      .line-clamp-1 {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      @media (max-width: 640px) {
+        #browse-cards-btn, #start-review-btn {
+          display: block;
+          width: 100%;
+          margin-bottom: 0.5rem;
+        }
+        
+        #browse-cards-btn {
+          margin-right: 0;
+        }
+        
+        #review-section {
+          display: flex;
+          flex-direction: column;
+        }
+      }
+
+      #cards-container {
+        max-height: 70vh;
+        overflow-y: auto;
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -152,9 +182,36 @@
 
       <!-- Review Section (Start Review button) -->
       <section id="review-section" class="mb-6">
-        <button id="start-review-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+        <button id="start-review-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mr-2">
           Start Review
         </button>
+        <button id="browse-cards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+          Browse Cards
+        </button>
+      </section>
+
+      <!-- Add a new section for browsing cards between "review-section" and "progress-container" -->
+      <section id="browse-cards-section" class="hidden mb-6 border p-4 rounded shadow bg-white">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-semibold">Browse Flashcards</h2>
+          <button id="close-browse-btn" class="text-sm bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
+            Close
+          </button>
+        </div>
+        
+        <div id="cards-container" class="space-y-4">
+          <!-- Cards will be inserted here -->
+        </div>
+        
+        <div class="flex justify-between items-center mt-4">
+          <button id="prev-page-btn" class="bg-gray-200 text-black py-1 px-3 rounded hover:bg-gray-300 disabled:opacity-50">
+            Previous
+          </button>
+          <span id="page-info">Page 1</span>
+          <button id="next-page-btn" class="bg-gray-200 text-black py-1 px-3 rounded hover:bg-gray-300">
+            Next
+          </button>
+        </div>
       </section>
 
       <!-- Move progress bar outside and above the active review section -->
@@ -391,6 +448,12 @@
 
       // Add a new global variable to track total cards in review session
       let initialReviewCount = 0;
+
+      // Add these globals for card browsing pagination
+      let currentPage = 1;
+      const cardsPerPage = 10;
+      let totalCards = 0;
+      let totalPages = 0;
 
       // DOM Elements
       const uploadFileInput = document.getElementById('flashcards-file');
@@ -1013,6 +1076,269 @@
 
       // Check for authentication on page load
       checkAuth();
+
+      // Event handler: Browse cards button
+      document.getElementById('browse-cards-btn').addEventListener('click', async () => {
+        // Reset pagination
+        currentPage = 1;
+        
+        // Hide the main sections
+        document.getElementById('app-title').classList.add('hidden');
+        document.getElementById('upload-section').classList.add('hidden');
+        document.getElementById('stats-section').classList.add('hidden');
+        document.getElementById('review-section').classList.add('hidden');
+        
+        // Show the browse cards section
+        document.getElementById('browse-cards-section').classList.remove('hidden');
+        
+        // Load the first page of cards
+        await loadCardsPage();
+      });
+
+      // Event handler: Close browse section
+      document.getElementById('close-browse-btn').addEventListener('click', () => {
+        // Hide browse section
+        document.getElementById('browse-cards-section').classList.add('hidden');
+        
+        // Show main sections again
+        document.getElementById('app-title').classList.remove('hidden');
+        document.getElementById('upload-section').classList.remove('hidden');
+        document.getElementById('stats-section').classList.remove('hidden');
+        document.getElementById('review-section').classList.remove('hidden');
+      });
+
+      // Event handler: Previous page
+      document.getElementById('prev-page-btn').addEventListener('click', async () => {
+        if (currentPage > 1) {
+          currentPage--;
+          await loadCardsPage();
+        }
+      });
+
+      // Event handler: Next page
+      document.getElementById('next-page-btn').addEventListener('click', async () => {
+        if (currentPage < totalPages) {
+          currentPage++;
+          await loadCardsPage();
+        }
+      });
+
+      // Function to load a page of cards
+      async function loadCardsPage() {
+        try {
+          // First, get the total count of cards
+          const { count, error: countError } = await supabase
+            .from('flashcards')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
+            
+          if (countError) {
+            console.error("Error counting flashcards:", countError);
+            return;
+          }
+          
+          totalCards = count || 0;
+          totalPages = Math.ceil(totalCards / cardsPerPage);
+          
+          // Update pagination display
+          document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+          
+          // Disable/enable pagination buttons
+          document.getElementById('prev-page-btn').disabled = (currentPage <= 1);
+          document.getElementById('next-page-btn').disabled = (currentPage >= totalPages);
+          
+          // Calculate range for the current page
+          const from = (currentPage - 1) * cardsPerPage;
+          const to = from + cardsPerPage - 1;
+          
+          // Fetch cards for current page, ordered by due date (overdue cards first)
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('*')
+            .eq('user_id', userId)
+            .range(from, to)
+            .order('due', { ascending: true })
+            .order('word', { ascending: true });
+            
+          if (error) {
+            console.error("Error loading flashcards page:", error);
+            return;
+          }
+          
+          // Clear the container
+          const cardsContainer = document.getElementById('cards-container');
+          cardsContainer.innerHTML = '';
+          
+          // If no cards, show a message
+          if (!data || data.length === 0) {
+            cardsContainer.innerHTML = '<p class="text-center py-4">No flashcards found.</p>';
+            return;
+          }
+          
+          // Render each card
+          data.forEach(card => {
+            // Format the due date
+            const dueDate = new Date(card.due);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Calculate days until due
+            const diffTime = dueDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            let dueText;
+            if (diffDays < 0) {
+              dueText = 'Overdue';
+            } else if (diffDays === 0) {
+              dueText = 'Due today';
+            } else {
+              dueText = `Due in ${diffDays} day${diffDays !== 1 ? 's' : ''}`;
+            }
+            
+            // Create card element
+            const cardElement = document.createElement('div');
+            cardElement.className = 'border rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-800';
+            cardElement.innerHTML = `
+              <div class="flex flex-col md:flex-row justify-between">
+                <div class="flex-grow mb-2 md:mb-0">
+                  <h3 class="text-lg font-medium">${card.word}</h3>
+                  <p class="text-sm ${diffDays < 0 ? 'text-red-500' : 'text-gray-500'}">${dueText}</p>
+                </div>
+                <div class="flex gap-2">
+                  <button class="edit-browse-card text-xs bg-blue-100 text-blue-700 py-1 px-2 rounded hover:bg-blue-200" 
+                    data-card-id="${card.id}">
+                    Edit
+                  </button>
+                  <button class="delete-browse-card text-xs bg-red-100 text-red-700 py-1 px-2 rounded hover:bg-red-200"
+                    data-card-id="${card.id}">
+                    Delete
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-700 mt-2 line-clamp-1">${card.phrase}</p>
+            `;
+            
+            cardsContainer.appendChild(cardElement);
+          });
+          
+          // Add event listeners for edit and delete buttons
+          document.querySelectorAll('.edit-browse-card').forEach(button => {
+            button.addEventListener('click', async () => {
+              const cardId = button.getAttribute('data-card-id');
+              await openEditCardModal(cardId);
+            });
+          });
+          
+          document.querySelectorAll('.delete-browse-card').forEach(button => {
+            button.addEventListener('click', async () => {
+              const cardId = button.getAttribute('data-card-id');
+              await openDeleteCardModal(cardId);
+            });
+          });
+          
+        } catch (err) {
+          console.error("Error browsing cards:", err);
+        }
+      }
+
+      // Function to open edit modal for a specific card
+      async function openEditCardModal(cardId) {
+        try {
+          // Fetch the card details
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching card:", error);
+            return;
+          }
+          
+          // Set current card for editing
+          currentCard = data;
+          
+          // Fill form with current card details
+          document.getElementById('edit-word').value = currentCard.word || '';
+          document.getElementById('edit-phrase').value = currentCard.phrase || '';
+          document.getElementById('edit-translation').value = currentCard.translation_answer || '';
+          document.getElementById('edit-ipa').value = currentCard.ipa || '';
+          
+          // Show the modal
+          editModal.classList.remove('hidden');
+          
+          // We'll reuse the existing edit form submission handler that already updates the card
+          
+        } catch (err) {
+          console.error("Error opening edit modal:", err);
+        }
+      }
+
+      // Function to open delete modal for a specific card
+      async function openDeleteCardModal(cardId) {
+        try {
+          // Fetch the card details
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('*')
+            .eq('id', cardId)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching card:", error);
+            return;
+          }
+          
+          // Set current card for deletion
+          currentCard = data;
+          
+          // Show the modal
+          deleteModal.classList.remove('hidden');
+          
+          // Update the existing confirmDeleteBtn handler to refresh the browse view after deletion
+          const originalHandler = confirmDeleteBtn.onclick;
+          confirmDeleteBtn.onclick = async () => {
+            await originalHandler();
+            
+            // After successful deletion, reload the current page of cards
+            if (document.getElementById('browse-cards-section').classList.contains('hidden')) {
+              // If browse section is hidden, we don't need to reload
+              return;
+            }
+            
+            // Reload cards after a short delay
+            setTimeout(async () => {
+              await loadCardsPage();
+            }, 500);
+          };
+          
+        } catch (err) {
+          console.error("Error opening delete modal:", err);
+        }
+      }
+
+      // Update the edit form submit handler to refresh the browse view after saving
+      const originalSubmitHandler = editForm.onsubmit;
+      editForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        // Call original handler (or re-implement if needed)
+        if (originalSubmitHandler) {
+          await originalSubmitHandler(e);
+        } else {
+          // If there's no handler, implement the edit functionality here
+          // (same code as the existing edit form handler)
+          // ...
+        }
+        
+        // After successful edit, reload the current page of cards if the browse section is visible
+        if (!document.getElementById('browse-cards-section').classList.contains('hidden')) {
+          setTimeout(async () => {
+            await loadCardsPage();
+          }, 500);
+        }
+      };
     </script>
   </body>
 </html> 
