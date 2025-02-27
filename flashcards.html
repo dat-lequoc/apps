@@ -591,10 +591,52 @@
             return;
           }
           
-          // Get all existing cards for this user to check for duplicates
+          // First, check for and remove duplicates within the upload batch itself
+          const uniqueUploadedCards = [];
+          const normalizedUploadWords = new Map(); // Map to track normalized words to original cards
+          
+          // First pass - identify unique cards in upload batch
+          uploadedCards.forEach(card => {
+            if (!card.word) return; // Skip cards without words
+            
+            const normalizedWord = card.word.toLowerCase().trim();
+            
+            // If we've seen this normalized word before, keep the card with more complete data
+            if (normalizedUploadWords.has(normalizedWord)) {
+              const existingCard = normalizedUploadWords.get(normalizedWord);
+              
+              // Determine if this card has more data than the existing one (simple heuristic)
+              const existingHasIpa = !!existingCard.ipa;
+              const newHasIpa = !!card.ipa;
+              const existingHasAudio = !!(existingCard.wordAudio || existingCard.phrase_audio);
+              const newHasAudio = !!(card.wordAudio || card.phraseAudio);
+              
+              // If new card has more data, replace the existing one
+              if ((!existingHasIpa && newHasIpa) || (!existingHasAudio && newHasAudio)) {
+                // Remove old card from uniqueUploadedCards
+                const index = uniqueUploadedCards.findIndex(c => 
+                  c.word.toLowerCase().trim() === normalizedWord);
+                if (index !== -1) {
+                  uniqueUploadedCards.splice(index, 1);
+                }
+                // Add new card
+                uniqueUploadedCards.push(card);
+                normalizedUploadWords.set(normalizedWord, card);
+              }
+              // Otherwise keep the existing card (do nothing)
+            } else {
+              // First time seeing this word
+              uniqueUploadedCards.push(card);
+              normalizedUploadWords.set(normalizedWord, card);
+            }
+          });
+          
+          console.log(`Removed ${uploadedCards.length - uniqueUploadedCards.length} duplicate cards from upload batch`);
+          
+          // Get all existing cards for this user to check for duplicates in DB
           const { data: existingCardsData, error: fetchError } = await supabase
             .from('flashcards')
-            .select('*')  // Get all fields so we can update them
+            .select('*')
             .eq('user_id', userId);
             
           if (fetchError) {
@@ -612,7 +654,7 @@
           const cardsToInsert = [];
           const cardsToUpdate = [];
           
-          uploadedCards.forEach(card => {
+          uniqueUploadedCards.forEach(card => {
             // Normalize the word for comparison
             const normalizedWord = card.word.toLowerCase().trim();
             const translationAnswer = card.translation_answer || card.translationAnswer;
@@ -649,26 +691,44 @@
             }
           });
           
-          // Track results
+          // Now insert cards one at a time to better handle errors
           let insertCount = 0;
           let updateCount = 0;
           let failCount = 0;
           
-          // Insert new cards
-          if (cardsToInsert.length > 0) {
-            const { data, error } = await supabase
+          // Process all cards with upsert operations
+          for (const card of cardsToInsert) {
+            const normalizedWord = card.word.toLowerCase().trim();
+            const translationAnswer = card.translation_answer || card.translationAnswer;
+            
+            // Prepare the card data
+            const cardData = {
+              user_id: userId,
+              word: card.word.trim(),
+              phrase: card.phrase,
+              translation_answer: translationAnswer,
+              ipa: card.ipa || null,
+              word_audio: card.wordAudio || null,
+              phrase_audio: card.phraseAudio || null
+            };
+            
+            // Using upsert operation (on_conflict does an update if the unique constraint is violated)
+            const { error } = await supabase
               .from('flashcards')
-              .insert(cardsToInsert);
+              .upsert(cardData, { 
+                onConflict: 'user_id,word',
+                ignoreDuplicates: false // false means update on conflict
+              });
               
             if (error) {
-              console.error("Error inserting new cards:", error);
-              failCount += cardsToInsert.length;
+              console.error("Error upserting card:", card.word, error);
+              failCount++;
             } else {
-              insertCount = cardsToInsert.length;
+              insertCount++;
             }
           }
           
-          // Update existing cards one by one
+          // Update existing cards
           for (const card of cardsToUpdate) {
             const { error } = await supabase
               .from('flashcards')
@@ -690,27 +750,11 @@
             }
           }
           
-          // Create success message
-          let message = '';
-          if (insertCount > 0) {
-            message += `Added ${insertCount} new flashcards. `;
-          }
-          if (updateCount > 0) {
-            message += `Updated ${updateCount} existing flashcards. `;
-          }
-          if (failCount > 0) {
-            message += `Failed to process ${failCount} cards. `;
-          }
+          // Display results
+          uploadMessage.textContent = `Processed ${insertCount + updateCount} flashcards successfully. ${failCount} failed.`;
           
-          if (message === '') {
-            message = 'No changes were made.';
-          }
-          
-          uploadMessage.textContent = message;
-          
-          // Clear the file input
+          // Clear the file input and reload
           uploadFileInput.value = '';
-          // Reload flashcards after operations
           await loadFlashcards();
           
         } catch (err) {
