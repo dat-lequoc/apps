@@ -592,7 +592,6 @@
           }
           
           // First, query the database to get all existing words for this user
-          // This ensures we have the most up-to-date data when checking for duplicates
           const { data: existingCardsData, error: fetchError } = await supabase
             .from('flashcards')
             .select('word')
@@ -603,19 +602,24 @@
             return;
           }
           
-          // Extract just the words from the result
-          const existingWords = existingCardsData.map(card => card.word);
+          // Create a normalized set of existing words (lowercase and trimmed)
+          const existingWordsSet = new Set(existingCardsData.map(card => 
+            card.word.toLowerCase().trim()
+          ));
           
-          // Filter out duplicates
+          // Filter out duplicates with case-insensitive comparison
           const newCards = [];
           const duplicateWords = [];
           
           uploadedCards.forEach(card => {
+            // Normalize the word for comparison
+            const normalizedWord = card.word.toLowerCase().trim();
+            
             // Support both "translation_answer" (from jsonl) and "translationAnswer" keys.
-            if (!existingWords.includes(card.word)) {
+            if (!existingWordsSet.has(normalizedWord)) {
               newCards.push({
                 user_id: userId,
-                word: card.word,
+                word: card.word.trim(), // Store the original word with just whitespace trimmed
                 phrase: card.phrase,
                 translation_answer: card.translation_answer || card.translationAnswer,
                 reps: 0,
@@ -625,11 +629,15 @@
                 word_audio: card.wordAudio || null,
                 phrase_audio: card.phraseAudio || null
               });
+              
+              // Add this word to our set to prevent duplicates within the upload batch
+              existingWordsSet.add(normalizedWord);
             } else {
               duplicateWords.push(card.word);
             }
           });
           
+          // Rest of your function remains the same
           if (newCards.length === 0) {
             if (duplicateWords.length > 0) {
               uploadMessage.textContent = `All ${duplicateWords.length} flashcards are duplicates and were skipped.`;
@@ -637,26 +645,33 @@
               uploadMessage.textContent = 'No new flashcards to add.';
             }
           } else {
-            // Try to insert the new cards
-            const { error } = await supabase
-              .from('flashcards')
-              .insert(newCards);
-              
-            if (error) {
-              if (error.code === '23505') { // PostgreSQL unique violation code
-                uploadMessage.textContent = 'Some cards could not be added due to duplicate words. Try again after refreshing the page.';
+            // Insert cards one at a time to handle individual failures
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const card of newCards) {
+              const { error } = await supabase
+                .from('flashcards')
+                .insert([card]); // Insert as array of one item
+                
+              if (error) {
+                console.error("Error inserting card:", card.word, error);
+                failCount++;
               } else {
-                uploadMessage.textContent = 'Error uploading flashcards: ' + error.message;
+                successCount++;
               }
-              return;
             }
             
-            // Success message with duplicate information
+            // Success message with detailed counts
+            let message = `Successfully uploaded ${successCount} flashcards.`;
             if (duplicateWords.length > 0) {
-              uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards. ${duplicateWords.length} duplicate(s) were skipped.`;
-            } else {
-              uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards.`;
+              message += ` ${duplicateWords.length} duplicate(s) were skipped.`;
             }
+            if (failCount > 0) {
+              message += ` ${failCount} card(s) failed to upload due to database constraints.`;
+            }
+            
+            uploadMessage.textContent = message;
             
             // Clear the file input
             uploadFileInput.value = '';
