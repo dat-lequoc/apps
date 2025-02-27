@@ -590,9 +590,26 @@
             uploadMessage.textContent = 'Invalid format: JSON must be an array or JSONL format.';
             return;
           }
-          // Get existing words to check for duplication
-          const existingWords = flashcards.map(card => card.word);
+          
+          // First, query the database to get all existing words for this user
+          // This ensures we have the most up-to-date data when checking for duplicates
+          const { data: existingCardsData, error: fetchError } = await supabase
+            .from('flashcards')
+            .select('word')
+            .eq('user_id', userId);
+            
+          if (fetchError) {
+            uploadMessage.textContent = 'Error checking for duplicates: ' + fetchError.message;
+            return;
+          }
+          
+          // Extract just the words from the result
+          const existingWords = existingCardsData.map(card => card.word);
+          
+          // Filter out duplicates
           const newCards = [];
+          const duplicateWords = [];
+          
           uploadedCards.forEach(card => {
             // Support both "translation_answer" (from jsonl) and "translationAnswer" keys.
             if (!existingWords.includes(card.word)) {
@@ -608,19 +625,39 @@
                 word_audio: card.wordAudio || null,
                 phrase_audio: card.phraseAudio || null
               });
+            } else {
+              duplicateWords.push(card.word);
             }
           });
+          
           if (newCards.length === 0) {
-            uploadMessage.textContent = 'No new flashcards to add (all duplicates).';
+            if (duplicateWords.length > 0) {
+              uploadMessage.textContent = `All ${duplicateWords.length} flashcards are duplicates and were skipped.`;
+            } else {
+              uploadMessage.textContent = 'No new flashcards to add.';
+            }
           } else {
+            // Try to insert the new cards
             const { error } = await supabase
               .from('flashcards')
               .insert(newCards);
+              
             if (error) {
-              uploadMessage.textContent = 'Error uploading flashcards: ' + error.message;
+              if (error.code === '23505') { // PostgreSQL unique violation code
+                uploadMessage.textContent = 'Some cards could not be added due to duplicate words. Try again after refreshing the page.';
+              } else {
+                uploadMessage.textContent = 'Error uploading flashcards: ' + error.message;
+              }
               return;
             }
-            uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards.`;
+            
+            // Success message with duplicate information
+            if (duplicateWords.length > 0) {
+              uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards. ${duplicateWords.length} duplicate(s) were skipped.`;
+            } else {
+              uploadMessage.textContent = `Successfully uploaded ${newCards.length} flashcards.`;
+            }
+            
             // Clear the file input
             uploadFileInput.value = '';
             // Reload flashcards after insertion
