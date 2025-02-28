@@ -357,6 +357,14 @@
       transform: translateY(-1px);
       box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
     }
+
+    body.dark .toggle-switch .slider {
+      background-color: #4b5563;
+    }
+    
+    body.dark #status-label {
+      color: #d1d5db;
+    }
   </style>
 </head>
 <body class="bg-gray-100 p-6 font-sans">
@@ -679,6 +687,19 @@
             class="mt-1 p-2 w-full border rounded focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
+        
+        <!-- Add book status toggle here -->
+        <div class="flex items-center justify-between">
+          <label for="book-status-toggle" class="text-sm font-medium text-gray-700">Book Status</label>
+          <div class="flex items-center gap-2">
+            <span id="status-label" class="text-sm text-gray-600">In Progress</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="book-status-toggle">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+        
         <fieldset class="border p-3 rounded">
           <legend class="text-sm font-medium">Goal</legend>
           <div class="space-y-1">
@@ -764,6 +785,13 @@
           <label for="hide-completed-books" class="text-sm text-gray-700">Hide completed books in My Books</label>
           <label class="toggle-switch">
             <input type="checkbox" id="hide-completed-books">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="flex items-center justify-between">
+          <label for="show-paused-in-heatmap" class="text-sm text-gray-700">Show paused books in weekly view</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="show-paused-in-heatmap">
             <span class="slider"></span>
           </label>
         </div>
@@ -944,7 +972,8 @@
         this.bookOrder = [];
         this.settings = {
           hideCompletedWeek: true,
-          hideCompletedBooks: false
+          hideCompletedBooks: false,
+          showPausedInHeatmap: false
         };
         this.setupEventListeners();
       }
@@ -1378,6 +1407,7 @@
 
         const hideCompletedWeekToggle = $("hide-completed-week");
         const hideCompletedBooksToggle = $("hide-completed-books");
+        const showPausedInHeatmapToggle = $("show-paused-in-heatmap");
 
         if (hideCompletedWeekToggle) {
           hideCompletedWeekToggle.checked = this.settings.hideCompletedWeek;
@@ -1392,6 +1422,15 @@
           hideCompletedBooksToggle.checked = this.settings.hideCompletedBooks;
           hideCompletedBooksToggle.addEventListener("change", (e) => {
             this.settings.hideCompletedBooks = e.target.checked;
+            this.saveSettings();
+            this.updateUI();
+          });
+        }
+        
+        if (showPausedInHeatmapToggle) {
+          showPausedInHeatmapToggle.checked = this.settings.showPausedInHeatmap;
+          showPausedInHeatmapToggle.addEventListener("change", (e) => {
+            this.settings.showPausedInHeatmap = e.target.checked;
             this.saveSettings();
             this.updateUI();
           });
@@ -1520,6 +1559,18 @@
         $("edit-pages-per-day").value = book.goalType === "pages" ? book.pagesPerDay : "";
         $("edit-target-date").disabled = book.goalType !== "date";
         $("edit-pages-per-day").disabled = book.goalType !== "pages";
+        
+        // Set book status toggle
+        const statusToggle = $("book-status-toggle");
+        const statusLabel = $("status-label");
+        statusToggle.checked = book.status === 'paused';
+        statusLabel.textContent = book.status === 'paused' ? 'Paused' : 'In Progress';
+        
+        // Add event listener for status toggle
+        statusToggle.addEventListener('change', (e) => {
+          statusLabel.textContent = e.target.checked ? 'Paused' : 'In Progress';
+        }, { once: true });
+        
         $("edit-book-modal").classList.remove("hidden");
       }
 
@@ -1580,7 +1631,9 @@
           startDate: $("edit-start-date").value,
           goalType: document.querySelector('input[name="edit-goal-type"]:checked')?.value,
           targetDate: $("edit-target-date").value,
-          pagesPerDay: parseInt($("edit-pages-per-day").value, 10)
+          pagesPerDay: parseInt($("edit-pages-per-day").value, 10),
+          // Add status to form data
+          status: $("book-status-toggle").checked ? 'paused' : 'active'
         };
         if (!this.validateBookData(formData)) {
           alert("Please fill in all required fields with valid values.");
@@ -1774,8 +1827,10 @@
         `;
         heatmapContainer.appendChild(headerRow);
 
+        // Filter books: hide completed books (if setting enabled) and paused books (unless showing is enabled)
         const booksToShow = this.books.filter(book => 
-          !this.settings.hideCompletedWeek || book.currentPage !== book.totalPages
+          (!this.settings.hideCompletedWeek || book.currentPage !== book.totalPages) && 
+          (this.settings.showPausedInHeatmap || book.status !== 'paused')
         );
 
         booksToShow.forEach((book) => {
