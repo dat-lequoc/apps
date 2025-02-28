@@ -226,9 +226,10 @@
     noteForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const content = document.getElementById('note-content').value;
+      const noteInput = document.getElementById('note-content');
       
       // Clear form
-      document.getElementById('note-content').value = '';
+      noteInput.value = '';
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -249,13 +250,25 @@
       } else {
         loadNotes();
       }
+      
+      // Return focus to the textarea after submission
+      // Using setTimeout to ensure it works properly on mobile
+      setTimeout(() => {
+        noteInput.focus();
+      }, 10);
     });
 
-    // Add shift+enter handler for the textarea
+    // Add Enter/Shift+Enter handler for the textarea
     document.getElementById('note-content').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.shiftKey) {
-        e.preventDefault();
-        noteForm.dispatchEvent(new Event('submit'));
+      if (e.key === 'Enter') {
+        if (e.shiftKey) {
+          // With Shift: allow default behavior (new line)
+          return;
+        } else {
+          // Without Shift: send the note (like in chat apps)
+          e.preventDefault();
+          noteForm.dispatchEvent(new Event('submit'));
+        }
       }
     });
 
