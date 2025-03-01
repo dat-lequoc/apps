@@ -507,33 +507,38 @@
             function setupTextSelection() {
                 if (!rendition) return;
                 
-                // Set up touch detection on the reader element itself
-                readerElement.removeEventListener('touchstart', readerTouchStart);
-                readerElement.removeEventListener('touchend', readerTouchEnd);
-                
-                readerElement.addEventListener('touchstart', readerTouchStart, { passive: false });
-                readerElement.addEventListener('touchend', readerTouchEnd, { passive: false });
-                
-                // Make the rendition allow text selection by modifying its behavior
-                rendition.on('rendered', () => {
+                rendition.on('rendered', function() {
                     const iframe = readerElement.querySelector('iframe');
                     if (!iframe) return;
-                    
-                    // Ensure iframe allows text selection
                     try {
-                        // EpubJS uses a sandboxed iframe which doesn't allow scripts
-                        // We can still modify some properties via the iframe element itself
+                        // Allow text selection on the iframe element
                         iframe.style.userSelect = 'text';
                         iframe.style.webkitUserSelect = 'text';
                         
-                        // Allow selection to propagate
-                        iframe.setAttribute('allow', 'clipboard-write');
-                    } catch (err) {
-                        console.error("Error setting up iframe for selection:", err);
+                        // Inject a style element into the iframe to enforce text selection and enable touch callout
+                        const doc = iframe.contentDocument;
+                        const style = doc.createElement('style');
+                        style.type = 'text/css';
+                        style.textContent = `
+                            * {
+                                -webkit-user-select: text !important;
+                                -moz-user-select: text !important;
+                                -ms-user-select: text !important;
+                                user-select: text !important;
+                            }
+                            body {
+                                -webkit-touch-callout: default !important;
+                            }
+                            ::selection {
+                                background: rgba(66, 133, 244, 0.3) !important;
+                            }
+                        `;
+                        doc.head.appendChild(style);
+                    } catch(err) {
+                        console.error("Error initializing text selection in iframe", err);
                     }
                 });
                 
-                // Use CSS injections to enable selection styles
                 rendition.themes.default({
                     '::selection': {
                         'background': 'rgba(66, 133, 244, 0.3)'
@@ -577,8 +582,8 @@
                 if (timeDiff < 300 && timeDiff > 0 && tapDistance < 10) {
                     // Double tap detected - try selecting a word
                     triggerNativeSelection(touch.clientX, touch.clientY);
-                    e.preventDefault();
-                    
+                    // Comment out preventDefault so the native long press event may occur
+                    // e.preventDefault();
                     // Reset tap timer
                     lastTap.time = 0;
                 } else {
@@ -588,58 +593,24 @@
             }
             
             function triggerNativeSelection(x, y) {
-                try {
-                    // Instead of trying to manually select a word,
-                    // we'll simulate a long press to trigger native selection
-                    
-                    // First, find where in the reader area this coordinate is
-                    const iframe = readerElement.querySelector('iframe');
-                    if (!iframe) return;
-                    
-                    // Get iframe position
-                    const iframeRect = iframe.getBoundingClientRect();
-                    
-                    // If tap is within iframe bounds
-                    if (x >= iframeRect.left && x <= iframeRect.right && 
-                        y >= iframeRect.top && y <= iframeRect.bottom) {
-                        
-                        // For mobile, we'll use a different approach:
-                        // 1. Create a temporary invisible button at the tap position
-                        const tempButton = document.createElement('button');
-                        tempButton.style.position = 'absolute';
-                        tempButton.style.left = (x - 1) + 'px';
-                        tempButton.style.top = (y - 1) + 'px';
-                        tempButton.style.width = '2px';
-                        tempButton.style.height = '2px';
-                        tempButton.style.opacity = '0.01';
-                        tempButton.style.border = 'none';
-                        tempButton.style.background = 'transparent';
-                        tempButton.style.zIndex = '1000';
-                        document.body.appendChild(tempButton);
-                        
-                        // 2. Focus and click the button to give focus to that area
-                        tempButton.focus();
-                        tempButton.click();
-                        
-                        // 3. Remove it after a short delay
-                        setTimeout(() => {
-                            document.body.removeChild(tempButton);
-                            
-                            // 4. Show some mobile text selection UI hints
-                            // This won't always work, but gives visual feedback on some devices
-                            const selection = window.getSelection();
-                            if (selection.rangeCount > 0) {
-                                const range = selection.getRangeAt(0);
-                                range.collapse(true);
-                            }
-                            
-                            // Some mobile browsers will show selection UI on this command
-                            document.execCommand('selectAll', false, null);
-                            document.execCommand('unselect', false, null);
-                        }, 10);
-                    }
-                } catch (err) {
-                    console.error("Error with native selection:", err);
+                const iframe = readerElement.querySelector('iframe');
+                if (!iframe) return;
+                
+                const rect = iframe.getBoundingClientRect();
+                const iframeDoc = iframe.contentDocument;
+                // Convert page coordinates to coordinates relative to iframe content
+                const relativeX = x - rect.left;
+                const relativeY = y - rect.top;
+                const targetElement = iframeDoc.elementFromPoint(relativeX, relativeY);
+                if (targetElement) {
+                    // Dispatch a double-click event to simulate native text selection
+                    const dblClickEvent = new MouseEvent('dblclick', {
+                        bubbles: true,
+                        cancelable: true,
+                        clientX: relativeX,
+                        clientY: relativeY
+                    });
+                    targetElement.dispatchEvent(dblClickEvent);
                 }
             }
             
@@ -649,32 +620,31 @@
                 selectionInProgress = selection && selection.toString().trim().length > 0;
             });
             
-            // Add support for long press to trigger native selection
-            let longPressTimer = null;
-            readerElement.addEventListener('touchstart', function(e) {
-                if (e.touches.length === 1) {
-                    const touch = e.touches[0];
-                    longPressTimer = setTimeout(() => {
-                        triggerNativeSelection(touch.clientX, touch.clientY);
-                    }, 500); // 500ms is typical for long press
-                }
-            });
-            
-            readerElement.addEventListener('touchmove', function() {
-                // Cancel long press if touch moves
-                if (longPressTimer) {
-                    clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                }
-            });
-            
-            readerElement.addEventListener('touchend', function() {
-                // Cancel long press timer on touch end
-                if (longPressTimer) {
-                    clearTimeout(longPressTimer);
-                    longPressTimer = null;
-                }
-            });
+            // Optionally, comment out custom long press listeners so that the native 
+            // long press event triggers text selection.
+            // let longPressTimer = null;
+            // readerElement.addEventListener('touchstart', function(e) {
+            //     if (e.touches.length === 1) {
+            //         const touch = e.touches[0];
+            //         longPressTimer = setTimeout(() => {
+            //             triggerNativeSelection(touch.clientX, touch.clientY);
+            //         }, 500);
+            //     }
+            // });
+            //
+            // readerElement.addEventListener('touchmove', function() {
+            //     if (longPressTimer) {
+            //         clearTimeout(longPressTimer);
+            //         longPressTimer = null;
+            //     }
+            // });
+            //
+            // readerElement.addEventListener('touchend', function() {
+            //     if (longPressTimer) {
+            //         clearTimeout(longPressTimer);
+            //         longPressTimer = null;
+            //     }
+            // });
             
             // Functions
             function openBook(e) {

@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EPUB Reader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        
+        header {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 500;
+        }
+        
+        .file-input {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4a69bd;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3b5998;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .reader-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .toc-container {
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: white;
+            display: none;
+        }
+        
+        .toc-list {
+            list-style-type: none;
+        }
+        
+        .toc-item {
+            padding: 5px 0;
+            cursor: pointer;
+            color: #4a69bd;
+        }
+        
+        .toc-item:hover {
+            text-decoration: underline;
+        }
+        
+        .content-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            min-height: 300px;
+            overflow-wrap: break-word;
+            -webkit-user-select: text; /* For iOS Safari */
+            user-select: text;
+            touch-action: manipulation; /* Improve touch handling */
+        }
+        
+        .content-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #777;
+        }
+        
+        .footnote {
+            margin-top: 30px;
+            font-size: 14px;
+            color: #777;
+        }
+        
+        .info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .metadata {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .reader-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .reader-controls button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>EPUB Reader</h1>
+        <div class="file-input">
+            <input type="file" id="epub-file" accept=".epub" />
+            <button id="load-button">Load EPUB</button>
+        </div>
+    </header>
+    
+    <div class="info" id="book-info">
+        <!-- Book metadata will be displayed here -->
+    </div>
+    
+    <div class="reader-controls">
+        <button id="prev-button" disabled>Previous Chapter</button>
+        <button id="toc-button" disabled>Table of Contents</button>
+        <button id="next-button" disabled>Next Chapter</button>
+    </div>
+    
+    <div class="toc-container" id="toc-container">
+        <ul class="toc-list" id="toc-list"></ul>
+    </div>
+    
+    <div class="content-container" id="content">
+        <div class="loading">Upload an EPUB file to start reading</div>
+    </div>
+    
+    <p class="footnote">
+        Note: This is a basic EPUB reader. Some complex EPUB features may not be fully supported.
+    </p>
+
+    <script>
+        // Main elements
+        const fileInput = document.getElementById('epub-file');
+        const loadButton = document.getElementById('load-button');
+        const prevButton = document.getElementById('prev-button');
+        const nextButton = document.getElementById('next-button');
+        const tocButton = document.getElementById('toc-button');
+        const tocContainer = document.getElementById('toc-container');
+        const tocList = document.getElementById('toc-list');
+        const contentContainer = document.getElementById('content');
+        const bookInfo = document.getElementById('book-info');
+        
+        // EPUB data storage
+        let epub = {
+            content: {},
+            spine: [],
+            toc: [],
+            metadata: {},
+            currentChapterIndex: 0
+        };
+        
+        // Event listeners
+        loadButton.addEventListener('click', handleFileSelection);
+        prevButton.addEventListener('click', navigateToPreviousChapter);
+        nextButton.addEventListener('click', navigateToNextChapter);
+        tocButton.addEventListener('click', toggleTableOfContents);
+        
+        // Handle file upload
+        function handleFileSelection() {
+            const file = fileInput.files[0];
+            if (!file || file.type !== 'application/epub+zip') {
+                alert('Please select a valid EPUB file.');
+                return;
+            }
+            
+            contentContainer.innerHTML = '<div class="loading">Loading EPUB...</div>';
+            resetEpubState();
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                parseEpub(e.target.result);
+            };
+            reader.onerror = function() {
+                contentContainer.innerHTML = '<div class="loading">Error reading file.</div>';
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // Parse the EPUB file
+        function parseEpub(arrayBuffer) {
+            const jszip = new JSZip();
+            
+            jszip.loadAsync(arrayBuffer)
+                .then(function(zip) {
+                    // First, get the container.xml to find the OPF file
+                    return zip.file('META-INF/container.xml').async('text');
+                })
+                .then(function(containerXml) {
+                    const parser = new DOMParser();
+                    const containerDoc = parser.parseFromString(containerXml, 'application/xml');
+                    const rootFilePath = containerDoc.querySelector('rootfile').getAttribute('full-path');
+                    
+                    // Store the root directory for resolving relative paths
+                    epub.rootDirectory = rootFilePath.substring(0, rootFilePath.lastIndexOf('/') + 1);
+                    
+                    // Get the OPF file
+                    return jszip.file(rootFilePath).async('text');
+                })
+                .then(function(opfContent) {
+                    const parser = new DOMParser();
+                    const opfDoc = parser.parseFromString(opfContent, 'application/xml');
+                    
+                    // Parse metadata
+                    parseMetadata(opfDoc);
+                    
+                    // Parse manifest items
+                    const manifest = opfDoc.querySelector('manifest');
+                    const manifestItems = {};
+                    
+                    manifest.querySelectorAll('item').forEach(item => {
+                        const id = item.getAttribute('id');
+                        const href = item.getAttribute('href');
+                        const mediaType = item.getAttribute('media-type');
+                        
+                        manifestItems[id] = {
+                            href: href,
+                            mediaType: mediaType
+                        };
+                    });
+                    
+                    // Parse spine
+                    const spine = opfDoc.querySelector('spine');
+                    const spineItems = [];
+                    
+                    spine.querySelectorAll('itemref').forEach(itemref => {
+                        const idref = itemref.getAttribute('idref');
+                        if (manifestItems[idref]) {
+                            spineItems.push({
+                                id: idref,
+                                href: manifestItems[idref].href,
+                                mediaType: manifestItems[idref].mediaType
+                            });
+                        }
+                    });
+                    
+                    epub.spine = spineItems;
+                    
+                    // Parse TOC (NavPoint)
+                    const tocId = spine.getAttribute('toc');
+                    if (tocId && manifestItems[tocId]) {
+                        const tocPath = manifestItems[tocId].href;
+                        return {
+                            zip: jszip,
+                            tocPath: tocPath,
+                            manifestItems: manifestItems
+                        };
+                    } else {
+                        // Try to find the nav document (EPUB3)
+                        let navItem = Object.values(manifestItems).find(item => 
+                            item.mediaType === 'application/xhtml+xml' && 
+                            item.href.includes('nav') || item.href.includes('toc'));
+                        
+                        if (navItem) {
+                            return {
+                                zip: jszip,
+                                tocPath: navItem.href,
+                                manifestItems: manifestItems
+                            };
+                        } else {
+                            return {
+                                zip: jszip,
+                                tocPath: null,
+                                manifestItems: manifestItems
+                            };
+                        }
+                    }
+                })
+                .then(function(data) {
+                    const {zip, tocPath, manifestItems} = data;
+                    
+                    // If we found a TOC, parse it
+                    if (tocPath) {
+                        const fullTocPath = epub.rootDirectory + tocPath;
+                        return zip.file(fullTocPath).async('text').then(tocContent => {
+                            const parser = new DOMParser();
+                            const tocDoc = parser.parseFromString(tocContent, 'application/xml');
+                            
+                            // Try parsing as NCX (EPUB2)
+                            let navPoints = tocDoc.querySelectorAll('navPoint');
+                            if (navPoints.length > 0) {
+                                parseTocFromNavPoints(navPoints);
+                            } else {
+                                // Try parsing as EPUB3 nav
+                                let navLinks = tocDoc.querySelectorAll('nav[epub\\:type="toc"] a, nav[*|type="toc"] a');
+                                if (navLinks.length > 0) {
+                                    parseTocFromNavLinks(navLinks);
+                                }
+                            }
+                            
+                            return {zip, manifestItems};
+                        }).catch(() => {
+                            // If TOC parsing fails, continue without TOC
+                            return {zip, manifestItems};
+                        });
+                    } else {
+                        return {zip, manifestItems};
+                    }
+                })
+                .then(function(data) {
+                    const {zip} = data;
+                    
+                    // Load all spine items
+                    const loadPromises = epub.spine.map(item => {
+                        const fullPath = epub.rootDirectory + item.href;
+                        return zip.file(fullPath).async('text').then(content => {
+                            epub.content[item.id] = content;
+                        }).catch(error => {
+                            console.error(`Failed to load ${fullPath}:`, error);
+                        });
+                    });
+                    
+                    return Promise.all(loadPromises).then(() => zip);
+                })
+                .then(function(zip) {
+                    // Enable navigation buttons
+                    enableNavigationButtons();
+                    
+                    // Display metadata
+                    displayMetadata();
+                    
+                    // Display first chapter
+                    navigateToChapter(0);
+                })
+                .catch(function(error) {
+                    console.error('Error parsing EPUB:', error);
+                    contentContainer.innerHTML = '<div class="loading">Error parsing EPUB. Make sure the file is a valid EPUB.</div>';
+                });
+        }
+        
+        // Parse metadata from the OPF document
+        function parseMetadata(opfDoc) {
+            const metadataElement = opfDoc.querySelector('metadata');
+            if (!metadataElement) return;
+            
+            // Title
+            const titleElement = metadataElement.querySelector('dc\\:title, title');
+            if (titleElement) {
+                epub.metadata.title = titleElement.textContent;
+            }
+            
+            // Creator/Author
+            const creatorElement = metadataElement.querySelector('dc\\:creator, creator');
+            if (creatorElement) {
+                epub.metadata.creator = creatorElement.textContent;
+            }
+            
+            // Language
+            const languageElement = metadataElement.querySelector('dc\\:language, language');
+            if (languageElement) {
+                epub.metadata.language = languageElement.textContent;
+            }
+        }
+        
+        // Parse TOC from NavPoints (EPUB2)
+        function parseTocFromNavPoints(navPoints) {
+            const processTocItems = (nodes, level = 0) => {
+                let items = [];
+                
+                Array.from(nodes).forEach(navPoint => {
+                    const label = navPoint.querySelector('navLabel text').textContent;
+                    const content = navPoint.querySelector('content');
+                    const src = content ? content.getAttribute('src') : '';
+                    
+                    // Extract the spine ID from the src
+                    let targetPath = src.split('#')[0];
+                    let fragmentId = src.includes('#') ? src.split('#')[1] : null;
+                    
+                    // Find the matching spine item
+                    let spineIndex = epub.spine.findIndex(item => 
+                        item.href.endsWith(targetPath) || targetPath.endsWith(item.href));
+                    
+                    if (spineIndex !== -1) {
+                        const tocItem = {
+                            label: label,
+                            spineIndex: spineIndex,
+                            fragmentId: fragmentId,
+                            level: level
+                        };
+                        
+                        const subItems = navPoint.querySelectorAll(':scope > navPoint');
+                        if (subItems.length > 0) {
+                            tocItem.subitems = processTocItems(subItems, level + 1);
+                        }
+                        
+                        items.push(tocItem);
+                    }
+                });
+                
+                return items;
+            };
+            
+            epub.toc = processTocItems(navPoints);
+        }
+        
+        // Parse TOC from Nav Links (EPUB3)
+        function parseTocFromNavLinks(navLinks) {
+            const tocItems = [];
+            
+            navLinks.forEach(link => {
+                const label = link.textContent.trim();
+                const href = link.getAttribute('href');
+                
+                if (href) {
+                    // Extract the file path and fragment ID
+                    let targetPath = href.split('#')[0];
+                    let fragmentId = href.includes('#') ? href.split('#')[1] : null;
+                    
+                    // If target path is empty, it's pointing to the current file
+                    if (targetPath === '') {
+                        targetPath = link.closest('html').querySelector('head > link[rel="self"]')?.getAttribute('href') || '';
+                    }
+                    
+                    // Find the matching spine item
+                    let spineIndex = epub.spine.findIndex(item => 
+                        item.href.endsWith(targetPath) || targetPath.endsWith(item.href));
+                    
+                    if (spineIndex !== -1) {
+                        tocItems.push({
+                            label: label,
+                            spineIndex: spineIndex,
+                            fragmentId: fragmentId,
+                            level: getElementNestLevel(link, 'nav')
+                        });
+                    }
+                }
+            });
+            
+            epub.toc = tocItems;
+        }
+        
+        // Helper to get element nesting level for EPUB3 TOC
+        function getElementNestLevel(element, topTagName) {
+            let level = 0;
+            let current = element;
+            
+            while (current && current.tagName.toLowerCase() !== topTagName.toLowerCase()) {
+                if (current.tagName.toLowerCase() === 'li') {
+                    level++;
+                }
+                current = current.parentElement;
+            }
+            
+            return level - 1; // Adjust so top level is 0
+        }
+        
+        // Reset EPUB state
+        function resetEpubState() {
+            epub = {
+                content: {},
+                spine: [],
+                toc: [],
+                metadata: {},
+                currentChapterIndex: 0
+            };
+            
+            disableNavigationButtons();
+            tocContainer.style.display = 'none';
+            bookInfo.innerHTML = '';
+        }
+        
+        // Enable navigation buttons
+        function enableNavigationButtons() {
+            prevButton.disabled = false;
+            nextButton.disabled = false;
+            tocButton.disabled = epub.toc.length === 0;
+        }
+        
+        // Disable navigation buttons
+        function disableNavigationButtons() {
+            prevButton.disabled = true;
+            nextButton.disabled = true;
+            tocButton.disabled = true;
+        }
+        
+        // Display book metadata
+        function displayMetadata() {
+            let html = '';
+            
+            if (epub.metadata.title) {
+                html += `<div class="metadata"><strong>Title:</strong> ${epub.metadata.title}</div>`;
+            }
+            
+            if (epub.metadata.creator) {
+                html += `<div class="metadata"><strong>Author:</strong> ${epub.metadata.creator}</div>`;
+            }
+            
+            bookInfo.innerHTML = html;
+        }
+        
+        // Navigate to a specific chapter
+        function navigateToChapter(index) {
+            if (index < 0) {
+                index = 0;
+            } else if (index >= epub.spine.length) {
+                index = epub.spine.length - 1;
+            }
+            
+            epub.currentChapterIndex = index;
+            const chapter = epub.spine[index];
+            
+            if (chapter && epub.content[chapter.id]) {
+                displayChapterContent(epub.content[chapter.id]);
+            } else {
+                contentContainer.innerHTML = '<div class="loading">Unable to load chapter content.</div>';
+            }
+            
+            updateNavigationButtons();
+        }
+        
+        // Display chapter content
+        function displayChapterContent(htmlContent) {
+            // Create a temporary container to process the HTML
+            const tempContainer = document.createElement('div');
+            tempContainer.innerHTML = htmlContent;
+            
+            // Extract body content if available
+            const bodyContent = tempContainer.querySelector('body');
+            if (bodyContent) {
+                tempContainer.innerHTML = bodyContent.innerHTML;
+            }
+            
+            // Remove scripts for security
+            tempContainer.querySelectorAll('script').forEach(script => script.remove());
+            
+            // Fix relative paths in images
+            tempContainer.querySelectorAll('img').forEach(img => {
+                const src = img.getAttribute('src');
+                if (src && !src.startsWith('http')) {
+                    const currentChapterPath = epub.spine[epub.currentChapterIndex].href;
+                    const currentDir = currentChapterPath.substring(0, currentChapterPath.lastIndexOf('/') + 1);
+                    img.setAttribute('src', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+                }
+            });
+            
+            // Add basic CSS for readability
+            const styleElement = document.createElement('style');
+            styleElement.textContent = `
+                body { font-family: inherit; }
+                p { margin-bottom: 1em; }
+                h1, h2, h3, h4, h5, h6 { margin: 1em 0 0.5em; }
+                img { max-width: 100%; height: auto; }
+            `;
+            tempContainer.prepend(styleElement);
+            
+            // Set the content
+            contentContainer.innerHTML = '';
+            contentContainer.appendChild(tempContainer);
+        }
+        
+        // Update navigation buttons state
+        function updateNavigationButtons() {
+            prevButton.disabled = epub.currentChapterIndex <= 0;
+            nextButton.disabled = epub.currentChapterIndex >= epub.spine.length - 1;
+        }
+        
+        // Navigate to the previous chapter
+        function navigateToPreviousChapter() {
+            navigateToChapter(epub.currentChapterIndex - 1);
+        }
+        
+        // Navigate to the next chapter
+        function navigateToNextChapter() {
+            navigateToChapter(epub.currentChapterIndex + 1);
+        }
+        
+        // Toggle table of contents
+        function toggleTableOfContents() {
+            if (tocContainer.style.display === 'none' || !tocContainer.style.display) {
+                tocContainer.style.display = 'block';
+                renderTableOfContents();
+            } else {
+                tocContainer.style.display = 'none';
+            }
+        }
+        
+        // Render table of contents
+        function renderTableOfContents() {
+            tocList.innerHTML = '';
+            
+            if (epub.toc.length === 0) {
+                tocList.innerHTML = '<li>No table of contents available</li>';
+                return;
+            }
+            
+            epub.toc.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'toc-item';
+                li.textContent = item.label;
+                li.style.paddingLeft = `${item.level * 15}px`;
+                li.addEventListener('click', () => {
+                    navigateToChapter(item.spineIndex);
+                    tocContainer.style.display = 'none';
+                });
+                tocList.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
