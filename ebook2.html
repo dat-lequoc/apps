@@ -316,6 +316,8 @@
             pointer-events: auto;
             cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 75;
+            position: relative;
         }
         
         /* Progress indicator */
@@ -555,8 +557,6 @@
         
         // Touch zones for navigation
         zoneTop.addEventListener('click', toggleNavbar);
-        zoneLeft.addEventListener('click', navigateToPreviousChapter);
-        zoneRight.addEventListener('click', navigateToNextChapter);
         
         // Navbar buttons
         tocBtn.addEventListener('click', showTocPanel);
@@ -568,8 +568,17 @@
         panelOverlay.addEventListener('click', closeAllPanels);
         
         // Navigation arrows
-        prevArrow.addEventListener('click', navigateToPreviousChapter);
-        nextArrow.addEventListener('click', navigateToNextChapter);
+        prevArrow.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            navigateToPreviousChapter();
+        });
+        
+        nextArrow.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            navigateToNextChapter();
+        });
         
         // Font size controls
         fontDecreaseBtn.addEventListener('click', decreaseFontSize);
@@ -1157,6 +1166,24 @@
                 navbarTitle.textContent = epub.metadata.title;
             }
         };
+
+        // Function to return to home/welcome screen
+        function returnToHome() {
+            // Hide reader container
+            readerContainer.style.display = 'none';
+            
+            // Show welcome screen
+            welcomeScreen.style.display = 'flex';
+            
+            // Reset content display
+            contentContainer.innerHTML = '<div class="loading">Upload an EPUB file to start reading</div>';
+            
+            // Close any open panels
+            closeAllPanels();
+            
+            // Hide navbar if visible
+            navbar.classList.remove('visible');
+        }
     </script>
 </body>
 </html>
