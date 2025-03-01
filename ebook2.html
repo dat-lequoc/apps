@@ -16,142 +16,373 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             line-height: 1.6;
             color: #333;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
             background-color: #f9f9f9;
+            height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
         }
         
-        header {
+        /* Theme classes */
+        body.light-theme {
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        
+        body.sepia-theme {
+            background-color: #f8f1e3;
+            color: #5f4b32;
+        }
+        
+        body.dark-theme {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        
+        /* Initial welcome screen */
+        .welcome-screen {
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #ddd;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .welcome-screen h2 {
             margin-bottom: 20px;
         }
         
-        h1 {
-            font-size: 24px;
-            font-weight: 500;
-        }
-        
-        .file-input {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        button {
-            padding: 8px 16px;
-            background-color: #4a69bd;
+        .open-button {
+            background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 18px;
             cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         
-        button:hover {
-            background-color: #3b5998;
+        .recent-files {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 320px;
         }
         
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
+        .recent-file-item {
+            background-color: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            text-align: left;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .reader-controls {
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: -60px;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: top 0.3s ease;
+            z-index: 100;
+        }
+        
+        .navbar.visible {
+            top: 0;
+        }
+        
+        .navbar-title {
+            font-size: 18px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 50%;
+        }
+        
+        .navbar-buttons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .navbar-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .toc-btn {
+            background-color: #FFC107;
+        }
+        
+        .settings-btn {
+            background-color: #F44336;
+        }
+        
+        .home-btn {
+            background-color: #2196F3;
+        }
+        
+        /* Side panels */
+        .panel {
+            position: fixed;
+            background-color: white;
+            z-index: 200;
+            transition: transform 0.3s ease;
+        }
+        
+        .toc-panel {
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 80%;
+            max-width: 320px;
+            transform: translateX(-100%);
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .toc-panel.visible {
+            transform: translateX(0);
+        }
+        
+        .toc-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
+            align-items: center;
         }
         
-        .toc-container {
-            margin-bottom: 20px;
-            max-height: 200px;
+        .toc-content {
+            flex: 1;
             overflow-y: auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            background-color: white;
+            padding: 15px;
+        }
+        
+        .settings-panel {
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            transform: translateY(100%);
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .settings-panel.visible {
+            transform: translateY(0);
+        }
+        
+        .panel-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 150;
             display: none;
         }
         
-        .toc-list {
-            list-style-type: none;
+        .panel-overlay.visible {
+            display: block;
         }
         
-        .toc-item {
-            padding: 5px 0;
+        /* Settings controls */
+        .settings-section {
+            margin-bottom: 20px;
+        }
+        
+        .settings-title {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .font-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background-color: white;
+            font-weight: bold;
             cursor: pointer;
-            color: #4a69bd;
         }
         
-        .toc-item:hover {
-            text-decoration: underline;
+        .theme-options {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .theme-option.active {
+            border-color: #2196F3;
+        }
+        
+        .light-option {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        
+        .sepia-option {
+            background-color: #f8f1e3;
+        }
+        
+        .dark-option {
+            background-color: #333;
+        }
+        
+        /* Reader content */
+        .reader-container {
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
         }
         
         .content-container {
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+            transition: background-color 0.3s ease;
+        }
+        
+        body.light-theme .content-container {
             background-color: white;
-            padding: 20px;
-            border-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            min-height: 300px;
-            overflow-wrap: break-word;
-            -webkit-user-select: text; /* For iOS Safari */
-            user-select: text;
-            touch-action: manipulation; /* Improve touch handling */
         }
         
-        .content-container img {
-            max-width: 100%;
-            height: auto;
+        body.sepia-theme .content-container {
+            background-color: #f8f1e3;
         }
         
-        .loading {
-            text-align: center;
-            padding: 20px;
-            font-style: italic;
-            color: #777;
+        body.dark-theme .content-container {
+            background-color: #222;
+            color: #e0e0e0;
         }
         
-        .footnote {
-            margin-top: 30px;
-            font-size: 14px;
-            color: #777;
-        }
-        
-        .info {
+        /* Navigation arrows */
+        .nav-arrows {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
             display: flex;
-            flex-direction: column;
-            gap: 5px;
-            margin-bottom: 15px;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
         }
         
-        .metadata {
+        .nav-arrow {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Progress indicator */
+        .progress-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
             font-size: 14px;
-            color: #666;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
+        .progress-indicator.visible {
+            opacity: 1;
+        }
+        
+        /* Touch zones */
+        .touch-zone {
+            position: absolute;
+            z-index: 50;
+        }
+        
+        .zone-top {
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+        }
+        
+        .zone-left {
+            left: 0;
+            top: 80px;
+            bottom: 0;
+            width: 40%;
+        }
+        
+        .zone-right {
+            right: 0;
+            top: 80px;
+            bottom: 0;
+            width: 40%;
+        }
+        
+        /* Hide initial elements that will be replaced */
+        header, .file-input, .reader-controls, .info, .toc-container, .footnote {
+            display: none;
+        }
+        
+        /* Additional mobile optimizations */
         @media (max-width: 768px) {
-            body {
-                padding: 15px;
+            .navbar-title {
+                max-width: 40%;
             }
             
-            .reader-controls {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .reader-controls button {
-                width: 100%;
+            .toc-panel {
+                width: 90%;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Original elements (hidden but preserved for functionality) -->
     <header>
         <h1>EPUB Reader</h1>
         <div class="file-input">
@@ -174,13 +405,87 @@
         <ul class="toc-list" id="toc-list"></ul>
     </div>
     
-    <div class="content-container" id="content">
-        <div class="loading">Upload an EPUB file to start reading</div>
+    <!-- New mobile-optimized UI elements -->
+    <div class="welcome-screen" id="welcome-screen">
+        <h2>EPUB Reader</h2>
+        <p>Tap below to open an EPUB file</p>
+        <button class="open-button" id="open-epub-button">Open EPUB</button>
+        
+        <div class="recent-files" id="recent-files">
+            <h3>Recent Books</h3>
+            <!-- Recent files will be populated here -->
+        </div>
     </div>
     
-    <p class="footnote">
-        Note: This is a basic EPUB reader. Some complex EPUB features may not be fully supported.
-    </p>
+    <div class="reader-container" id="reader-container" style="display: none;">
+        <!-- Top navbar -->
+        <div class="navbar" id="navbar">
+            <div class="navbar-title" id="navbar-title">Book Title</div>
+            <div class="navbar-buttons">
+                <button class="navbar-button toc-btn" id="toc-btn">
+                    ☰
+                </button>
+                <button class="navbar-button settings-btn" id="settings-btn">
+                    ⚙
+                </button>
+                <button class="navbar-button home-btn" id="home-btn">
+                    ⌂
+                </button>
+            </div>
+        </div>
+        
+        <!-- Touch zones -->
+        <div class="touch-zone zone-top" id="zone-top"></div>
+        <div class="touch-zone zone-left" id="zone-left"></div>
+        <div class="touch-zone zone-right" id="zone-right"></div>
+        
+        <!-- Content container -->
+        <div class="content-container" id="content">
+            <div class="loading">Upload an EPUB file to start reading</div>
+        </div>
+        
+        <!-- Navigation arrows -->
+        <div class="nav-arrows">
+            <div class="nav-arrow" id="prev-arrow">←</div>
+            <div class="nav-arrow" id="next-arrow">→</div>
+        </div>
+        
+        <!-- Progress indicator -->
+        <div class="progress-indicator" id="progress-indicator">45%</div>
+    </div>
+    
+    <!-- Table of Contents panel -->
+    <div class="panel toc-panel" id="toc-panel">
+        <div class="toc-header">
+            <h3>Table of Contents</h3>
+            <button id="close-toc">✕</button>
+        </div>
+        <div class="toc-content" id="toc-content"></div>
+    </div>
+    
+    <!-- Settings panel -->
+    <div class="panel settings-panel" id="settings-panel">
+        <div class="settings-section">
+            <div class="settings-title">Font Size</div>
+            <div class="font-size-controls">
+                <button class="font-button" id="font-decrease">A-</button>
+                <span id="font-size-value">100%</span>
+                <button class="font-button" id="font-increase">A+</button>
+            </div>
+        </div>
+        
+        <div class="settings-section">
+            <div class="settings-title">Theme</div>
+            <div class="theme-options">
+                <div class="theme-option light-option active" data-theme="light"></div>
+                <div class="theme-option sepia-option" data-theme="sepia"></div>
+                <div class="theme-option dark-option" data-theme="dark"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel overlay -->
+    <div class="panel-overlay" id="panel-overlay"></div>
 
     <script>
         // Main elements
@@ -203,11 +508,83 @@
             currentChapterIndex: 0
         };
         
+        // New UI References
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const readerContainer = document.getElementById('reader-container');
+        const openEpubButton = document.getElementById('open-epub-button');
+        const navbar = document.getElementById('navbar');
+        const navbarTitle = document.getElementById('navbar-title');
+        const tocBtn = document.getElementById('toc-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const homeBtn = document.getElementById('home-btn');
+        const tocPanel = document.getElementById('toc-panel');
+        const closeTocBtn = document.getElementById('close-toc');
+        const tocContent = document.getElementById('toc-content');
+        const settingsPanel = document.getElementById('settings-panel');
+        const panelOverlay = document.getElementById('panel-overlay');
+        const progressIndicator = document.getElementById('progress-indicator');
+        const fontDecreaseBtn = document.getElementById('font-decrease');
+        const fontIncreaseBtn = document.getElementById('font-increase');
+        const fontSizeValue = document.getElementById('font-size-value');
+        const themeOptions = document.querySelectorAll('.theme-option');
+        const zoneTop = document.getElementById('zone-top');
+        const zoneLeft = document.getElementById('zone-left');
+        const zoneRight = document.getElementById('zone-right');
+        const prevArrow = document.getElementById('prev-arrow');
+        const nextArrow = document.getElementById('next-arrow');
+        
         // Event listeners
         loadButton.addEventListener('click', handleFileSelection);
         prevButton.addEventListener('click', navigateToPreviousChapter);
         nextButton.addEventListener('click', navigateToNextChapter);
         tocButton.addEventListener('click', toggleTableOfContents);
+        
+        // Add event listeners for new UI
+        openEpubButton.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        // Handle file selected after clicking the open button
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                handleFileSelection();
+                welcomeScreen.style.display = 'none';
+                readerContainer.style.display = 'block';
+            }
+        });
+        
+        // Touch zones for navigation
+        zoneTop.addEventListener('click', toggleNavbar);
+        zoneLeft.addEventListener('click', navigateToPreviousChapter);
+        zoneRight.addEventListener('click', navigateToNextChapter);
+        
+        // Navbar buttons
+        tocBtn.addEventListener('click', showTocPanel);
+        settingsBtn.addEventListener('click', showSettingsPanel);
+        homeBtn.addEventListener('click', returnToHome);
+        closeTocBtn.addEventListener('click', hideTocPanel);
+        
+        // Panel overlay (used to close panels when clicking outside)
+        panelOverlay.addEventListener('click', closeAllPanels);
+        
+        // Navigation arrows
+        prevArrow.addEventListener('click', navigateToPreviousChapter);
+        nextArrow.addEventListener('click', navigateToNextChapter);
+        
+        // Font size controls
+        fontDecreaseBtn.addEventListener('click', decreaseFontSize);
+        fontIncreaseBtn.addEventListener('click', increaseFontSize);
+        
+        // Theme options
+        themeOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                setTheme(option.dataset.theme);
+            });
+        });
+        
+        // Variable to store the current font size percentage
+        let currentFontSize = 100;
+        let currentTheme = 'light';
         
         // Handle file upload
         function handleFileSelection() {
@@ -648,6 +1025,138 @@
                 tocList.appendChild(li);
             });
         }
+        
+        // Function to toggle navbar visibility
+        function toggleNavbar() {
+            navbar.classList.toggle('visible');
+            
+            // Auto-hide navbar after a few seconds
+            if (navbar.classList.contains('visible')) {
+                setTimeout(() => {
+                    navbar.classList.remove('visible');
+                }, 3000);
+            }
+        }
+        
+        // Show TOC panel
+        function showTocPanel() {
+            tocPanel.classList.add('visible');
+            panelOverlay.classList.add('visible');
+            renderMobileToc();
+        }
+        
+        // Hide TOC panel
+        function hideTocPanel() {
+            tocPanel.classList.remove('visible');
+            panelOverlay.classList.remove('visible');
+        }
+        
+        // Show settings panel
+        function showSettingsPanel() {
+            settingsPanel.classList.add('visible');
+            panelOverlay.classList.add('visible');
+        }
+        
+        // Hide settings panel
+        function hideSettingsPanel() {
+            settingsPanel.classList.remove('visible');
+            panelOverlay.classList.remove('visible');
+        }
+        
+        // Close all panels
+        function closeAllPanels() {
+            hideTocPanel();
+            hideSettingsPanel();
+        }
+        
+        // Render TOC for mobile
+        function renderMobileToc() {
+            tocContent.innerHTML = '';
+            
+            if (epub.toc.length === 0) {
+                tocContent.innerHTML = '<p>No table of contents available</p>';
+                return;
+            }
+            
+            epub.toc.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'toc-item';
+                div.textContent = item.label;
+                div.style.paddingLeft = `${item.level * 15}px`;
+                div.style.padding = '10px 0';
+                div.style.borderBottom = '1px solid #eee';
+                div.addEventListener('click', () => {
+                    navigateToChapter(item.spineIndex);
+                    hideTocPanel();
+                });
+                tocContent.appendChild(div);
+            });
+        }
+        
+        // Show progress indicator
+        function showProgress() {
+            const progress = Math.round(((epub.currentChapterIndex + 1) / epub.spine.length) * 100);
+            progressIndicator.textContent = `${progress}%`;
+            progressIndicator.classList.add('visible');
+            
+            setTimeout(() => {
+                progressIndicator.classList.remove('visible');
+            }, 2000);
+        }
+        
+        // Decrease font size
+        function decreaseFontSize() {
+            if (currentFontSize > 70) {
+                currentFontSize -= 10;
+                updateFontSize();
+            }
+        }
+        
+        // Increase font size
+        function increaseFontSize() {
+            if (currentFontSize < 200) {
+                currentFontSize += 10;
+                updateFontSize();
+            }
+        }
+        
+        // Update font size
+        function updateFontSize() {
+            fontSizeValue.textContent = `${currentFontSize}%`;
+            contentContainer.style.fontSize = `${currentFontSize}%`;
+        }
+        
+        // Set theme
+        function setTheme(theme) {
+            // Remove current theme class
+            document.body.classList.remove('light-theme', 'sepia-theme', 'dark-theme');
+            
+            // Add new theme class
+            document.body.classList.add(`${theme}-theme`);
+            
+            // Update active theme option
+            themeOptions.forEach(option => {
+                if (option.dataset.theme === theme) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+            
+            currentTheme = theme;
+        }
+
+        // Override the original navigate functions to include progress display
+        const originalNavigateToChapter = navigateToChapter;
+        navigateToChapter = function(index) {
+            originalNavigateToChapter(index);
+            showProgress();
+            
+            // Update navbar title
+            if (epub.metadata.title) {
+                navbarTitle.textContent = epub.metadata.title;
+            }
+        };
     </script>
 </body>
 </html>
