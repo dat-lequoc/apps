@@ -404,6 +404,44 @@
         ::selection {
             background-color: rgba(66, 133, 244, 0.3);
         }
+        
+        /* Translation popup */
+        #translation-popup {
+            position: fixed;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 12px;
+            min-width: 200px;
+            max-width: 300px;
+            z-index: 100;
+            display: none;
+        }
+        
+        body.dark-theme #translation-popup {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        
+        #translation-content {
+            margin-bottom: 8px;
+        }
+        
+        #translation-loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            height: 24px;
+        }
+        
+        #translation-loading .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-left-color: #4285f4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
     </style>
 </head>
 <body class="light-theme">
@@ -473,6 +511,10 @@
                     <!-- This will be populated dynamically -->
                     <p>Loading AI settings...</p>
                 </div>
+                <div class="settings-row" style="margin-top: 12px;">
+                    <label for="translation-toggle">Text Selection Translation</label>
+                    <input type="checkbox" id="translation-toggle" checked>
+                </div>
                 <button id="summarize-chapter-btn" style="display: none;">Summarize Chapter</button>
                 <div id="ai-response-area" style="margin-top: 16px; display: none;"></div>
             </div>
@@ -484,6 +526,14 @@
         <!-- Loading indicator -->
         <div id="loading">
             <div class="spinner"></div>
+        </div>
+        
+        <!-- Translation popup -->
+        <div id="translation-popup">
+            <div id="translation-content"></div>
+            <div id="translation-loading">
+                <div class="spinner"></div>
+            </div>
         </div>
         
         <!-- File input (hidden) -->
@@ -610,11 +660,23 @@
                 
                 // Set up AI features
                 document.getElementById('summarize-chapter-btn').addEventListener('click', summarizeCurrentChapter);
+                document.getElementById('translation-toggle').addEventListener('change', function() {
+                    localStorage.setItem('translation-enabled', this.checked);
+                });
+                
+                // Load translation toggle state from localStorage
+                if (localStorage.getItem('translation-enabled') === 'false') {
+                    document.getElementById('translation-toggle').checked = false;
+                }
+                
                 await checkAuthAndLoadApiSettings();
                 
                 // Content area
                 contentArea.addEventListener('click', handleContentClick);
                 contentArea.addEventListener('scroll', updateProgressBar);
+                
+                // Add selection event listener for translation
+                document.addEventListener('selectionchange', handleTextSelection);
                 
                 // Swipe detection
                 let touchStartX = 0;
@@ -1082,6 +1144,80 @@
                 
                 // Toggle navbar visibility on tap
                 toggleNavbar();
+                
+                // Hide translation popup when clicking elsewhere
+                const translationPopup = document.getElementById('translation-popup');
+                translationPopup.style.display = 'none';
+            }
+            
+            // Handle text selection for translation
+            function handleTextSelection() {
+                // Check if translation is enabled
+                const translationEnabled = document.getElementById('translation-toggle').checked;
+                if (!translationEnabled) {
+                    return;
+                }
+                
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                
+                // Hide the popup if no text is selected
+                if (!selectedText) {
+                    document.getElementById('translation-popup').style.display = 'none';
+                    return;
+                }
+                
+                // Only proceed if we have a reasonable amount of text (not too short, not too long)
+                if (selectedText.length > 1 && selectedText.length < 500) {
+                    // Get the selection's bounding box
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    // Position and show the popup
+                    const popup = document.getElementById('translation-popup');
+                    popup.style.left = `${rect.left + window.scrollX}px`;
+                    popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
+                    popup.style.display = 'block';
+                    
+                    // Get translation
+                    translateText(selectedText);
+                }
+            }
+            
+            // Translate text using Gemini API
+            async function translateText(text) {
+                if (!userApiSettings) {
+                    document.getElementById('translation-content').textContent = 'Please configure API key in settings to use translation.';
+                    return;
+                }
+                
+                const translationContent = document.getElementById('translation-content');
+                const translationLoading = document.getElementById('translation-loading');
+                
+                // Show loading indicator
+                translationContent.textContent = '';
+                translationLoading.style.display = 'flex';
+                
+                try {
+                    const prompt = `Translate the following English text to Vietnamese. Only return the translation without any explanation or additional text.\n\nText: "${text}"`;
+                    
+                    const response = await geminiRequest(userApiSettings.api_key, prompt, userApiSettings.model);
+                    
+                    // Hide loading indicator
+                    translationLoading.style.display = 'none';
+                    
+                    if (response.error) {
+                        translationContent.textContent = `Error: ${response.error.message}`;
+                        return;
+                    }
+                    
+                    const translation = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation failed.';
+                    translationContent.textContent = translation;
+                } catch (error) {
+                    console.error('Error translating text:', error);
+                    translationLoading.style.display = 'none';
+                    translationContent.textContent = 'An error occurred during translation.';
+                }
             }
             
             // Settings controls
