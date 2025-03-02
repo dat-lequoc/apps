@@ -1151,6 +1151,8 @@
             }
             
             // Handle text selection for translation
+            let translationTimer = null;
+            
             function handleTextSelection() {
                 // Check if translation is enabled
                 const translationEnabled = document.getElementById('translation-toggle').checked;
@@ -1164,6 +1166,7 @@
                 // Hide the popup if no text is selected
                 if (!selectedText) {
                     document.getElementById('translation-popup').style.display = 'none';
+                    clearTimeout(translationTimer);
                     return;
                 }
                 
@@ -1179,8 +1182,18 @@
                     popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
                     popup.style.display = 'block';
                     
-                    // Get translation
-                    translateText(selectedText);
+                    // Show loading state immediately 
+                    document.getElementById('translation-content').textContent = 'Waiting...';
+                    document.getElementById('translation-loading').style.display = 'none';
+                    
+                    // Clear any existing timer
+                    clearTimeout(translationTimer);
+                    
+                    // Set a new timer for translation (800ms delay)
+                    translationTimer = setTimeout(() => {
+                        // Get translation after delay
+                        translateText(selectedText);
+                    }, 800);
                 }
             }
             
