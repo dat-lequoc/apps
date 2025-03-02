@@ -219,6 +219,11 @@
         <h3>Flashcards</h3>
         <p>Practice with flashcards</p>
       </div>
+      <div class="app-card" id="ebook-reader-btn">
+        <div class="app-icon">📖</div>
+        <h3>Ebook Reader</h3>
+        <p>Read and translate ebooks</p>
+      </div>
     </div>
     <button id="logout-button">Sign Out</button>
     <!-- New Settings button -->
@@ -371,6 +376,9 @@
     });
     document.getElementById("flashcards-app-btn").addEventListener("click", () => {
       window.location.href = "flashcards.html";
+    });
+    document.getElementById("ebook-reader-btn").addEventListener("click", () => {
+      window.location.href = "simple-ebook-reader.html";
     });
 
     // Check auth on initial load
