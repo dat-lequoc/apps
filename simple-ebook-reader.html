@@ -71,7 +71,82 @@
             text-align: center;
         }
         
-        #open-file-btn {
+        .welcome-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+        
+        .welcome-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        #library-section {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .library-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background-color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .library-item:hover {
+            background-color: #eaeaea;
+        }
+        
+        .library-item-details {
+            flex: 1;
+        }
+        
+        .library-item-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .library-item-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .library-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .library-item-delete {
+            color: #d93025;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .auth-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        #open-file-btn, #login-btn {
             background-color: #4285f4;
             color: white;
             border: none;
@@ -448,9 +523,26 @@
     <div id="app">
         <!-- Welcome screen -->
         <div id="welcome-screen">
-            <h1>Simple Ebook Reader</h1>
-            <p>Open a text, EPUB, or PDF file to start reading</p>
-            <button id="open-file-btn">Open File</button>
+            <div class="welcome-content">
+                <h1>Simple Ebook Reader</h1>
+                <p>Open a text, EPUB, or PDF file to start reading</p>
+                <div class="welcome-buttons">
+                    <button id="open-file-btn">Open File</button>
+                    <button id="login-btn" style="display: none;">Sign In</button>
+                </div>
+                
+                <div class="auth-section" id="auth-section">
+                    <p>Sign in to save books to your library</p>
+                </div>
+                
+                <!-- Library Section -->
+                <div id="library-section" style="display: none;">
+                    <h2>Your Library</h2>
+                    <div id="library-list">
+                        <!-- Library items will be populated here -->
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Top navbar -->
@@ -1007,6 +1099,13 @@
                 
                 // Populate TOC
                 populateToc();
+                
+                // Save to library if user is logged in
+                saveBookToLibrary().then(saved => {
+                    if (saved) {
+                        console.log('Book saved to library');
+                    }
+                });
             }
             
             function displayCurrentChapter() {
@@ -1133,6 +1232,12 @@
                     chapters: [],
                     currentPosition: 0
                 };
+                
+                // Refresh library if user is logged in
+                const { data: { session } } = supabase.auth.getSession();
+                if (session) {
+                    loadUserLibrary();
+                }
             }
             
             function handleContentClick(e) {
@@ -1282,6 +1387,18 @@
                 const overallProgress = (chaptersProgress + (chapterProgress / Math.max(1, bookData.chapters.length))) * 100;
                 
                 progressBar.style.width = `${overallProgress}%`;
+                
+                // Save reading progress to library periodically
+                // Use debouncing to avoid too many saves
+                if (bookData.title) {
+                    if (updateProgressBar.saveTimeout) {
+                        clearTimeout(updateProgressBar.saveTimeout);
+                    }
+                    
+                    updateProgressBar.saveTimeout = setTimeout(() => {
+                        saveBookToLibrary();
+                    }, 3000);  // Save after 3 seconds of no scrolling
+                }
             }
             
             // Utility functions
@@ -1297,15 +1414,40 @@
             async function checkAuthAndLoadApiSettings() {
                 const aiSettingsContent = document.getElementById('ai-settings-content');
                 const summarizeBtn = document.getElementById('summarize-chapter-btn');
+                const loginBtn = document.getElementById('login-btn');
+                const librarySection = document.getElementById('library-section');
+                const authSection = document.getElementById('auth-section');
                 
                 // Check if the user is logged in
                 const { data: { session } } = await supabase.auth.getSession();
                 
                 if (!session) {
+                    // Show login button
+                    loginBtn.style.display = 'inline-block';
+                    loginBtn.addEventListener('click', () => {
+                        window.open('index.html', '_blank');
+                    });
+                    
+                    // Update auth section
+                    authSection.innerHTML = `
+                        <p>Sign in to save books to your library</p>
+                    `;
+                    
+                    // Update AI settings
                     aiSettingsContent.innerHTML = `
                         <p>Please <a href="index.html" target="_blank">sign in</a> to use AI features.</p>
                     `;
                     return;
+                } else {
+                    // User is signed in
+                    loginBtn.style.display = 'none';
+                    authSection.innerHTML = `
+                        <p>Signed in as ${session.user.email}</p>
+                    `;
+                    
+                    // Load user's library
+                    librarySection.style.display = 'block';
+                    loadUserLibrary();
                 }
                 
                 // User is logged in, check if they have API settings
@@ -1325,6 +1467,196 @@
                     <p>Model: ${userApiSettings.model}</p>
                 `;
                 summarizeBtn.style.display = 'block';
+            }
+            
+            // Library functions
+            async function loadUserLibrary() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+                
+                const libraryList = document.getElementById('library-list');
+                libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading your books...</div>';
+                
+                // Fetch user's books from Supabase
+                const { data: books, error } = await supabase
+                    .from('ebooks')
+                    .select('*')
+                    .order('updated_at', { ascending: false });
+                
+                if (error) {
+                    console.error('Error fetching library:', error);
+                    libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Error loading library</div>';
+                    return;
+                }
+                
+                if (!books || books.length === 0) {
+                    libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Your library is empty</div>';
+                    return;
+                }
+                
+                // Display books
+                libraryList.innerHTML = '';
+                books.forEach(book => {
+                    const date = new Date(book.updated_at).toLocaleDateString();
+                    
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    item.innerHTML = `
+                        <div class="library-item-details">
+                            <div class="library-item-title">${book.title}</div>
+                            <div class="library-item-meta">
+                                ${book.file_type.toUpperCase()} • Last read: ${date}
+                            </div>
+                        </div>
+                        <div class="library-item-actions">
+                            <button class="library-item-delete" data-id="${book.id}">×</button>
+                        </div>
+                    `;
+                    
+                    // Add click event to open the book
+                    item.addEventListener('click', (event) => {
+                        // Don't open if the delete button was clicked
+                        if (event.target.classList.contains('library-item-delete')) {
+                            return;
+                        }
+                        loadBookFromLibrary(book);
+                    });
+                    
+                    libraryList.appendChild(item);
+                });
+                
+                // Add delete button event listeners
+                document.querySelectorAll('.library-item-delete').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        event.stopPropagation();
+                        const bookId = button.getAttribute('data-id');
+                        
+                        if (confirm('Remove this book from your library?')) {
+                            await deleteBookFromLibrary(bookId);
+                        }
+                    });
+                });
+            }
+            
+            async function deleteBookFromLibrary(bookId) {
+                const { error } = await supabase
+                    .from('ebooks')
+                    .delete()
+                    .eq('id', bookId);
+                
+                if (error) {
+                    console.error('Error deleting book:', error);
+                    alert('Could not delete the book');
+                    return;
+                }
+                
+                // Reload library
+                loadUserLibrary();
+            }
+            
+            async function saveBookToLibrary() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return false;
+                
+                if (!bookData.title) return false;
+                
+                // Determine if we already have this book by title
+                const { data: existingBooks } = await supabase
+                    .from('ebooks')
+                    .select('id')
+                    .eq('title', bookData.title)
+                    .maybeSingle();
+                
+                // Prepare book data
+                const fileType = bookData.title.split('.').pop().toLowerCase();
+                const bookContent = bookData.content && bookData.content.length < 100000 ? bookData.content : null;
+                
+                // Create metadata with chapters information (but strip content to save space)
+                const metadata = {
+                    chapters: bookData.chapters.map(chapter => ({
+                        title: chapter.title,
+                        startLine: chapter.startLine,
+                        endLine: chapter.endLine
+                    }))
+                };
+                
+                // Record current position
+                const lastPosition = {
+                    chapter: bookData.currentPosition,
+                    scroll: contentArea.scrollTop || 0
+                };
+                
+                if (existingBooks) {
+                    // Update existing book
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .update({
+                            title: bookData.title,
+                            content: bookContent,
+                            file_type: fileType,
+                            metadata: metadata,
+                            last_position: lastPosition,
+                            updated_at: new Date()
+                        })
+                        .eq('id', existingBooks.id);
+                    
+                    if (error) {
+                        console.error('Error updating book:', error);
+                        return false;
+                    }
+                } else {
+                    // Insert new book
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .insert({
+                            title: bookData.title,
+                            content: bookContent,
+                            file_type: fileType,
+                            metadata: metadata,
+                            last_position: lastPosition
+                        });
+                    
+                    if (error) {
+                        console.error('Error saving book:', error);
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            async function loadBookFromLibrary(book) {
+                showLoading();
+                
+                // Set up book data
+                bookData.title = book.title;
+                bookTitle.textContent = book.title;
+                
+                // If content is stored, use it directly
+                if (book.content) {
+                    bookData.content = book.content;
+                    bookData.chapters = book.metadata.chapters;
+                    
+                    // Restore last position
+                    if (book.last_position) {
+                        bookData.currentPosition = book.last_position.chapter || 0;
+                    }
+                    
+                    showBook();
+                    
+                    // Restore scroll position after a short delay
+                    if (book.last_position && book.last_position.scroll) {
+                        setTimeout(() => {
+                            contentArea.scrollTop = book.last_position.scroll;
+                        }, 100);
+                    }
+                    
+                    hideLoading();
+                } else {
+                    // Content not stored, show error
+                    hideLoading();
+                    alert('Book content not available. Please re-upload the file.');
+                }
             }
             
             // AI feature functions
