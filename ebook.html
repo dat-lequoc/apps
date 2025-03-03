@@ -495,6 +495,8 @@
             transform: translateY(10px);
             opacity: 0;
             transition: transform 0.2s ease, opacity 0.2s ease;
+            font-style: italic;
+            color: #4285f4;
         }
         
         #translation-popup.visible {
@@ -504,18 +506,18 @@
         
         body.light-theme #translation-popup {
             background-color: #ffffff;
-            color: #333;
+            color: #4285f4;
         }
         
         body.sepia-theme #translation-popup {
             background-color: #f7f0e0;
-            color: #5f4b32;
+            color: #4285f4;
             border-color: rgba(95, 75, 50, 0.15);
         }
         
         body.dark-theme #translation-popup {
             background-color: #2d2d2d;
-            color: #e0e0e0;
+            color: #4285f4;
             border-color: rgba(255,255,255,0.1);
         }
         
@@ -921,19 +923,6 @@
                 
                 // Add selection event listener for translation
                 document.addEventListener('selectionchange', handleTextSelection);
-                
-                // Swipe detection
-                let touchStartX = 0;
-                let touchEndX = 0;
-                
-                contentArea.addEventListener('touchstart', e => {
-                    touchStartX = e.changedTouches[0].screenX;
-                }, { passive: true });
-                
-                contentArea.addEventListener('touchend', e => {
-                    touchEndX = e.changedTouches[0].screenX;
-                    handleSwipe(touchStartX, touchEndX);
-                }, { passive: true });
             }
             
             function handleFileSelected() {
@@ -1317,18 +1306,6 @@
                 if (bookData.currentPosition < bookData.chapters.length - 1) {
                     bookData.currentPosition++;
                     displayCurrentChapter();
-                }
-            }
-            
-            function handleSwipe(startX, endX) {
-                const swipeThreshold = 100;
-                
-                if (startX - endX > swipeThreshold) {
-                    // Swipe left - go next
-                    goToNext();
-                } else if (endX - startX > swipeThreshold) {
-                    // Swipe right - go previous
-                    goToPrevious();
                 }
             }
             
