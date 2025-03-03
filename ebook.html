@@ -517,6 +517,70 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
+        
+        /* Flashcard toast styles */
+        .flashcard-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 12px 16px;
+            width: 280px;
+            z-index: 1000;
+        }
+        
+        body.dark-theme .flashcard-toast {
+            background-color: #333;
+            color: #e0e0e0;
+        }
+        
+        .flashcard-toast.visible {
+            display: block;
+        }
+        
+        .flashcard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .flashcard-close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #888;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .flashcard-word {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .flashcard-translation {
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        
+        .flashcard-save-btn {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .flashcard-save-btn:disabled {
+            background-color: #a4c2f4;
+        }
     </style>
 </head>
 <body class="light-theme">
@@ -1331,11 +1395,134 @@
                     
                     const translation = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation failed.';
                     translationContent.textContent = translation;
+                    
+                    // Generate flashcard in parallel
+                    generateFlashcard(text);
                 } catch (error) {
                     console.error('Error translating text:', error);
                     translationLoading.style.display = 'none';
                     translationContent.textContent = 'An error occurred during translation.';
                 }
+            }
+            
+            // Generate a flashcard from selected text
+            async function generateFlashcard(text) {
+                if (!userApiSettings) return;
+                
+                try {
+                    const prompt = `Extract a single useful vocabulary word or phrase from this text that would be good for a language learner. If the text is long, choose the most difficult or interesting word/phrase.
+                    
+                    Text: "${text}"
+                    
+                    Return in this JSON format without any additional text:
+                    {
+                        "word": "the extracted word or short phrase",
+                        "phrase": "A sentence showing the word in context, with the <b>word</b> in bold",
+                        "translation_answer": "vietnamese translation\\nBrief definition in English"
+                    }`;
+                    
+                    const response = await geminiRequest(userApiSettings.api_key, prompt, userApiSettings.model);
+                    
+                    if (response.error) {
+                        console.error('Error generating flashcard:', response.error);
+                        return;
+                    }
+                    
+                    const flashcardText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                    
+                    // Extract the JSON object
+                    try {
+                        // Find the JSON part in the response
+                        const jsonMatch = flashcardText.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            const flashcardData = JSON.parse(jsonMatch[0]);
+                            showFlashcardToast(flashcardData);
+                        }
+                    } catch (jsonError) {
+                        console.error('Error parsing flashcard JSON:', jsonError, flashcardText);
+                    }
+                } catch (error) {
+                    console.error('Error generating flashcard:', error);
+                }
+            }
+            
+            // Format translation to make Vietnamese part bold
+            function formatTranslation(translation) {
+                // Split by newline - first part is Vietnamese, second part is English definition
+                const parts = translation.split('\n');
+                if (parts.length > 1) {
+                    return `<b>${parts[0]}</b><br>${parts[1]}`;
+                }
+                return translation;
+            }
+            
+            // Show flashcard as a toast notification
+            function showFlashcardToast(flashcardData) {
+                // Check if there's already a toast, remove it
+                const existingToast = document.getElementById('flashcard-toast');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+                
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.id = 'flashcard-toast';
+                toast.className = 'flashcard-toast visible'; // Add visible class immediately
+                
+                // Create flashcard content
+                toast.innerHTML = `
+                    <div class="flashcard-header">
+                        <div class="flashcard-word">${flashcardData.word}</div>
+                        <button class="flashcard-close-btn">×</button>
+                    </div>
+                    <div class="flashcard-translation">${formatTranslation(flashcardData.translation_answer)}</div>
+                    <button class="flashcard-save-btn">Save to Flashcards</button>
+                `;
+                
+                // Add to document
+                document.body.appendChild(toast);
+                
+                // Add close button functionality
+                toast.querySelector('.flashcard-close-btn').addEventListener('click', () => {
+                    toast.remove(); // Just remove immediately without animation
+                });
+                
+                // Auto-hide after 20 seconds
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        toast.remove(); // Remove without animation
+                    }
+                }, 20000);
+                
+                // Save button functionality
+                toast.querySelector('.flashcard-save-btn').addEventListener('click', async () => {
+                    // Only proceed if user is logged in
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (!session) {
+                        alert('Please sign in to save flashcards');
+                        return;
+                    }
+                    
+                    // Save to Supabase
+                    const { error } = await supabase
+                        .from('flashcards')
+                        .insert({
+                            user_id: session.user.id,
+                            word: flashcardData.word,
+                            phrase: flashcardData.phrase,
+                            translation: flashcardData.translation_answer,
+                            book_title: bookData.title,
+                            chapter: bookData.chapters[bookData.currentPosition]?.title || ''
+                        });
+                        
+                    if (error) {
+                        console.error('Error saving flashcard:', error);
+                        alert('Error saving flashcard');
+                    } else {
+                        toast.querySelector('.flashcard-save-btn').textContent = 'Saved!';
+                        toast.querySelector('.flashcard-save-btn').disabled = true;
+                    }
+                });
             }
             
             // Settings controls
@@ -1719,4 +1906,10 @@
         });
     </script>
 </body>
+<!-- 
+Flashcard example:
+word: "endeavor"
+phrase: "To <b>endeavor</b> is to try hard to do or achieve something."
+translation_answer: "nỗ lực\nTry hard to do or achieve something."
+-->
 </html>

@@ -598,9 +598,9 @@
             if (!existingWords.includes(card.word)) {
               newCards.push({
                 user_id: userId,
-                word: card.word,
-                phrase: card.phrase,
-                translation_answer: card.translation_answer || card.translationAnswer,
+                word: card.word, // e.g: "endeavor"
+                phrase: card.phrase, // e.g: "To <b>endeavor</b> is to try hard to do or achieve something."
+                translation_answer: card.translation_answer || card.translationAnswer, // e.g: "nỗ lực\nTry hard to do or achieve something."
                 reps: 0,
                 lapses: 0,
                 last_reviewed: null,
