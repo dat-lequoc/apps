@@ -484,38 +484,87 @@
         #translation-popup {
             position: fixed;
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            padding: 12px;
-            min-width: 200px;
-            max-width: 300px;
+            border-radius: 12px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+            padding: 16px;
+            min-width: 220px;
+            max-width: 320px;
             z-index: 100;
             display: none;
+            border: 1px solid rgba(0,0,0,0.08);
+            transform: translateY(10px);
+            opacity: 0;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        
+        #translation-popup.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        body.light-theme #translation-popup {
+            background-color: #ffffff;
+            color: #333;
+        }
+        
+        body.sepia-theme #translation-popup {
+            background-color: #f7f0e0;
+            color: #5f4b32;
+            border-color: rgba(95, 75, 50, 0.15);
         }
         
         body.dark-theme #translation-popup {
-            background-color: #333;
+            background-color: #2d2d2d;
             color: #e0e0e0;
+            border-color: rgba(255,255,255,0.1);
+        }
+        
+        #translation-popup:before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 20px;
+            width: 14px;
+            height: 14px;
+            background-color: inherit;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            border-left: 1px solid rgba(0,0,0,0.08);
+            transform: rotate(45deg);
+        }
+        
+        body.dark-theme #translation-popup:before {
+            border-color: rgba(255,255,255,0.1);
+        }
+        
+        body.sepia-theme #translation-popup:before {
+            border-color: rgba(95, 75, 50, 0.15);
         }
         
         #translation-content {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            line-height: 1.5;
         }
         
         #translation-loading {
             display: none;
             align-items: center;
             justify-content: center;
-            height: 24px;
+            height: 30px;
         }
         
         #translation-loading .spinner {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             border: 2px solid rgba(0,0,0,0.1);
             border-left-color: #4285f4;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+        }
+        
+        body.dark-theme #translation-loading .spinner {
+            border-color: rgba(255,255,255,0.1);
+            border-left-color: #4285f4;
         }
         
         /* Flashcard toast styles */
@@ -1355,7 +1404,10 @@
                 
                 // Hide translation popup when clicking elsewhere
                 const translationPopup = document.getElementById('translation-popup');
-                translationPopup.style.display = 'none';
+                translationPopup.classList.remove('visible');
+                setTimeout(() => {
+                    translationPopup.style.display = 'none';
+                }, 200); // Match transition duration
             }
             
             // Handle text selection for translation
@@ -1391,9 +1443,42 @@
                         
                         // Position and show the popup
                         const popup = document.getElementById('translation-popup');
-                        popup.style.left = `${rect.left + window.scrollX}px`;
-                        popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
+                        
+                        // Get viewport dimensions
+                        const viewportWidth = window.innerWidth;
+                        const viewportHeight = window.innerHeight;
+                        
+                        // Calculate initial position
+                        let leftPos = rect.left + window.scrollX;
+                        let topPos = rect.bottom + window.scrollY + 10;
+                        
+                        // Make sure popup is displayed so we can get its dimensions
                         popup.style.display = 'block';
+                        popup.style.opacity = '0';  // Hide it visually while calculating
+                        
+                        // Get popup dimensions
+                        const popupWidth = popup.offsetWidth;
+                        const popupHeight = popup.offsetHeight;
+                        
+                        // Adjust horizontal position if needed
+                        if (leftPos + popupWidth > viewportWidth - 10) {
+                            // Would go off right edge, adjust left position
+                            leftPos = Math.max(10, viewportWidth - popupWidth - 10);
+                        }
+                        
+                        // Adjust vertical position if needed
+                        if (topPos + popupHeight > viewportHeight + window.scrollY - 10) {
+                            // Would go off bottom edge, position above selection instead
+                            topPos = rect.top + window.scrollY - popupHeight - 10;
+                        }
+                        
+                        // Update popup position
+                        popup.style.left = `${leftPos}px`;
+                        popup.style.top = `${topPos}px`;
+                        popup.style.opacity = '';  // Restore opacity
+                        
+                        // Add the visible class after a tiny delay to trigger transition
+                        setTimeout(() => popup.classList.add('visible'), 10);
                         
                         // Show loading state 
                         document.getElementById('translation-content').textContent = 'Translating...';
@@ -1592,7 +1677,7 @@
                                     toast.remove();
                                 }
                             }, 500); // Match this duration to the CSS transition time
-                        }, 1000); // Wait 1 second before starting the fade-out
+                        }, 1000);
                     }
                 });
             }
