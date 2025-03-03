@@ -17,8 +17,9 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             line-height: 1.6;
-            color: #333;
-            background-color: #f8f8f8;
+            /* Set dark theme as default base style */
+            color: #e0e0e0;
+            background-color: #222;
             height: 100vh;
             overflow: hidden;
             touch-action: manipulation;
@@ -38,6 +39,69 @@
         body.dark-theme {
             background-color: #222;
             color: #e0e0e0;
+        }
+        
+        /* Dark theme additional elements */
+        body.dark-theme #navbar {
+            background-color: #333;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        body.dark-theme #settings-panel,
+        body.dark-theme #toc-panel {
+            background-color: #333;
+            color: #e0e0e0;
+            border-color: #444;
+        }
+        
+        body.dark-theme #toc-header {
+            border-bottom-color: #444;
+        }
+        
+        body.dark-theme .toc-item {
+            border-bottom-color: #444;
+        }
+        
+        body.dark-theme .settings-section {
+            border-color: #444;
+        }
+        
+        body.dark-theme .font-btn {
+            background-color: #444;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme #welcome-screen {
+            background-color: #222;
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme #library-section {
+            background-color: #333;
+        }
+        
+        body.dark-theme .library-item {
+            background-color: #444;
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme .library-item:hover {
+            background-color: #555;
+        }
+        
+        body.dark-theme .library-item-meta {
+            color: #aaa;
+        }
+        
+        body.dark-theme #ai-settings-content,
+        body.dark-theme #ai-response-area {
+            background-color: #444;
+            color: #e0e0e0;
+        }
+        
+        body.dark-theme #loading {
+            background-color: rgba(0,0,0,0.8);
         }
         
         /* Main container */
@@ -660,7 +724,7 @@
         }
     </style>
 </head>
-<body class="light-theme">
+<body class="dark-theme">
     <div id="app">
         <!-- Welcome screen -->
         <div id="welcome-screen">
@@ -860,7 +924,7 @@
             // Settings
             let settings = {
                 fontSize: 100,
-                theme: 'light',
+                theme: 'dark',
                 lineHeight: 1.6
             };
             
@@ -887,11 +951,18 @@
                 nextBtn.addEventListener('click', goToNext);
                 
                 // Settings
-                fontDecreaseBtn.addEventListener('click', decreaseFontSize);
-                fontIncreaseBtn.addEventListener('click', increaseFontSize);
+                fontDecreaseBtn.addEventListener('click', () => {
+                    decreaseFontSize();
+                    saveUserPreferences();
+                });
+                fontIncreaseBtn.addEventListener('click', () => {
+                    increaseFontSize();
+                    saveUserPreferences();
+                });
                 themeOptions.forEach(option => {
                     option.addEventListener('click', () => {
                         setTheme(option.getAttribute('data-theme'));
+                        saveUserPreferences();
                     });
                 });
                 
@@ -899,6 +970,7 @@
                 document.getElementById('summarize-chapter-btn').addEventListener('click', summarizeCurrentChapter);
                 document.getElementById('translation-toggle').addEventListener('change', function() {
                     localStorage.setItem('translation-enabled', this.checked);
+                    saveUserPreferences();
                 });
                 
                 // Load translation toggle state from localStorage
@@ -908,6 +980,7 @@
                 
                 document.getElementById('auto-speak-toggle').addEventListener('change', function() {
                     localStorage.setItem('auto-speak-enabled', this.checked);
+                    saveUserPreferences();
                 });
                 
                 // Load auto-speak toggle state from localStorage
@@ -916,6 +989,9 @@
                 }
                 
                 await checkAuthAndLoadApiSettings();
+                
+                // Load user preferences after checking auth
+                await loadUserPreferences();
                 
                 // Content area
                 contentArea.addEventListener('click', handleContentClick);
@@ -1694,6 +1770,8 @@
             function updateFontSize() {
                 contentArea.style.fontSize = `${settings.fontSize}%`;
                 fontSizeValue.textContent = `${settings.fontSize}%`;
+                // Save to localStorage for immediate use
+                localStorage.setItem('ebook-font-size', settings.fontSize);
             }
             
             function setTheme(theme) {
@@ -1708,6 +1786,8 @@
                 });
                 
                 settings.theme = theme;
+                // Save to localStorage for immediate use
+                localStorage.setItem('ebook-theme', theme);
             }
             
             function updateProgressBar() {
@@ -2053,6 +2133,114 @@
                     console.error('Error generating summary:', error);
                     responseArea.textContent = 'An error occurred while generating the summary.';
                 }
+            }
+            
+            // Save user preferences to Supabase or localStorage
+            async function saveUserPreferences() {
+                // Build preferences object
+                const preferences = {
+                    fontSize: settings.fontSize,
+                    theme: settings.theme,
+                    translationEnabled: document.getElementById('translation-toggle').checked,
+                    autoSpeakEnabled: document.getElementById('auto-speak-toggle').checked
+                };
+                
+                // Always save to localStorage as fallback
+                localStorage.setItem('ebook-font-size', preferences.fontSize);
+                localStorage.setItem('ebook-theme', preferences.theme);
+                localStorage.setItem('translation-enabled', preferences.translationEnabled);
+                localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
+                
+                // If user is logged in, save to Supabase
+                if (session) {
+                    // Get existing user_settings
+                    const { data, error } = await supabase
+                        .from('user_settings')
+                        .select('*')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
+                    
+                    if (error) {
+                        console.error('Error fetching user settings:', error);
+                        return;
+                    }
+                    
+                    // If no settings exist yet, we can't update
+                    if (!data) return;
+                    
+                    // Update with new preferences (preserving existing fields like api_key)
+                    const updatedSettings = {
+                        ...data,
+                        preferences: preferences
+                    };
+                    
+                    // Save to Supabase
+                    const { error: updateError } = await supabase
+                        .from('user_settings')
+                        .update(updatedSettings)
+                        .eq('user_id', session.user.id);
+                    
+                    if (updateError) {
+                        console.error('Error saving user preferences:', updateError);
+                    }
+                }
+            }
+            
+            // Load user preferences from Supabase or localStorage
+            async function loadUserPreferences() {
+                // Check if user is logged in
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session) {
+                    // Try to load from Supabase
+                    const { data, error } = await supabase
+                        .from('user_settings')
+                        .select('preferences')
+                        .eq('user_id', session.user.id)
+                        .maybeSingle();
+                    
+                    if (!error && data && data.preferences) {
+                        const prefs = data.preferences;
+                        
+                        // Apply font size
+                        if (prefs.fontSize) {
+                            settings.fontSize = prefs.fontSize;
+                            updateFontSize();
+                        }
+                        
+                        // Apply theme
+                        if (prefs.theme) {
+                            setTheme(prefs.theme);
+                        }
+                        
+                        // Apply translation toggle
+                        if (prefs.translationEnabled !== undefined) {
+                            document.getElementById('translation-toggle').checked = prefs.translationEnabled;
+                            localStorage.setItem('translation-enabled', prefs.translationEnabled);
+                        }
+                        
+                        // Apply auto speak toggle
+                        if (prefs.autoSpeakEnabled !== undefined) {
+                            document.getElementById('auto-speak-toggle').checked = prefs.autoSpeakEnabled;
+                            localStorage.setItem('auto-speak-enabled', prefs.autoSpeakEnabled);
+                        }
+                        
+                        return;
+                    }
+                }
+                
+                // Fall back to localStorage if not found in Supabase
+                const fontSize = parseInt(localStorage.getItem('ebook-font-size')) || 100;
+                const theme = localStorage.getItem('ebook-theme') || 'dark';
+                
+                // Apply fontSize from localStorage
+                settings.fontSize = fontSize;
+                updateFontSize();
+                
+                // Apply theme from localStorage
+                setTheme(theme);
+                
+                // Note: translation and auto-speak toggles are already loaded from localStorage above
             }
         });
     </script>
