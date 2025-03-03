@@ -530,6 +530,8 @@
             width: 240px;
             z-index: 1000;
             font-size: 14px;
+            opacity: 1;
+            transition: opacity 0.5s ease, transform 0.5s ease;
         }
         
         body.dark-theme .flashcard-toast {
@@ -539,6 +541,11 @@
         
         .flashcard-toast.visible {
             display: block;
+        }
+        
+        .flashcard-toast.fade-out {
+            opacity: 0;
+            transform: translateY(10px);
         }
         
         .flashcard-header {
@@ -1574,6 +1581,18 @@
                     } else {
                         toast.querySelector('.flashcard-save-btn').textContent = 'Saved!';
                         toast.querySelector('.flashcard-save-btn').disabled = true;
+                        
+                        // Add fade-out animation after a short delay
+                        setTimeout(() => {
+                            toast.classList.add('fade-out');
+                            
+                            // Remove the element after the animation completes
+                            setTimeout(() => {
+                                if (document.body.contains(toast)) {
+                                    toast.remove();
+                                }
+                            }, 500); // Match this duration to the CSS transition time
+                        }, 1000); // Wait 1 second before starting the fade-out
                     }
                 });
             }
