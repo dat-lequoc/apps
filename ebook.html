@@ -1,27 +1,46 @@
 <!DOCTYPE html>
-<!-- Design to work on mobile device -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile EPUB Reader</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+    <title>Simple Ebook Reader</title>
+    <!-- Include the Supabase JS library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <style>
+        /* Reset and base styles */
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
-            overscroll-behavior: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f8f8;
+            height: 100vh;
+            overflow: hidden;
             touch-action: manipulation;
+        }
+        
+        /* Theme styles */
+        body.light-theme {
             background-color: #f8f8f8;
             color: #333;
         }
         
+        body.sepia-theme {
+            background-color: #f8f1e3;
+            color: #5f4b32;
+        }
+        
+        body.dark-theme {
+            background-color: #222;
+            color: #e0e0e0;
+        }
+        
+        /* Main container */
         #app {
             position: fixed;
             top: 0;
@@ -32,75 +51,336 @@
             flex-direction: column;
         }
         
-        #reader {
-            flex: 1;
-            overflow: hidden;
-            position: relative;
-            -webkit-user-select: text; /* Enable text selection for Safari */
-            user-select: text; /* Enable text selection */
+        /* Welcome screen */
+        #welcome-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            z-index: 100;
         }
         
+        #welcome-screen h1 {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .welcome-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 0 20px;
+        }
+        
+        .welcome-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+        }
+        
+        #library-section {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .library-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background-color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .library-item:hover {
+            background-color: #eaeaea;
+        }
+        
+        .library-item-details {
+            flex: 1;
+        }
+        
+        .library-item-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .library-item-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .library-item-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .library-item-delete {
+            color: #d93025;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        
+        .auth-section {
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        #open-file-btn, #login-btn {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        /* Top navbar */
         #navbar {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            padding: 12px;
+            height: 56px;
+            background-color: white;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background-color: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 0 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             transform: translateY(-100%);
             transition: transform 0.3s ease;
-            z-index: 10;
+            z-index: 20;
         }
         
         #navbar.visible {
             transform: translateY(0);
         }
         
-        #title {
-            font-size: 16px;
-            font-weight: bold;
-            white-space: nowrap;
+        #book-title {
+            font-size: 18px;
+            font-weight: 500;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 60%;
+            white-space: nowrap;
+            max-width: 40%;
         }
         
-        button {
+        #navbar-buttons {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .navbar-btn {
+            background-color: transparent;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            color: #555;
+            font-size: 20px;
+        }
+        
+        /* Reader content */
+        #reader-container {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #content-area {
+            height: 100%;
+            overflow-y: auto;
+            padding: 16px;
+            -webkit-overflow-scrolling: touch;
+            user-select: text;
+            -webkit-user-select: text;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        body.light-theme #content-area {
+            background-color: #fff;
+            color: #333;
+        }
+        
+        body.sepia-theme #content-area {
+            background-color: #f8f1e3;
+            color: #5f4b32;
+        }
+        
+        body.dark-theme #content-area {
+            background-color: #222;
+            color: #e0e0e0;
+        }
+        
+        /* Settings panel */
+        #settings-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 20px;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 30;
+        }
+        
+        #settings-panel.visible {
+            transform: translateY(0);
+        }
+        
+        .settings-section {
+            margin-bottom: 20px;
+        }
+        
+        .settings-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        #ai-settings-content {
+            margin-bottom: 16px;
+        }
+        
+        #summarize-chapter-btn {
             background-color: #4285f4;
             color: white;
             border: none;
             border-radius: 4px;
             padding: 8px 16px;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
-            touch-action: manipulation;
+            margin-top: 8px;
         }
         
-        button:disabled {
-            background-color: #ccc;
+        #ai-response-area {
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         
-        #file-input {
-            display: none;
+        body.dark-theme #ai-response-area {
+            background-color: #333;
         }
         
-        #upload-btn {
-            background-color: #34a853;
+        .settings-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
         }
         
-        #toc-btn {
-            background-color: #fbbc05;
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
         
-        #settings-btn {
-            background-color: #ea4335;
+        .font-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background-color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
         }
         
-        #toc {
+        .theme-options {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .theme-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .theme-option.active {
+            border-color: #4285f4;
+        }
+        
+        .light-option {
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+        
+        .sepia-option {
+            background-color: #f8f1e3;
+        }
+        
+        .dark-option {
+            background-color: #222;
+        }
+        
+        /* Navigation controls */
+        #nav-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+            z-index: 15;
+        }
+        
+        .nav-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: rgba(0,0,0,0.5);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        
+        /* Table of contents panel */
+        #toc-panel {
             position: fixed;
             top: 0;
             left: 0;
@@ -108,764 +388,1333 @@
             width: 80%;
             max-width: 320px;
             background-color: white;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-            z-index: 20;
-            overflow-y: auto;
+            z-index: 30;
             transform: translateX(-100%);
             transition: transform 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
         }
         
-        #toc.open {
+        #toc-panel.visible {
             transform: translateX(0);
         }
         
-        #toc-list {
-            list-style: none;
+        #toc-header {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #toc-content {
+            flex: 1;
+            overflow-y: auto;
             padding: 16px;
         }
         
-        #toc-list li {
+        .toc-item {
             padding: 8px 0;
             border-bottom: 1px solid #eee;
+            cursor: pointer;
         }
         
-        #toc-list li a {
-            text-decoration: none;
-            color: #333;
-            display: block;
-        }
-        
+        /* Overlay for panels */
         #overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 15;
+            background-color: rgba(0,0,0,0.4);
+            z-index: 25;
             display: none;
         }
         
-        #overlay.open {
+        #overlay.visible {
             display: block;
         }
         
-        #settings {
-            position: fixed;
+        /* Progress indicator */
+        #progress-bar {
+            position: absolute;
             bottom: 0;
             left: 0;
-            right: 0;
-            background-color: white;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 20;
-            padding: 16px;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
+            height: 3px;
+            background-color: #4285f4;
+            transition: width 0.2s ease;
+            z-index: 10;
         }
         
-        #settings.open {
-            transform: translateY(0);
-        }
-        
-        .settings-group {
-            margin-bottom: 16px;
-        }
-        
-        .settings-group h3 {
-            margin-bottom: 8px;
-        }
-        
-        .font-size-controls,
-        .theme-controls {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .theme-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid transparent;
-        }
-        
-        .theme-btn.active {
-            border-color: #4285f4;
-        }
-        
-        #theme-light {
-            background-color: #fff;
-            color: #333;
-            border: 1px solid #ccc;
-        }
-        
-        #theme-sepia {
-            background-color: #f8f1e3;
-            color: #704214;
-        }
-        
-        #theme-dark {
-            background-color: #333;
-            color: #fff;
-        }
-        
+        /* Loading indicator */
         #loading {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255,255,255,0.8);
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 30;
+            z-index: 50;
             display: none;
         }
         
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(66, 133, 244, 0.2);
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0,0,0,0.1);
+            border-left-color: #4285f4;
             border-radius: 50%;
-            border-top-color: #4285f4;
             animation: spin 1s linear infinite;
         }
         
         @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+            to { transform: rotate(360deg); }
         }
         
-        /* Touch zones */
-        #touch-left, #touch-right, #touch-center {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            z-index: 5;
+        /* Custom selection style */
+        ::selection {
+            background-color: rgba(66, 133, 244, 0.3);
         }
         
-        #touch-left {
-            left: 0;
-            width: 30%;
-        }
-        
-        #touch-right {
-            right: 0;
-            width: 30%;
-        }
-        
-        #touch-center {
-            left: 30%;
-            right: 30%;
-            width: 40%;
-        }
-        
-        #page-info {
-            position: absolute;
-            bottom: 16px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.6);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 12px;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 8;
-        }
-        
-        #page-info.visible {
-            opacity: 1;
-        }
-        
-        #open-book-container {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-            z-index: 6;
-        }
-        
-        #open-book-container.hidden {
+        /* Translation popup */
+        #translation-popup {
+            position: fixed;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 12px;
+            min-width: 200px;
+            max-width: 300px;
+            z-index: 100;
             display: none;
         }
         
-        /* Add CSS for navigation buttons */
-        #nav-buttons {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            z-index: 7;
-            pointer-events: none; /* Allow touch events to pass through the container */
+        body.dark-theme #translation-popup {
+            background-color: #333;
+            color: #e0e0e0;
         }
         
-        #prev-btn, #next-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5);
-            color: white;
-            font-size: 20px;
-            display: flex;
+        #translation-content {
+            margin-bottom: 8px;
+        }
+        
+        #translation-loading {
+            display: none;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            border: none;
-            pointer-events: auto; /* Make buttons clickable */
-            opacity: 0.7;
-            transition: opacity 0.3s ease, background-color 0.3s ease;
+            height: 24px;
         }
         
-        #prev-btn:hover, #next-btn:hover {
-            opacity: 1;
-            background-color: rgba(0, 0, 0, 0.7);
-        }
-        
-        #prev-btn:active, #next-btn:active {
-            background-color: rgba(0, 0, 0, 0.9);
-        }
-        
-        /* Style for selected text */
-        ::selection {
-            background: rgba(66, 133, 244, 0.3);
+        #translation-loading .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0,0,0,0.1);
+            border-left-color: #4285f4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
-<body>
+<body class="light-theme">
     <div id="app">
+        <!-- Welcome screen -->
+        <div id="welcome-screen">
+            <div class="welcome-content">
+                <h1>Simple Ebook Reader</h1>
+                <p>Open a text, EPUB, or PDF file to start reading</p>
+                <div class="welcome-buttons">
+                    <button id="open-file-btn">Open File</button>
+                    <button id="login-btn" style="display: none;">Sign In</button>
+                </div>
+                
+                <div class="auth-section" id="auth-section">
+                    <p>Sign in to save books to your library</p>
+                </div>
+                
+                <!-- Library Section -->
+                <div id="library-section" style="display: none;">
+                    <h2>Your Library</h2>
+                    <div id="library-list">
+                        <!-- Library items will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top navbar -->
         <div id="navbar">
-            <div id="title">EPUB Reader</div>
-            <button id="toc-btn">TOC</button>
-            <button id="settings-btn">Settings</button>
-            <button id="upload-btn">Open EPUB</button>
-            <input type="file" id="file-input" accept=".epub" />
+            <div id="book-title">Ebook Title</div>
+            <div id="navbar-buttons">
+                <button class="navbar-btn" id="toc-btn">☰</button>
+                <button class="navbar-btn" id="settings-btn">⚙️</button>
+                <button class="navbar-btn" id="home-btn">⌂</button>
+            </div>
         </div>
         
-        <div id="reader">
-            <!-- Touch zones for Kindle-like interaction -->
-            <div id="touch-left"></div>
-            <div id="touch-center"></div>
-            <div id="touch-right"></div>
+        <!-- Main reader area -->
+        <div id="reader-container">
+            <div id="content-area"></div>
+            <div id="progress-bar"></div>
+        </div>
+        
+        <!-- Navigation buttons -->
+        <div id="nav-controls">
+            <div class="nav-btn" id="prev-btn">←</div>
+            <div class="nav-btn" id="next-btn">→</div>
+        </div>
+        
+        <!-- Table of contents panel -->
+        <div id="toc-panel">
+            <div id="toc-header">
+                <h3>Table of Contents</h3>
+                <button class="navbar-btn" id="close-toc-btn">✕</button>
+            </div>
+            <div id="toc-content"></div>
+        </div>
+        
+        <!-- Settings panel -->
+        <div id="settings-panel">
+            <div class="settings-section">
+                <div class="settings-title">Font Size</div>
+                <div class="font-size-controls">
+                    <button class="font-btn" id="font-decrease-btn">A-</button>
+                    <span id="font-size-value">100%</span>
+                    <button class="font-btn" id="font-increase-btn">A+</button>
+                </div>
+            </div>
             
-            <!-- Initial open book container -->
-            <div id="open-book-container">
-                <h2>Tap to open an EPUB</h2>
-                <button id="open-book-btn">Open EPUB</button>
+            <div class="settings-section">
+                <div class="settings-title">Theme</div>
+                <div class="theme-options">
+                    <div class="theme-option light-option active" data-theme="light"></div>
+                    <div class="theme-option sepia-option" data-theme="sepia"></div>
+                    <div class="theme-option dark-option" data-theme="dark"></div>
+                </div>
+            </div>
+            
+            <!-- AI Features Section -->
+            <div class="settings-section" id="ai-features-section">
+                <div class="settings-title">AI Features</div>
+                <div id="ai-settings-content">
+                    <!-- This will be populated dynamically -->
+                    <p>Loading AI settings...</p>
+                </div>
+                <div class="settings-row" style="margin-top: 12px;">
+                    <label for="translation-toggle">Text Selection Translation</label>
+                    <input type="checkbox" id="translation-toggle" checked>
+                </div>
+                <button id="summarize-chapter-btn" style="display: none;">Summarize Chapter</button>
+                <div id="ai-response-area" style="margin-top: 16px; display: none;"></div>
             </div>
         </div>
         
-        <div id="page-info"></div>
-    </div>
-    
-    <!-- Add navigation buttons -->
-    <div id="nav-buttons">
-        <button id="prev-btn" aria-label="Previous page">&lt;</button>
-        <button id="next-btn" aria-label="Next page">&gt;</button>
-    </div>
-    
-    <div id="toc">
-        <div style="padding: 16px; border-bottom: 1px solid #eee;">
-            <h2>Table of Contents</h2>
+        <!-- Overlay for panels -->
+        <div id="overlay"></div>
+        
+        <!-- Loading indicator -->
+        <div id="loading">
+            <div class="spinner"></div>
         </div>
-        <ul id="toc-list"></ul>
-    </div>
-    
-    <div id="settings">
-        <div class="settings-group">
-            <h3>Font Size</h3>
-            <div class="font-size-controls">
-                <button id="font-smaller">A-</button>
-                <button id="font-bigger">A+</button>
+        
+        <!-- Translation popup -->
+        <div id="translation-popup">
+            <div id="translation-content"></div>
+            <div id="translation-loading">
+                <div class="spinner"></div>
             </div>
         </div>
         
-        <div class="settings-group">
-            <h3>Theme</h3>
-            <div class="theme-controls">
-                <button id="theme-light" class="theme-btn active" aria-label="Light theme"></button>
-                <button id="theme-sepia" class="theme-btn" aria-label="Sepia theme"></button>
-                <button id="theme-dark" class="theme-btn" aria-label="Dark theme"></button>
-            </div>
-        </div>
+        <!-- File input (hidden) -->
+        <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;">
     </div>
-    
-    <div id="overlay"></div>
-    
-    <div id="loading">
-        <div class="spinner"></div>
-    </div>
-    
+
     <script>
+        // Initialize the Supabase client
+        const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+        
+        // Gemini API helper functions
+        const getApiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`;
+        const geminiRequest = async (apiKey, message, model) => {
+          try {
+            const res = await fetch(`${getApiUrl(model)}${apiKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [{ text: message }]
+                }]
+              })
+            });
+            return res.json();
+          } catch (error) {
+            console.error('Error calling Gemini API:', error);
+            return { error: { message: 'Failed to connect to Gemini API' } };
+          }
+        };
+        
+        // Get the user's Gemini API settings from Supabase
+        async function getUserApiSettings() {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) return null;
+          
+          const { data, error } = await supabase
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+            
+          if (error) {
+            console.error('Error fetching API settings:', error);
+            return null;
+          }
+          
+          return data;
+        }
+        
         document.addEventListener('DOMContentLoaded', function() {
-            // Elements
-            const readerElement = document.getElementById('reader');
-            const uploadBtn = document.getElementById('upload-btn');
-            const fileInput = document.getElementById('file-input');
-            const titleElement = document.getElementById('title');
+            // DOM elements
+            const app = document.getElementById('app');
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const readerContainer = document.getElementById('reader-container');
+            const contentArea = document.getElementById('content-area');
+            const navbar = document.getElementById('navbar');
+            const bookTitle = document.getElementById('book-title');
             const tocBtn = document.getElementById('toc-btn');
-            const tocElement = document.getElementById('toc');
-            const tocList = document.getElementById('toc-list');
             const settingsBtn = document.getElementById('settings-btn');
-            const settingsElement = document.getElementById('settings');
-            const overlayElement = document.getElementById('overlay');
-            const fontSmallerBtn = document.getElementById('font-smaller');
-            const fontBiggerBtn = document.getElementById('font-bigger');
-            const themeButtons = document.querySelectorAll('.theme-btn');
-            const loadingElement = document.getElementById('loading');
-            const navbarElement = document.getElementById('navbar');
-            const touchCenter = document.getElementById('touch-center');
-            const pageInfo = document.getElementById('page-info');
-            const openBookContainer = document.getElementById('open-book-container');
-            const openBookBtn = document.getElementById('open-book-btn');
+            const homeBtn = document.getElementById('home-btn');
+            const tocPanel = document.getElementById('toc-panel');
+            const closeTocBtn = document.getElementById('close-toc-btn');
+            const tocContent = document.getElementById('toc-content');
+            const settingsPanel = document.getElementById('settings-panel');
+            const overlay = document.getElementById('overlay');
+            const fileInput = document.getElementById('file-input');
+            const openFileBtn = document.getElementById('open-file-btn');
+            const fontDecreaseBtn = document.getElementById('font-decrease-btn');
+            const fontIncreaseBtn = document.getElementById('font-increase-btn');
+            const fontSizeValue = document.getElementById('font-size-value');
+            const themeOptions = document.querySelectorAll('.theme-option');
+            const progressBar = document.getElementById('progress-bar');
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
+            const loading = document.getElementById('loading');
             
-            let book = null;
-            let rendition = null;
-            let fontSize = 100;
-            let currentTheme = 'light';
-            let pageInfoTimeout = null;
-            let currentLocation = null;
-            let totalLocations = 0;
-            let lastTapTime = 0;
+            // Book data
+            let bookData = {
+                title: '',
+                content: '',
+                chapters: [],
+                currentPosition: 0
+            };
             
-            // Initialize
-            uploadBtn.addEventListener('click', () => fileInput.click());
-            openBookBtn.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', openBook);
-            tocBtn.addEventListener('click', toggleToc);
-            settingsBtn.addEventListener('click', toggleSettings);
-            overlayElement.addEventListener('click', closeOverlays);
-            fontSmallerBtn.addEventListener('click', decreaseFontSize);
-            fontBiggerBtn.addEventListener('click', increaseFontSize);
-            prevBtn.addEventListener('click', prevPage);
-            nextBtn.addEventListener('click', nextPage);
+            // Settings
+            let settings = {
+                fontSize: 100,
+                theme: 'light',
+                lineHeight: 1.6
+            };
             
-            // New touch interaction - only use center area for UI toggle, not for navigation
-            touchCenter.addEventListener('click', function(e) {
-                // Check if there's a text selection
-                const selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) {
-                    // Don't toggle UI if text is selected
-                    return;
-                }
-                toggleUI(e);
-            });
+            // Initial setup
+            initialize();
             
-            // Edge swipe gestures for TOC and settings
-            let touchStartX = 0;
-            let touchStartY = 0;
+            // AI Features
+            let userApiSettings = null;
             
-            document.addEventListener('touchstart', e => {
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-            }, { passive: true });
-            
-            document.addEventListener('touchend', e => {
-                // Don't process navigation gestures if there's text selected
-                const selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) {
-                    return;
-                }
+            // Core functions
+            async function initialize() {
+                // Set up event listeners
+                openFileBtn.addEventListener('click', () => fileInput.click());
+                fileInput.addEventListener('change', handleFileSelected);
                 
-                const touchEndX = e.changedTouches[0].clientX;
-                const touchEndY = e.changedTouches[0].clientY;
-                const diffX = touchEndX - touchStartX;
-                const diffY = touchEndY - touchStartY;
+                tocBtn.addEventListener('click', toggleTocPanel);
+                closeTocBtn.addEventListener('click', closeTocPanel);
+                settingsBtn.addEventListener('click', toggleSettingsPanel);
+                homeBtn.addEventListener('click', goToHome);
+                overlay.addEventListener('click', closeAllPanels);
                 
-                // If start near left edge and swipe right, open TOC
-                if (touchStartX < 30 && diffX > 70) {
-                    toggleToc();
-                }
+                // Navigation
+                prevBtn.addEventListener('click', goToPrevious);
+                nextBtn.addEventListener('click', goToNext);
                 
-                // If start near bottom edge and swipe up, open settings
-                if (touchStartY > window.innerHeight - 30 && diffY < -70) {
-                    toggleSettings();
-                }
-            }, { passive: true });
-            
-            // Theme buttons
-            themeButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const themeId = button.id.split('-')[1];
-                    changeTheme(themeId);
-                    
-                    // Update active state
-                    themeButtons.forEach(btn => btn.classList.remove('active'));
-                    button.classList.add('active');
-                });
-            });
-            
-            // Functions for text selection that works with sandboxed iframes
-            function setupTextSelection() {
-                if (!rendition) return;
-                
-                rendition.on('rendered', function() {
-                    const iframe = readerElement.querySelector('iframe');
-                    if (!iframe) return;
-                    try {
-                        // Allow text selection on the iframe element
-                        iframe.style.userSelect = 'text';
-                        iframe.style.webkitUserSelect = 'text';
-                        
-                        // Inject a style element into the iframe to enforce text selection and enable touch callout
-                        const doc = iframe.contentDocument;
-                        const style = doc.createElement('style');
-                        style.type = 'text/css';
-                        style.textContent = `
-                            * {
-                                -webkit-user-select: text !important;
-                                -moz-user-select: text !important;
-                                -ms-user-select: text !important;
-                                user-select: text !important;
-                            }
-                            body {
-                                -webkit-touch-callout: default !important;
-                            }
-                            ::selection {
-                                background: rgba(66, 133, 244, 0.3) !important;
-                            }
-                        `;
-                        doc.head.appendChild(style);
-                    } catch(err) {
-                        console.error("Error initializing text selection in iframe", err);
-                    }
-                });
-                
-                rendition.themes.default({
-                    '::selection': {
-                        'background': 'rgba(66, 133, 244, 0.3)'
-                    },
-                    'body': {
-                        'user-select': 'text !important',
-                        '-webkit-user-select': 'text !important'
-                    }
-                });
-            }
-            
-            let lastTap = { time: 0, x: 0, y: 0 };
-            let selectionInProgress = false;
-            
-            function readerTouchStart(e) {
-                if (e.touches.length === 1) {
-                    const touch = e.touches[0];
-                    lastTap.x = touch.clientX;
-                    lastTap.y = touch.clientY;
-                }
-            }
-            
-            function readerTouchEnd(e) {
-                // Always allow normal selection behavior
-                if (selectionInProgress) {
-                    selectionInProgress = false;
-                    return;
-                }
-                
-                if (e.changedTouches.length !== 1) return;
-                
-                const touch = e.changedTouches[0];
-                const currentTime = new Date().getTime();
-                const timeDiff = currentTime - lastTap.time;
-                const tapDistance = Math.sqrt(
-                    Math.pow(touch.clientX - lastTap.x, 2) + 
-                    Math.pow(touch.clientY - lastTap.y, 2)
-                );
-                
-                // Check if it's a double tap (within 300ms and 10px radius)
-                if (timeDiff < 300 && timeDiff > 0 && tapDistance < 10) {
-                    // Double tap detected - try selecting a word
-                    triggerNativeSelection(touch.clientX, touch.clientY);
-                    // Comment out preventDefault so the native long press event may occur
-                    // e.preventDefault();
-                    // Reset tap timer
-                    lastTap.time = 0;
-                } else {
-                    // Store this tap data
-                    lastTap.time = currentTime;
-                }
-            }
-            
-            function triggerNativeSelection(x, y) {
-                const iframe = readerElement.querySelector('iframe');
-                if (!iframe) return;
-                
-                const rect = iframe.getBoundingClientRect();
-                const iframeDoc = iframe.contentDocument;
-                // Convert page coordinates to coordinates relative to iframe content
-                const relativeX = x - rect.left;
-                const relativeY = y - rect.top;
-                const targetElement = iframeDoc.elementFromPoint(relativeX, relativeY);
-                if (targetElement) {
-                    // Dispatch a double-click event to simulate native text selection
-                    const dblClickEvent = new MouseEvent('dblclick', {
-                        bubbles: true,
-                        cancelable: true,
-                        clientX: relativeX,
-                        clientY: relativeY
+                // Settings
+                fontDecreaseBtn.addEventListener('click', decreaseFontSize);
+                fontIncreaseBtn.addEventListener('click', increaseFontSize);
+                themeOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        setTheme(option.getAttribute('data-theme'));
                     });
-                    targetElement.dispatchEvent(dblClickEvent);
+                });
+                
+                // Set up AI features
+                document.getElementById('summarize-chapter-btn').addEventListener('click', summarizeCurrentChapter);
+                document.getElementById('translation-toggle').addEventListener('change', function() {
+                    localStorage.setItem('translation-enabled', this.checked);
+                });
+                
+                // Load translation toggle state from localStorage
+                if (localStorage.getItem('translation-enabled') === 'false') {
+                    document.getElementById('translation-toggle').checked = false;
                 }
+                
+                await checkAuthAndLoadApiSettings();
+                
+                // Content area
+                contentArea.addEventListener('click', handleContentClick);
+                contentArea.addEventListener('scroll', updateProgressBar);
+                
+                // Add selection event listener for translation
+                document.addEventListener('selectionchange', handleTextSelection);
+                
+                // Swipe detection
+                let touchStartX = 0;
+                let touchEndX = 0;
+                
+                contentArea.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+                
+                contentArea.addEventListener('touchend', e => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe(touchStartX, touchEndX);
+                }, { passive: true });
             }
             
-            // Add a method to handle selection state
-            document.addEventListener('selectionchange', function() {
-                const selection = window.getSelection();
-                selectionInProgress = selection && selection.toString().trim().length > 0;
-            });
-            
-            // Optionally, comment out custom long press listeners so that the native 
-            // long press event triggers text selection.
-            // let longPressTimer = null;
-            // readerElement.addEventListener('touchstart', function(e) {
-            //     if (e.touches.length === 1) {
-            //         const touch = e.touches[0];
-            //         longPressTimer = setTimeout(() => {
-            //             triggerNativeSelection(touch.clientX, touch.clientY);
-            //         }, 500);
-            //     }
-            // });
-            //
-            // readerElement.addEventListener('touchmove', function() {
-            //     if (longPressTimer) {
-            //         clearTimeout(longPressTimer);
-            //         longPressTimer = null;
-            //     }
-            // });
-            //
-            // readerElement.addEventListener('touchend', function() {
-            //     if (longPressTimer) {
-            //         clearTimeout(longPressTimer);
-            //         longPressTimer = null;
-            //     }
-            // });
-            
-            // Functions
-            function openBook(e) {
-                if (!e.target.files.length) return;
+            function handleFileSelected() {
+                const file = fileInput.files[0];
+                if (!file) return;
                 
-                const file = e.target.files[0];
-                if (!file.name.endsWith('.epub')) {
-                    alert('Please select an EPUB file');
-                    return;
-                }
-                
+                // Show loading
                 showLoading();
                 
-                // Create ArrayBuffer from the file
+                // Update book title
+                bookTitle.textContent = file.name;
+                bookData.title = file.name;
+                
+                // Process file based on extension
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                
+                if (fileExtension === 'txt') {
+                    processTextFile(file);
+                } else if (fileExtension === 'epub') {
+                    processEpubFile(file);
+                } else if (fileExtension === 'pdf') {
+                    processPdfFile(file);
+                } else {
+                    hideLoading();
+                    alert('Unsupported file format');
+                }
+            }
+            
+            function processTextFile(file) {
                 const reader = new FileReader();
-                reader.onload = function(event) {
-                    const arrayBuffer = event.target.result;
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    bookData.content = text;
                     
-                    // Initialize Book
-                    if (book) {
-                        book.destroy();
+                    // Simple chapter detection based on line breaks and possible chapter indicators
+                    const lines = text.split('\n');
+                    let chapters = [];
+                    let chapterMarkers = [];
+                    
+                    // Find potential chapter breaks
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        // Look for chapter indicators (empty line followed by "Chapter" or roman numerals)
+                        if (line === '' && i < lines.length - 1) {
+                            const nextLine = lines[i+1].trim();
+                            if (nextLine.match(/^(Chapter|CHAPTER|\bPart\b|\bSection\b|[IVXLCDM]+\.?)/)) {
+                                chapterMarkers.push(i+1);
+                            }
+                        }
                     }
                     
-                    book = ePub(arrayBuffer);
+                    // If no chapters detected, create arbitrary chapters every 1000 lines
+                    if (chapterMarkers.length <= 1) {
+                        for (let i = 0; i < lines.length; i += 1000) {
+                            chapterMarkers.push(i);
+                        }
+                    }
                     
-                    book.ready.then(() => {
-                        // Hide open book container
-                        openBookContainer.classList.add('hidden');
+                    // Create chapters
+                    for (let i = 0; i < chapterMarkers.length; i++) {
+                        const start = chapterMarkers[i];
+                        const end = i < chapterMarkers.length - 1 ? chapterMarkers[i+1] : lines.length;
+                        const chapterContent = lines.slice(start, end).join('\n');
+                        const title = lines[start].trim() || `Chapter ${i+1}`;
                         
-                        // Set the title
-                        book.loaded.metadata.then(metadata => {
-                            titleElement.textContent = metadata.title || 'Untitled Book';
+                        chapters.push({
+                            title: title,
+                            content: chapterContent,
+                            startLine: start,
+                            endLine: end
                         });
-                        
-                        // Set rendition options to enable text selection
-                        const renditionOptions = {
-                            width: '100%',
-                            height: '100%',
-                            spread: 'none',
-                            allowScriptedContent: true, // Try to allow scripts
-                            allowPopups: true // Allow popups in case needed for selection
-                        };
-                        
-                        // Render
-                        rendition = book.renderTo('reader', renditionOptions);
-                        
-                        // Apply stored settings
-                        applyCurrentSettings();
-                        
-                        rendition.display();
-                        
-                        // Setup text selection 
-                        setupTextSelection();
-                        
-                        // Load TOC
-                        book.loaded.navigation.then(nav => {
-                            const toc = nav.toc;
-                            tocList.innerHTML = '';
-                            
-                            toc.forEach(chapter => {
-                                const li = document.createElement('li');
-                                const link = document.createElement('a');
-                                link.textContent = chapter.label;
-                                link.href = '#';
-                                link.addEventListener('click', (e) => {
-                                    e.preventDefault();
-                                    rendition.display(chapter.href);
-                                    closeOverlays();
-                                    showPageInfo();
-                                });
-                                li.appendChild(link);
-                                tocList.appendChild(li);
-                            });
-                        });
-                        
-                        // Set up location tracking
-                        book.locations.generate().then(() => {
-                            totalLocations = book.locations.total;
-                            
-                            rendition.on('relocated', location => {
-                                currentLocation = location;
-                                const percentage = Math.floor((location.start.percentage || 0) * 100);
-                                pageInfo.textContent = `${percentage}%`;
-                                showPageInfo();
-                            });
-                        });
-                        
-                        hideLoading();
-                    }).catch(error => {
-                        console.error('Error loading book:', error);
-                        alert('Error loading EPUB: ' + error.message);
-                        hideLoading();
-                    });
+                    }
+                    
+                    bookData.chapters = chapters;
+                    showBook();
+                    hideLoading();
                 };
-                
+                reader.onerror = function() {
+                    hideLoading();
+                    alert('Error reading file');
+                };
+                reader.readAsText(file);
+            }
+            
+            function processEpubFile(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const arrayBuffer = e.target.result;
+                    
+                    // Load JSZip library dynamically if not available
+                    if (typeof JSZip === 'undefined') {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                        script.onload = function() {
+                            extractEpubContent(arrayBuffer);
+                        };
+                        script.onerror = function() {
+                            hideLoading();
+                            alert('Failed to load JSZip library. Please check your internet connection.');
+                        };
+                        document.head.appendChild(script);
+                    } else {
+                        extractEpubContent(arrayBuffer);
+                    }
+                };
+                reader.onerror = function() {
+                    hideLoading();
+                    alert('Error reading EPUB file');
+                };
                 reader.readAsArrayBuffer(file);
             }
             
-            function prevPage() {
-                if (rendition) {
-                    rendition.prev();
-                    showPageInfo();
-                }
-            }
-            
-            function nextPage() {
-                if (rendition) {
-                    rendition.next();
-                    showPageInfo();
-                }
-            }
-            
-            function toggleUI(e) {
-                // Only show navbar if click is near the top of the screen (within 100px)
-                if (e.clientY < 100) {
-                    navbarElement.classList.toggle('visible');
-                }
-                showPageInfo();
-            }
-            
-            function showPageInfo() {
-                pageInfo.classList.add('visible');
+            function extractEpubContent(arrayBuffer) {
+                const jszip = new JSZip();
                 
-                // Clear existing timeout
-                if (pageInfoTimeout) {
-                    clearTimeout(pageInfoTimeout);
+                jszip.loadAsync(arrayBuffer)
+                    .then(function(zip) {
+                        // First, find the OPF file through container.xml
+                        return zip.file('META-INF/container.xml').async('text').then(containerXml => {
+                            const parser = new DOMParser();
+                            const containerDoc = parser.parseFromString(containerXml, 'application/xml');
+                            const rootFile = containerDoc.querySelector('rootfile');
+                            
+                            if (!rootFile) {
+                                throw new Error('Invalid EPUB: container.xml doesn\'t contain a rootfile');
+                            }
+                            
+                            const rootFilePath = rootFile.getAttribute('full-path');
+                            const rootDir = rootFilePath.substring(0, rootFilePath.lastIndexOf('/') + 1);
+                            
+                            // Get the OPF file
+                            return zip.file(rootFilePath).async('text').then(opfContent => {
+                                return { zip, opfContent, rootDir };
+                            });
+                        });
+                    })
+                    .then(function({ zip, opfContent, rootDir }) {
+                        // Parse the OPF file to get the spine and manifest
+                        const parser = new DOMParser();
+                        const opfDoc = parser.parseFromString(opfContent, 'application/xml');
+                        
+                        // Get the spine items (reading order)
+                        const spineItems = [];
+                        const spine = opfDoc.querySelector('spine');
+                        const manifest = opfDoc.querySelector('manifest');
+                        
+                        if (spine && manifest) {
+                            // Map all manifest items
+                            const manifestItems = {};
+                            manifest.querySelectorAll('item').forEach(item => {
+                                const id = item.getAttribute('id');
+                                const href = item.getAttribute('href');
+                                const mediaType = item.getAttribute('media-type');
+                                
+                                manifestItems[id] = { href, mediaType };
+                            });
+                            
+                            // Get reading order from spine
+                            spine.querySelectorAll('itemref').forEach(itemref => {
+                                const idref = itemref.getAttribute('idref');
+                                if (manifestItems[idref] && manifestItems[idref].mediaType.includes('html')) {
+                                    spineItems.push({
+                                        id: idref,
+                                        href: manifestItems[idref].href
+                                    });
+                                }
+                            });
+                            
+                            // Get metadata
+                            const metadataElem = opfDoc.querySelector('metadata');
+                            if (metadataElem) {
+                                const titleElem = metadataElem.querySelector('dc\\:title, title');
+                                if (titleElem && titleElem.textContent) {
+                                    bookData.title = titleElem.textContent;
+                                    bookTitle.textContent = bookData.title;
+                                }
+                            }
+                            
+                            // Load all HTML files from the spine
+                            const contentPromises = spineItems.map(item => {
+                                const fullPath = rootDir + item.href;
+                                return zip.file(fullPath).async('text').then(content => {
+                                    return { id: item.id, content };
+                                }).catch(error => {
+                                    console.error(`Error loading ${fullPath}:`, error);
+                                    return { id: item.id, content: `[Error loading content: ${error.message}]` };
+                                });
+                            });
+                            
+                            return Promise.all(contentPromises);
+                        } else {
+                            throw new Error('Invalid EPUB: missing spine or manifest');
+                        }
+                    })
+                    .then(function(chaptersContent) {
+                        // Process chapter content
+                        bookData.chapters = [];
+                        
+                        chaptersContent.forEach((chapter, index) => {
+                            // Extract text from HTML
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(chapter.content, 'text/html');
+                            
+                            // Extract title
+                            let title = `Chapter ${index + 1}`;
+                            const headingElements = doc.querySelectorAll('h1, h2, h3, h4');
+                            if (headingElements.length > 0) {
+                                title = headingElements[0].textContent.trim();
+                            }
+                            
+                            // Extract text content
+                            let textContent = '';
+                            
+                            // Get all paragraph and heading elements
+                            const contentElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+                            contentElements.forEach(element => {
+                                textContent += element.textContent.trim() + '\n\n';
+                            });
+                            
+                            // If no paragraphs found, get text from body
+                            if (textContent.trim() === '') {
+                                const body = doc.querySelector('body');
+                                if (body) {
+                                    textContent = body.textContent.trim()
+                                        .replace(/\s+/g, ' ')  // collapse whitespace
+                                        .replace(/(.{60,70})(\s)/g, '$1\n'); // add line breaks for readability
+                                }
+                            }
+                            
+                            bookData.chapters.push({
+                                title: title,
+                                content: textContent,
+                                startLine: 0,
+                                endLine: textContent.split('\n').length
+                            });
+                        });
+                        
+                        if (bookData.chapters.length === 0) {
+                            // Create a fallback chapter if extraction failed
+                            bookData.chapters.push({
+                                title: bookData.title,
+                                content: "Could not extract readable content from this EPUB file.",
+                                startLine: 0,
+                                endLine: 1
+                            });
+                        }
+                        
+                        showBook();
+                        hideLoading();
+                    })
+                    .catch(function(error) {
+                        console.error('Error processing EPUB:', error);
+                        hideLoading();
+                        alert('Error processing EPUB: ' + error.message);
+                    });
+            }
+            
+            function processPdfFile(file) {
+                // This is a placeholder. For actual PDF parsing, you'd need to use a library like pdf.js
+                const reader = new FileReader();
+                reader.onload = function() {
+                    // Simply display a message that PDF extraction is limited
+                    bookData.content = "PDF content extraction is limited in this simple reader.\n\nFor a better experience with PDFs, consider using a dedicated PDF reader app.";
+                    
+                    bookData.chapters = [{
+                        title: bookData.title,
+                        content: bookData.content,
+                        startLine: 0,
+                        endLine: bookData.content.split('\n').length
+                    }];
+                    
+                    showBook();
+                    hideLoading();
+                };
+                reader.onerror = function() {
+                    hideLoading();
+                    alert('Error reading PDF file');
+                };
+                reader.readAsArrayBuffer(file);
+            }
+            
+            function extractTextContent(epubContent) {
+                // This is a very simplified approach
+                // Remove HTML tags but preserve paragraph breaks
+                let text = epubContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+                text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+                text = text.replace(/<[^>]+>/g, ' ');
+                text = text.replace(/\s+/g, ' ');
+                
+                // Decode HTML entities
+                text = text.replace(/&nbsp;/g, ' ');
+                text = text.replace(/&lt;/g, '<');
+                text = text.replace(/&gt;/g, '>');
+                text = text.replace(/&amp;/g, '&');
+                text = text.replace(/&quot;/g, '"');
+                text = text.replace(/&apos;/g, "'");
+                
+                return text;
+            }
+            
+            function showBook() {
+                // Hide welcome screen
+                welcomeScreen.style.display = 'none';
+                
+                // Show content
+                displayCurrentChapter();
+                
+                // Show the main UI
+                navbar.classList.add('visible');
+                
+                // Set timeout to auto-hide navbar
+                setTimeout(() => {
+                    navbar.classList.remove('visible');
+                }, 3000);
+                
+                // Populate TOC
+                populateToc();
+                
+                // Save to library if user is logged in
+                saveBookToLibrary().then(saved => {
+                    if (saved) {
+                        console.log('Book saved to library');
+                    }
+                });
+            }
+            
+            function displayCurrentChapter() {
+                const chapter = bookData.chapters[bookData.currentPosition];
+                if (!chapter) return;
+                
+                contentArea.innerHTML = '';
+                
+                // Split text into paragraphs
+                const paragraphs = chapter.content.split('\n');
+                paragraphs.forEach(paragraph => {
+                    if (paragraph.trim()) {
+                        const p = document.createElement('p');
+                        p.textContent = paragraph;
+                        contentArea.appendChild(p);
+                    }
+                });
+                
+                // Scroll to top
+                contentArea.scrollTop = 0;
+                
+                // Update progress
+                updateProgressBar();
+            }
+            
+            function populateToc() {
+                tocContent.innerHTML = '';
+                
+                bookData.chapters.forEach((chapter, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'toc-item';
+                    item.textContent = chapter.title;
+                    
+                    if (index === bookData.currentPosition) {
+                        item.style.fontWeight = 'bold';
+                    }
+                    
+                    item.addEventListener('click', () => {
+                        bookData.currentPosition = index;
+                        displayCurrentChapter();
+                        closeTocPanel();
+                    });
+                    
+                    tocContent.appendChild(item);
+                });
+            }
+            
+            // Navigation
+            function goToPrevious() {
+                if (bookData.currentPosition > 0) {
+                    bookData.currentPosition--;
+                    displayCurrentChapter();
+                }
+            }
+            
+            function goToNext() {
+                if (bookData.currentPosition < bookData.chapters.length - 1) {
+                    bookData.currentPosition++;
+                    displayCurrentChapter();
+                }
+            }
+            
+            function handleSwipe(startX, endX) {
+                const swipeThreshold = 100;
+                
+                if (startX - endX > swipeThreshold) {
+                    // Swipe left - go next
+                    goToNext();
+                } else if (endX - startX > swipeThreshold) {
+                    // Swipe right - go previous
+                    goToPrevious();
+                }
+            }
+            
+            // UI Controls
+            function toggleNavbar() {
+                navbar.classList.toggle('visible');
+                
+                if (navbar.classList.contains('visible')) {
+                    setTimeout(() => {
+                        navbar.classList.remove('visible');
+                    }, 3000);
+                }
+            }
+            
+            function toggleTocPanel() {
+                tocPanel.classList.toggle('visible');
+                overlay.classList.toggle('visible');
+                settingsPanel.classList.remove('visible');
+            }
+            
+            function closeTocPanel() {
+                tocPanel.classList.remove('visible');
+                overlay.classList.remove('visible');
+            }
+            
+            function toggleSettingsPanel() {
+                settingsPanel.classList.toggle('visible');
+                overlay.classList.toggle('visible');
+                tocPanel.classList.remove('visible');
+            }
+            
+            function closeSettingsPanel() {
+                settingsPanel.classList.remove('visible');
+                overlay.classList.remove('visible');
+            }
+            
+            function closeAllPanels() {
+                tocPanel.classList.remove('visible');
+                settingsPanel.classList.remove('visible');
+                overlay.classList.remove('visible');
+            }
+            
+            function goToHome() {
+                welcomeScreen.style.display = 'flex';
+                navbar.classList.remove('visible');
+                closeAllPanels();
+                fileInput.value = ''; // Reset file input
+                
+                // Reset book data
+                bookData = {
+                    title: '',
+                    content: '',
+                    chapters: [],
+                    currentPosition: 0
+                };
+                
+                // Refresh library if user is logged in
+                const { data: { session } } = supabase.auth.getSession();
+                if (session) {
+                    loadUserLibrary();
+                }
+            }
+            
+            function handleContentClick(e) {
+                // Don't toggle UI if text is being selected
+                const selection = window.getSelection();
+                if (selection && selection.toString().trim().length > 0) {
+                    return;
                 }
                 
-                // Set timeout to hide page info after 2 seconds
-                pageInfoTimeout = setTimeout(() => {
-                    pageInfo.classList.remove('visible');
-                }, 2000);
+                // Toggle navbar visibility on tap
+                toggleNavbar();
+                
+                // Hide translation popup when clicking elsewhere
+                const translationPopup = document.getElementById('translation-popup');
+                translationPopup.style.display = 'none';
             }
             
-            function toggleToc() {
-                tocElement.classList.toggle('open');
-                overlayElement.classList.toggle('open');
-                settingsElement.classList.remove('open');
+            // Handle text selection for translation
+            let translationTimer = null;
+            
+            function handleTextSelection() {
+                // Check if translation is enabled
+                const translationEnabled = document.getElementById('translation-toggle').checked;
+                if (!translationEnabled) {
+                    return;
+                }
+                
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
+                
+                // Hide the popup if no text is selected
+                if (!selectedText) {
+                    document.getElementById('translation-popup').style.display = 'none';
+                    clearTimeout(translationTimer);
+                    return;
+                }
+                
+                // Only proceed if we have a reasonable amount of text (not too short, not too long)
+                if (selectedText.length > 1 && selectedText.length < 500) {
+                    // Get the selection's bounding box
+                    const range = selection.getRangeAt(0);
+                    const rect = range.getBoundingClientRect();
+                    
+                    // Position and show the popup
+                    const popup = document.getElementById('translation-popup');
+                    popup.style.left = `${rect.left + window.scrollX}px`;
+                    popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
+                    popup.style.display = 'block';
+                    
+                    // Show loading state immediately 
+                    document.getElementById('translation-content').textContent = 'Waiting...';
+                    document.getElementById('translation-loading').style.display = 'none';
+                    
+                    // Clear any existing timer
+                    clearTimeout(translationTimer);
+                    
+                    // Set a new timer for translation (800ms delay)
+                    translationTimer = setTimeout(() => {
+                        // Get translation after delay
+                        translateText(selectedText);
+                    }, 800);
+                }
             }
             
-            function toggleSettings() {
-                settingsElement.classList.toggle('open');
-                overlayElement.classList.toggle('open');
-                tocElement.classList.remove('open');
+            // Translate text using Gemini API
+            async function translateText(text) {
+                if (!userApiSettings) {
+                    document.getElementById('translation-content').textContent = 'Please configure API key in settings to use translation.';
+                    return;
+                }
+                
+                const translationContent = document.getElementById('translation-content');
+                const translationLoading = document.getElementById('translation-loading');
+                
+                // Show loading indicator
+                translationContent.textContent = '';
+                translationLoading.style.display = 'flex';
+                
+                try {
+                    const prompt = `Translate the following English text to Vietnamese. Only return the translation without any explanation or additional text.\n\nText: "${text}"`;
+                    
+                    const response = await geminiRequest(userApiSettings.api_key, prompt, userApiSettings.model);
+                    
+                    // Hide loading indicator
+                    translationLoading.style.display = 'none';
+                    
+                    if (response.error) {
+                        translationContent.textContent = `Error: ${response.error.message}`;
+                        return;
+                    }
+                    
+                    const translation = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation failed.';
+                    translationContent.textContent = translation;
+                } catch (error) {
+                    console.error('Error translating text:', error);
+                    translationLoading.style.display = 'none';
+                    translationContent.textContent = 'An error occurred during translation.';
+                }
             }
             
-            function closeOverlays() {
-                tocElement.classList.remove('open');
-                settingsElement.classList.remove('open');
-                overlayElement.classList.remove('open');
-            }
-            
-            function increaseFontSize() {
-                if (fontSize < 200) {
-                    fontSize += 10;
+            // Settings controls
+            function decreaseFontSize() {
+                if (settings.fontSize > 70) {
+                    settings.fontSize -= 10;
                     updateFontSize();
                 }
             }
             
-            function decreaseFontSize() {
-                if (fontSize > 50) {
-                    fontSize -= 10;
+            function increaseFontSize() {
+                if (settings.fontSize < 200) {
+                    settings.fontSize += 10;
                     updateFontSize();
                 }
             }
             
             function updateFontSize() {
-                if (rendition) {
-                    rendition.themes.fontSize(`${fontSize}%`);
+                contentArea.style.fontSize = `${settings.fontSize}%`;
+                fontSizeValue.textContent = `${settings.fontSize}%`;
+            }
+            
+            function setTheme(theme) {
+                document.body.classList.remove('light-theme', 'sepia-theme', 'dark-theme');
+                document.body.classList.add(`${theme}-theme`);
+                
+                themeOptions.forEach(option => {
+                    option.classList.remove('active');
+                    if (option.getAttribute('data-theme') === theme) {
+                        option.classList.add('active');
+                    }
+                });
+                
+                settings.theme = theme;
+            }
+            
+            function updateProgressBar() {
+                const scrollTop = contentArea.scrollTop;
+                const scrollHeight = contentArea.scrollHeight;
+                const clientHeight = contentArea.clientHeight;
+                
+                const scrollPercentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
+                
+                // Calculate chapter progress
+                const chapterProgress = scrollPercentage / 100;
+                
+                // Calculate overall progress
+                const chaptersProgress = (bookData.currentPosition / Math.max(1, bookData.chapters.length - 1));
+                const overallProgress = (chaptersProgress + (chapterProgress / Math.max(1, bookData.chapters.length))) * 100;
+                
+                progressBar.style.width = `${overallProgress}%`;
+                
+                // Save reading progress to library periodically
+                // Use debouncing to avoid too many saves
+                if (bookData.title) {
+                    if (updateProgressBar.saveTimeout) {
+                        clearTimeout(updateProgressBar.saveTimeout);
+                    }
+                    
+                    updateProgressBar.saveTimeout = setTimeout(() => {
+                        saveBookToLibrary();
+                    }, 3000);  // Save after 3 seconds of no scrolling
                 }
             }
             
-            function changeTheme(theme) {
-                currentTheme = theme;
-                if (!rendition) return;
-                
-                let styles = {};
-                
-                switch (theme) {
-                    case 'light':
-                        styles = {
-                            body: {
-                                color: '#333',
-                                background: '#fff'
-                            }
-                        };
-                        break;
-                    case 'sepia':
-                        styles = {
-                            body: {
-                                color: '#704214',
-                                background: '#f8f1e3'
-                            }
-                        };
-                        break;
-                    case 'dark':
-                        styles = {
-                            body: {
-                                color: '#eee',
-                                background: '#333'
-                            }
-                        };
-                        break;
-                }
-                
-                rendition.themes.register(theme, styles);
-                rendition.themes.select(theme);
-            }
-            
-            function applyCurrentSettings() {
-                if (!rendition) return;
-                updateFontSize();
-                changeTheme(currentTheme);
-            }
-            
+            // Utility functions
             function showLoading() {
-                loadingElement.style.display = 'flex';
+                loading.style.display = 'flex';
             }
             
             function hideLoading() {
-                loadingElement.style.display = 'none';
+                loading.style.display = 'none';
+            }
+            
+            // Authentication & API Settings functions
+            async function checkAuthAndLoadApiSettings() {
+                const aiSettingsContent = document.getElementById('ai-settings-content');
+                const summarizeBtn = document.getElementById('summarize-chapter-btn');
+                const loginBtn = document.getElementById('login-btn');
+                const librarySection = document.getElementById('library-section');
+                const authSection = document.getElementById('auth-section');
+                
+                // Check if the user is logged in
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (!session) {
+                    // Show login button
+                    loginBtn.style.display = 'inline-block';
+                    loginBtn.addEventListener('click', () => {
+                        window.open('index.html', '_blank');
+                    });
+                    
+                    // Update auth section
+                    authSection.innerHTML = `
+                        <p>Sign in to save books to your library</p>
+                    `;
+                    
+                    // Update AI settings
+                    aiSettingsContent.innerHTML = `
+                        <p>Please <a href="index.html" target="_blank">sign in</a> to use AI features.</p>
+                    `;
+                    return;
+                } else {
+                    // User is signed in
+                    loginBtn.style.display = 'none';
+                    authSection.innerHTML = `
+                        <p>Signed in as ${session.user.email}</p>
+                    `;
+                    
+                    // Load user's library
+                    librarySection.style.display = 'block';
+                    loadUserLibrary();
+                }
+                
+                // User is logged in, check if they have API settings
+                userApiSettings = await getUserApiSettings();
+                
+                if (!userApiSettings) {
+                    aiSettingsContent.innerHTML = `
+                        <p>To use AI features, please set up your Gemini API key in the 
+                        <a href="index.html" target="_blank">main dashboard</a>.</p>
+                    `;
+                    return;
+                }
+                
+                // User has API settings, enable AI features
+                aiSettingsContent.innerHTML = `
+                    <p>✅ API Key configured</p>
+                    <p>Model: ${userApiSettings.model}</p>
+                `;
+                summarizeBtn.style.display = 'block';
+            }
+            
+            // Library functions
+            async function loadUserLibrary() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+                
+                const libraryList = document.getElementById('library-list');
+                libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading your books...</div>';
+                
+                // Fetch user's books from Supabase
+                const { data: books, error } = await supabase
+                    .from('ebooks')
+                    .select('*')
+                    .order('updated_at', { ascending: false });
+                
+                if (error) {
+                    console.error('Error fetching library:', error);
+                    libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Error loading library</div>';
+                    return;
+                }
+                
+                if (!books || books.length === 0) {
+                    libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Your library is empty</div>';
+                    return;
+                }
+                
+                // Display books
+                libraryList.innerHTML = '';
+                books.forEach(book => {
+                    const date = new Date(book.updated_at).toLocaleDateString();
+                    
+                    const item = document.createElement('div');
+                    item.className = 'library-item';
+                    item.innerHTML = `
+                        <div class="library-item-details">
+                            <div class="library-item-title">${book.title}</div>
+                            <div class="library-item-meta">
+                                ${book.file_type.toUpperCase()} • Last read: ${date}
+                            </div>
+                        </div>
+                        <div class="library-item-actions">
+                            <button class="library-item-delete" data-id="${book.id}">×</button>
+                        </div>
+                    `;
+                    
+                    // Add click event to open the book
+                    item.addEventListener('click', (event) => {
+                        // Don't open if the delete button was clicked
+                        if (event.target.classList.contains('library-item-delete')) {
+                            return;
+                        }
+                        loadBookFromLibrary(book);
+                    });
+                    
+                    libraryList.appendChild(item);
+                });
+                
+                // Add delete button event listeners
+                document.querySelectorAll('.library-item-delete').forEach(button => {
+                    button.addEventListener('click', async (event) => {
+                        event.stopPropagation();
+                        const bookId = button.getAttribute('data-id');
+                        
+                        if (confirm('Remove this book from your library?')) {
+                            await deleteBookFromLibrary(bookId);
+                        }
+                    });
+                });
+            }
+            
+            async function deleteBookFromLibrary(bookId) {
+                const { error } = await supabase
+                    .from('ebooks')
+                    .delete()
+                    .eq('id', bookId);
+                
+                if (error) {
+                    console.error('Error deleting book:', error);
+                    alert('Could not delete the book');
+                    return;
+                }
+                
+                // Reload library
+                loadUserLibrary();
+            }
+            
+            async function saveBookToLibrary() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return false;
+                
+                if (!bookData.title) return false;
+                
+                // Determine if we already have this book by title
+                const { data: existingBooks } = await supabase
+                    .from('ebooks')
+                    .select('id')
+                    .eq('title', bookData.title)
+                    .maybeSingle();
+                
+                // Prepare book data
+                const fileType = bookData.title.split('.').pop().toLowerCase();
+                const bookContent = bookData.content && bookData.content.length < 100000 ? bookData.content : null;
+                
+                // Create metadata with chapters information and include FULL content
+                const metadata = {
+                    chapters: bookData.chapters.map(chapter => {
+                        // Store the complete chapter content
+                        return {
+                            title: chapter.title,
+                            startLine: chapter.startLine,
+                            endLine: chapter.endLine,
+                            content: chapter.content // Store the full chapter content
+                        };
+                    })
+                };
+                
+                // Record current position
+                const lastPosition = {
+                    chapter: bookData.currentPosition,
+                    scroll: contentArea.scrollTop || 0
+                };
+                
+                if (existingBooks) {
+                    // Update existing book
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .update({
+                            title: bookData.title,
+                            content: bookContent,
+                            file_type: fileType,
+                            metadata: metadata,
+                            last_position: lastPosition,
+                            updated_at: new Date()
+                        })
+                        .eq('id', existingBooks.id);
+                    
+                    if (error) {
+                        console.error('Error updating book:', error);
+                        return false;
+                    }
+                } else {
+                    // Insert new book
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .insert({
+                            user_id: session.user.id,
+                            title: bookData.title,
+                            content: bookContent,
+                            file_type: fileType,
+                            metadata: metadata,
+                            last_position: lastPosition
+                        });
+                    
+                    if (error) {
+                        console.error('Error saving book:', error);
+                        return false;
+                    }
+                }
+                
+                return true;
+            }
+            
+            async function loadBookFromLibrary(book) {
+                showLoading();
+                
+                // Set up book data
+                bookData.title = book.title;
+                bookTitle.textContent = book.title;
+                
+                // If content is stored, use it directly
+                if (book.content) {
+                    bookData.content = book.content;
+                    bookData.chapters = book.metadata.chapters;
+                    
+                    // Restore last position
+                    if (book.last_position) {
+                        bookData.currentPosition = book.last_position.chapter || 0;
+                    }
+                    
+                    showBook();
+                    
+                    // Restore scroll position after a short delay
+                    if (book.last_position && book.last_position.scroll) {
+                        setTimeout(() => {
+                            contentArea.scrollTop = book.last_position.scroll;
+                        }, 100);
+                    }
+                    
+                    hideLoading();
+                } else {
+                    // If we don't have book.content but have chapter content in metadata
+                    if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
+                        bookData.chapters = book.metadata.chapters.map(chapter => {
+                            return {
+                                title: chapter.title,
+                                content: chapter.content || "Chapter content not available",
+                                startLine: chapter.startLine,
+                                endLine: chapter.endLine
+                            };
+                        });
+                        
+                        // Restore last position
+                        if (book.last_position) {
+                            bookData.currentPosition = book.last_position.chapter || 0;
+                        }
+                        
+                        showBook();
+                        hideLoading();
+                    } else {
+                        // No content and no chapter metadata
+                        hideLoading();
+                        alert('Book content not available. The book was likely too large to store in the library. Please re-upload the file.');
+                    }
+                }
+            }
+            
+            // AI feature functions
+            async function summarizeCurrentChapter() {
+                if (!userApiSettings) {
+                    await checkAuthAndLoadApiSettings();
+                    return;
+                }
+                
+                const chapter = bookData.chapters[bookData.currentPosition];
+                if (!chapter) return;
+                
+                const responseArea = document.getElementById('ai-response-area');
+                responseArea.style.display = 'block';
+                responseArea.textContent = 'Generating summary...';
+                
+                try {
+                    const chapterContent = chapter.content.substring(0, 15000); // Limit to 15k chars to avoid token limits
+                    const prompt = `Summarize the following text from a book chapter titled "${chapter.title}":\n\n${chapterContent}\n\nProvide a concise summary (about 3-5 sentences).`;
+                    
+                    const response = await geminiRequest(userApiSettings.api_key, prompt, userApiSettings.model);
+                    
+                    if (response.error) {
+                        responseArea.textContent = `Error: ${response.error.message}`;
+                        return;
+                    }
+                    
+                    const summary = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate summary.';
+                    responseArea.textContent = summary;
+                } catch (error) {
+                    console.error('Error generating summary:', error);
+                    responseArea.textContent = 'An error occurred while generating the summary.';
+                }
             }
         });
     </script>
