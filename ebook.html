@@ -1316,13 +1316,7 @@
                 
                 // Populate TOC
                 populateToc();
-                
-                // Save to library if user is logged in
-                saveBookToLibrary().then(saved => {
-                    if (saved) {
-                        console.log('Book saved to library');
-                    }
-                });
+                saveBookToLibrary();
             }
             
             function displayCurrentChapter() {
@@ -1355,15 +1349,20 @@
                     const item = document.createElement('div');
                     item.className = 'toc-item';
                     item.textContent = chapter.title;
+                    item.setAttribute('data-index', index);
                     
                     if (index === bookData.currentPosition) {
                         item.style.fontWeight = 'bold';
+                        item.classList.add('toc-active');
                     }
                     
                     item.addEventListener('click', () => {
                         bookData.currentPosition = index;
                         displayCurrentChapter();
                         closeTocPanel();
+                        
+                        // Save progress after TOC navigation
+                        saveBookToLibrary();
                     });
                     
                     tocContent.appendChild(item);
@@ -1375,6 +1374,7 @@
                 if (bookData.currentPosition > 0) {
                     bookData.currentPosition--;
                     displayCurrentChapter();
+                    saveBookToLibrary();
                 }
             }
             
@@ -1382,6 +1382,7 @@
                 if (bookData.currentPosition < bookData.chapters.length - 1) {
                     bookData.currentPosition++;
                     displayCurrentChapter();
+                    saveBookToLibrary();
                 }
             }
             
@@ -1400,6 +1401,19 @@
                 tocPanel.classList.toggle('visible');
                 overlay.classList.toggle('visible');
                 settingsPanel.classList.remove('visible');
+
+                // If the TOC panel is now visible, scroll to the active chapter
+                if (tocPanel.classList.contains('visible')) {
+                    // Find the active TOC item (has the bold style applied)
+                    const activeItem = tocContent.querySelector('.toc-item[data-index="' + bookData.currentPosition + '"]');
+                    
+                    if (activeItem) {
+                        // Scroll the item into view with some offset from the top
+                        setTimeout(() => {
+                            activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 100); // Small delay to ensure panel is visible
+                    }
+                }
             }
             
             function closeTocPanel() {
@@ -1979,11 +1993,17 @@
                 if (!bookData.title) return false;
                 
                 // Determine if we already have this book by title
-                const { data: existingBooks } = await supabase
+                const { data: existingBooks, error: queryError } = await supabase
                     .from('ebooks')
                     .select('id')
                     .eq('title', bookData.title)
+                    .eq('user_id', session.user.id)  // Add user_id to ensure we're only finding this user's books
                     .maybeSingle();
+                
+                if (queryError) {
+                    console.error('Error querying existing books:', queryError);
+                    return false;
+                }
                 
                 // Prepare book data
                 const fileType = bookData.title.split('.').pop().toLowerCase();
@@ -2008,7 +2028,8 @@
                     scroll: contentArea.scrollTop || 0
                 };
                 
-                if (existingBooks) {
+                // Check explicitly if existingBooks has an id property
+                if (existingBooks && existingBooks.id) {
                     // Update existing book
                     const { error } = await supabase
                         .from('ebooks')
