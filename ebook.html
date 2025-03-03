@@ -1557,9 +1557,15 @@
                             user_id: session.user.id,
                             word: flashcardData.word,
                             phrase: flashcardData.phrase,
-                            translation: flashcardData.translation_answer,
-                            book_title: bookData.title,
-                            chapter: bookData.chapters[bookData.currentPosition]?.title || ''
+                            translation_answer: flashcardData.translation_answer,
+                            state: "new",
+                            due: new Date().toISOString(),
+                            stability: 0.5, // Default stability
+                            difficulty: 5, // Default difficulty 
+                            elapsed_days: 0,
+                            scheduled_days: 0,
+                            reps: 0, 
+                            lapses: 0
                         });
                         
                     if (error) {
