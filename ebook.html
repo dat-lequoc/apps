@@ -1373,28 +1373,28 @@
                 
                 // Only proceed if we have a reasonable amount of text (not too short, not too long)
                 if (selectedText.length > 1 && selectedText.length < 500) {
-                    // Get the selection's bounding box
-                    const range = selection.getRangeAt(0);
-                    const rect = range.getBoundingClientRect();
-                    
-                    // Position and show the popup
-                    const popup = document.getElementById('translation-popup');
-                    popup.style.left = `${rect.left + window.scrollX}px`;
-                    popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
-                    popup.style.display = 'block';
-                    
-                    // Show loading state immediately 
-                    document.getElementById('translation-content').textContent = 'Waiting...';
-                    document.getElementById('translation-loading').style.display = 'none';
-                    
                     // Clear any existing timer
                     clearTimeout(translationTimer);
                     
-                    // Set a new timer for translation (800ms delay)
+                    // Set a new timer for translation (1000ms delay)
                     translationTimer = setTimeout(() => {
-                        // Get translation after delay
+                        // Get the selection's bounding box
+                        const range = selection.getRangeAt(0);
+                        const rect = range.getBoundingClientRect();
+                        
+                        // Position and show the popup
+                        const popup = document.getElementById('translation-popup');
+                        popup.style.left = `${rect.left + window.scrollX}px`;
+                        popup.style.top = `${rect.bottom + window.scrollY + 10}px`;
+                        popup.style.display = 'block';
+                        
+                        // Show loading state 
+                        document.getElementById('translation-content').textContent = 'Translating...';
+                        document.getElementById('translation-loading').style.display = 'flex';
+                        
+                        // Get translation
                         translateText(selectedText);
-                    }, 800);
+                    }, 1000);
                 }
             }
             
