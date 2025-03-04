@@ -8,19 +8,22 @@
   <title>Notes</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
-    body {
-      /* Fixed position was preventing scrolling on mobile */
-      position: relative;
-      width: 100%;
-      min-height: 100vh;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    html, body {
+      height: 100%;
       margin: 0;
       padding: 0;
+      overflow: hidden; /* Prevent double scrollbars */
+    }
+    
+    body {
+      /* Mobile-friendly layout */
+      position: relative;
+      width: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
       background: #f9f9f9;
       line-height: 1.6;
       display: flex;
+      flex-direction: column;
       justify-content: center;
     }
 
@@ -121,15 +124,25 @@
     #notes-container {
       margin-bottom: 100px; /* Increased bottom margin for better spacing */
       padding-bottom: env(safe-area-inset-bottom, 20px); /* Add safe area for iOS */
+      overflow-y: auto; /* Enable vertical scrolling */
+      flex: 1; /* Take up all available space */
+      -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+      position: relative; /* For absolute positioned elements inside */
     }
-    /* Auto-scroll to bottom when content changes */
+    /* Auto-scroll container with momentum scrolling for iOS */
     .auto-scroll-container {
       scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      overflow-y: auto;
+      max-height: calc(100vh - 160px); /* Subtract header and form height */
     }
     /* Main content container should take all available space */
     .container {
       padding-bottom: 80px;
       flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
     .delete-button {
       opacity: 0.7;
@@ -440,21 +453,22 @@
       scrollToBottom();
     }
     
-    // Function to scroll to the bottom of the notes container
+    // Improved function to scroll to the bottom of the notes container
     function scrollToBottom() {
       // Use requestAnimationFrame to ensure DOM is fully updated
       requestAnimationFrame(() => {
-        // Get the last date section
-        const sections = document.querySelectorAll('.date-section');
-        if (sections.length > 0) {
-          const lastSection = sections[sections.length - 1];
-          lastSection.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        } else {
-          // Fallback to standard window scroll
-          window.scrollTo({
-            top: document.body.scrollHeight,
-            behavior: 'smooth'
-          });
+        // Get the container element
+        const container = document.getElementById('notes-container');
+        
+        // If we have a container with content
+        if (container && container.scrollHeight > 0) {
+          // Scroll to bottom (use scrollTop for better mobile performance)
+          container.scrollTop = container.scrollHeight;
+          
+          // Focus the textarea after scrolling
+          setTimeout(() => {
+            document.getElementById('note-content').focus();
+          }, 50);
         }
       });
     }
@@ -550,9 +564,14 @@
       setTimeout(scrollToBottom, 300);
     });
     
-    // Also scroll to bottom on initial load
+    // Also scroll to bottom on initial load and resize events
     window.addEventListener('load', () => {
       setTimeout(scrollToBottom, 500);
+    });
+    
+    // Ensure scrolling works even after orientation changes
+    window.addEventListener('resize', () => {
+      setTimeout(scrollToBottom, 100);
     });
   </script>
 </body>
