@@ -853,7 +853,7 @@
                 </div>
                 <div class="settings-row">
                     <label for="auto-speak-toggle">Auto Speak Flashcard Words</label>
-                    <input type="checkbox" id="auto-speak-toggle">
+                    <input type="checkbox" id="auto-speak-toggle" checked>
                 </div>
                 <button id="summarize-chapter-btn" style="display: none;">Summarize Chapter</button>
                 <div id="ai-response-area" style="margin-top: 16px; display: none;"></div>
@@ -1024,8 +1024,15 @@
                 });
                 
                 // Load auto-speak toggle state from localStorage
-                if (localStorage.getItem('auto-speak-enabled') === 'true') {
+                if (localStorage.getItem('auto-speak-enabled') === 'false') {
+                    document.getElementById('auto-speak-toggle').checked = false;
+                } else {
+                    // Set to true by default if not explicitly set to false
                     document.getElementById('auto-speak-toggle').checked = true;
+                    // Initialize localStorage if it doesn't exist yet
+                    if (!localStorage.getItem('auto-speak-enabled')) {
+                        localStorage.setItem('auto-speak-enabled', 'true');
+                    }
                 }
                 
                 await checkAuthAndLoadApiSettings();
