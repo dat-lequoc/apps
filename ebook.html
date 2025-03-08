@@ -1522,8 +1522,17 @@
                     return;
                 }
                 
-                // Toggle navbar visibility on tap
-                toggleNavbar();
+                // Calculate the top 25% (1/4) of the screen
+                const topZoneHeight = window.innerHeight * 0.25;
+                
+                // Check if click is within the top zone
+                if (e.clientY <= topZoneHeight) {
+                    // Show the navbar
+                    navbar.classList.add('visible');
+                } else if (!navbar.contains(e.target)) {
+                    // Hide the navbar when clicking outside of it and outside the top zone
+                    navbar.classList.remove('visible');
+                }
                 
                 // Hide translation popup when clicking elsewhere
                 const translationPopup = document.getElementById('translation-popup');
