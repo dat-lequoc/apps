@@ -1256,22 +1256,29 @@
                                 title = headingElements[0].textContent.trim();
                             }
                             
-                            // Extract text content
+                            // Extract text content with improved formatting
                             let textContent = '';
-                            
-                            // Get all paragraph and heading elements
-                            const contentElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+                            const contentElements = doc.querySelectorAll('h1, h2, h3, h4, h5, h6, p, ul, ol');
                             contentElements.forEach(element => {
-                                textContent += element.textContent.trim() + '\n\n';
+                                if (element.tagName.match(/^H[1-6]$/)) {
+                                    textContent += element.textContent.trim().replace(/\s+/g, ' ') + '\n\n\n';
+                                } else if (element.tagName === 'P') {
+                                    textContent += element.textContent.trim().replace(/\s+/g, ' ') + '\n\n';
+                                } else if (element.tagName === 'UL' || element.tagName === 'OL') {
+                                    const listItems = element.querySelectorAll('li');
+                                    listItems.forEach((li, liIndex) => {
+                                        const prefix = element.tagName === 'OL' ? `${liIndex + 1}. ` : '- ';
+                                        textContent += prefix + li.textContent.trim().replace(/\s+/g, ' ') + '\n';
+                                    });
+                                    textContent += '\n';
+                                }
                             });
                             
-                            // If no paragraphs found, get text from body
+                            // Fallback if no content was extracted
                             if (textContent.trim() === '') {
                                 const body = doc.querySelector('body');
                                 if (body) {
-                                    textContent = body.textContent.trim()
-                                        .replace(/\s+/g, ' ')  // collapse whitespace
-                                        .replace(/(.{60,70})(\s)/g, '$1\n'); // add line breaks for readability
+                                    textContent = body.textContent.trim().replace(/\s+/g, ' ');
                                 }
                             }
                             
@@ -1500,10 +1507,12 @@
                 };
                 
                 // Refresh library if user is logged in
-                const { data: { session } } = supabase.auth.getSession();
-                if (session) {
-                    loadUserLibrary();
-                }
+                // The problem was here - need to make this async
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session) {
+                        loadUserLibrary();
+                    }
+                });
             }
             
             function handleContentClick(e) {
