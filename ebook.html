@@ -1518,22 +1518,25 @@
             function handleContentClick(e) {
                 // Don't toggle UI if text is being selected
                 const selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) {
-                    return;
+                if (selection && selection.toString().trim().length > 0) return;
+
+                // Determine if the click happened on the navbar itself
+                const clickedOnNavbar = navbar.contains(e.target);
+
+                // If click is on the navbar, do nothing
+                if (clickedOnNavbar) return;
+
+                // If navbar is not visible, only show it if click is in the top 25% of the screen
+                if (!navbar.classList.contains('visible')) {
+                    if (e.clientY <= window.innerHeight * 0.25) {
+                        navbar.classList.add('visible');
+                    }
                 }
-                
-                // Calculate the top 25% (1/4) of the screen
-                const topZoneHeight = window.innerHeight * 0.25;
-                
-                // Check if click is within the top zone
-                if (e.clientY <= topZoneHeight) {
-                    // Show the navbar
-                    navbar.classList.add('visible');
-                } else if (!navbar.contains(e.target)) {
-                    // Hide the navbar when clicking outside of it and outside the top zone
+                // Otherwise, if navbar is visible, fold it on any click outside the navbar, regardless of position
+                else {
                     navbar.classList.remove('visible');
                 }
-                
+
                 // Hide translation popup when clicking elsewhere
                 const translationPopup = document.getElementById('translation-popup');
                 translationPopup.classList.remove('visible');
