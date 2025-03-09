@@ -153,9 +153,6 @@
 
     /* Theme toggle button */
     .theme-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
       background: var(--primary-color);
       color: white;
       border: none;
@@ -172,11 +169,89 @@
       transform: translateY(-1px);
       box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
     }
+
+    /* Mobile Styles - Significantly more compact layout */
+    @media (max-width: 600px) {
+      body {
+        margin: 10px auto;
+        padding: 8px;
+      }
+      
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      h2 {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      input, button {
+        padding: 8px 10px;
+        margin: 4px 0;
+        font-size: 0.9rem;
+      }
+      
+      #app-selection {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        margin: 10px 0;
+      }
+      
+      .app-card {
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .app-card h3 {
+        font-size: 0.9rem;
+        margin: 4px 0;
+      }
+      
+      .app-card p {
+        font-size: 0.7rem;
+        margin: 0;
+        line-height: 1.2;
+      }
+      
+      .app-icon {
+        font-size: 1.5rem;
+        margin-bottom: 4px;
+      }
+      
+      #hub-container h2 {
+        margin-top: 8px;
+      }
+      
+      #logout-button, #settings-button {
+        margin-top: 8px;
+        padding: 8px;
+      }
+      
+      .theme-toggle {
+        top: 10px;
+        right: 10px;
+        padding: 2px 4px;
+        font-size: 12px;
+      }
+      
+      #settings-container {
+        padding: 10px;
+        margin-top: 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <h1>Personal Dashboard</h1>
-  <button id="theme-toggle" class="theme-toggle">🌙</button>
+  <div style="position: fixed; top: 20px; right: 20px; display: flex; gap: 8px;">
+    <button id="settings-button" style="margin: 0; width: 30px; height: 30px; padding: 2px; font-size: 14px; display: flex; align-items: center; justify-content: center;">⚙️</button>
+    <button id="theme-toggle" class="theme-toggle">��</button>
+  </div>
 
   <!-- Authentication Section -->
   <div id="auth-container">
@@ -226,8 +301,6 @@
       </div>
     </div>
     <button id="logout-button">Sign Out</button>
-    <!-- New Settings button -->
-    <button id="settings-button">Settings</button>
   </div>
 
   <!-- Gemini API Settings Container -->
