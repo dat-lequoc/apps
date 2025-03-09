@@ -348,9 +348,13 @@
         
         <div id="exercise-text" class="mb-2 sm:mb-4 p-2 sm:p-3"></div>
         
+        <!-- Update the exercise control buttons to add a help button -->
         <div class="flex justify-between items-center gap-1 sm:gap-0">
           <button id="check-answers-btn" class="bg-green-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-green-600">
             Check Answers
+          </button>
+          <button id="help-btn" class="bg-yellow-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-yellow-600">
+            Help
           </button>
           <button id="reset-exercise-btn" class="bg-gray-300 text-gray-800 py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-gray-400">
             Reset
@@ -2188,6 +2192,89 @@
       // Mark the exercise count input as user-modified once changed
       countInput.addEventListener('input', function () {
         this.setAttribute('data-user-changed', 'true');
+      });
+
+      // Add event listener for the help button
+      document.getElementById('help-btn').addEventListener('click', () => {
+        if (!exerciseData) return;
+        
+        // Find the word meanings from flashcards array
+        const wordMeanings = exerciseData.answers.map(word => {
+          const card = flashcards.find(c => c.word.toLowerCase() === word.toLowerCase());
+          if (card) {
+            // Extract the first line of translation_answer as the meaning
+            const meaning = card.translation_answer.split('\n')[0];
+            return { word: word, meaning: meaning, ipa: card.ipa };
+          }
+          return { word: word, meaning: "No definition available", ipa: null };
+        });
+        
+        // Create a more compact word meanings HTML
+        let wordMeaningsHTML = '<div class="mt-4 p-3 border rounded bg-blue-50 dark:bg-blue-900 dark:border-blue-800">';
+        wordMeaningsHTML += '<h3 class="font-semibold mb-2">Word Meanings:</h3>';
+        wordMeaningsHTML += '<ul class="space-y-1">';
+        
+        wordMeanings.forEach(item => {
+          // Format each word with its meaning on a single line
+          wordMeaningsHTML += `
+            <li class="py-1 border-b border-blue-200 dark:border-blue-800 last:border-0">
+              <span class="font-medium">${item.word}</span>
+              ${item.ipa ? `<span class="text-xs text-gray-500 ml-1">[${item.ipa}]</span>` : ''}
+              <span class="mx-1">:</span>
+              <span class="text-gray-700 dark:text-gray-300">${item.meaning}</span>
+            </li>
+          `;
+        });
+        
+        wordMeaningsHTML += '</ul></div>';
+        
+        // Get or create the help panel element
+        let helpPanelEl = document.getElementById('exercise-help');
+        if (!helpPanelEl) {
+          helpPanelEl = document.createElement('div');
+          helpPanelEl.id = 'exercise-help';
+          document.getElementById('exercise-text').after(helpPanelEl);
+        }
+        
+        // Toggle visibility of help panel
+        if (helpPanelEl.innerHTML === '') {
+          // Show the help panel
+          helpPanelEl.className = 'mt-4 p-3 rounded bg-yellow-50 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
+          helpPanelEl.innerHTML = wordMeaningsHTML;
+          // Make the help panel visible with a subtle animation
+          helpPanelEl.style.opacity = '0';
+          setTimeout(() => {
+            helpPanelEl.style.opacity = '1';
+          }, 10);
+        } else {
+          // Hide the help panel
+          helpPanelEl.innerHTML = '';
+          helpPanelEl.className = '';
+        }
+      });
+
+      // Update reset button handler to also clear the help panel
+      document.getElementById('reset-exercise-btn').addEventListener('click', () => {
+        // ... existing reset code ...
+        
+        // Also clear any help panel
+        const helpPanelEl = document.getElementById('exercise-help');
+        if (helpPanelEl) {
+          helpPanelEl.innerHTML = '';
+          helpPanelEl.className = '';
+        }
+      });
+
+      // Update exit exercise handler to also clear the help panel
+      document.getElementById('exit-exercise-btn').addEventListener('click', () => {
+        // ... existing exit code ...
+        
+        // Also clear any help panel
+        const helpPanelEl = document.getElementById('exercise-help');
+        if (helpPanelEl) {
+          helpPanelEl.innerHTML = '';
+          helpPanelEl.className = '';
+        }
       });
     </script>
   </body>
