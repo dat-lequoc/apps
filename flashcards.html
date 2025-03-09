@@ -258,6 +258,36 @@
           padding: 0.5rem;
         }
       }
+      
+      /* Add styles for tag buttons */
+      .tag-button {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .tag-button.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      
+      body.dark .tag-button {
+        border-color: #4b5563;
+      }
+      
+      body.dark .tag-button.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      
+      body.dark .tag-button:not(.active):hover {
+        background-color: #374151;
+      }
+      
+      .tag-button:not(.active):hover {
+        background-color: #f3f4f6;
+      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -474,9 +504,31 @@
             <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
           </select>
         </div>
-        <div class="mb-6">
+        <div class="mb-4">
           <label for="modal-exercise-cards-count" class="block text-sm font-medium mb-1">Number of Cards</label>
           <input type="number" id="modal-exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+        </div>
+        <!-- Add the new section for content style tags -->
+        <div class="mb-6">
+          <label class="block text-sm font-medium mb-2">Content Style</label>
+          <div id="exercise-tags-container" class="flex flex-wrap gap-2">
+            <button class="tag-button px-2 py-1 text-xs rounded border active" data-tag="easy-to-read">easy-to-read</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="advanced">advanced</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="knowledge">knowledge</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fact">fact</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="story">story</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="humor">humor</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="love-advice">love-advice</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="life">life</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="inspirational">inspirational</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="business">business</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="travel">travel</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="food">food</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="technology">technology</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fantasy">fantasy</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="cultural">cultural</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="slang">slang</button>
+          </div>
         </div>
         <div class="flex justify-end gap-2">
           <button id="cancel-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
@@ -1543,7 +1595,29 @@
       // Add these variables to your global variables section
       let selectedWords = [];
       let exerciseData = null;
-      
+      let selectedTags = ['easy-to-read']; // Default to easy-to-read
+
+      // Add this event listener after the DOM content loaded event
+      document.addEventListener('DOMContentLoaded', function() {
+        // Add tag button event listeners
+        document.querySelectorAll('.tag-button').forEach(button => {
+          button.addEventListener('click', function() {
+            const tag = this.getAttribute('data-tag');
+            if (this.classList.contains('active')) {
+              // Don't allow deselecting if it's the only active tag
+              const activeTags = document.querySelectorAll('.tag-button.active').length;
+              if (activeTags > 1) {
+                this.classList.remove('active');
+                selectedTags = selectedTags.filter(t => t !== tag);
+              }
+            } else {
+              this.classList.add('active');
+              selectedTags.push(tag);
+            }
+          });
+        });
+      });
+
       // Updated event listener for the start exercise button
       document.getElementById('start-exercise-btn').addEventListener('click', () => {
         // Get the current values from the model selection and card count
@@ -1599,16 +1673,26 @@
           // Create the LLM prompt
           const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordList.join(', ')}. 
           Write an interesting short paragraph.
-          IMPORTANT: Use each word EXACTLY as provided - do not change the form, tense, plurality, etc.
+          
+          IMPORTANT INSTRUCTIONS:
+          1. Use each word EXACTLY as provided - do not change the form, tense, plurality, etc.
+          2. Mark EACH blank space as "[BLANK]" (not with brackets around the word or any other format)
+          3. Make sure the number of [BLANK] tokens matches exactly the number of words provided
+          4. Do not number the blanks - use the exact same token "[BLANK]" for each one
+          
+          Style: ${selectedTags.join(', ')}
+          
           Format your response as a JSON object with these fields:
-          1. "text": The complete text with blanks marked simply as [BLANK] (not numbered)
-          2. "answers": An array of correct answers in the EXACT order they appear in the text
+          1. "text": The complete text with blanks marked as "[BLANK]" (not with different formatting)
+          2. "answers": An array containing each missing word in the EXACT order they appear in the text
           
           For example:
           {
-            "text": "Yesterday, I [BLANK] to the store to [BLANK] some groceries...",
-            "answers": ["went", "buy"]
-          }`;
+            "text": "Yesterday, I [BLANK] to the store to [BLANK] some groceries. I was [BLANK] by how crowded it was.",
+            "answers": ["went", "buy", "surprised"]
+          }
+          
+          DO NOT use formats like "[WORD]" or "[OTHER_FORMAT]" - only use "[BLANK]".`;
           
           // Get Gemini API credentials from user settings
           const { data: { session } } = await supabase.auth.getSession();
@@ -1649,6 +1733,7 @@
           
           const responseData = await response.json();
           const llmResponse = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          console.log(llmResponse);
           
           if (!llmResponse) {
             throw new Error("Invalid response from LLM API");
