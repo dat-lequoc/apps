@@ -259,17 +259,75 @@
       box-shadow: var(--shadow);
     }
 
-    #auth-container {
-      max-width: 400px;
-      margin: 0 auto;
-      padding: 24px;
-      background: var(--card-background);
-      border-radius: 12px;
-      box-shadow: var(--shadow);
-      border: 1px solid var(--border-color);
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
     }
 
-    /* Mobile Styles - Refined layout */
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-container {
+      background: var(--card-background);
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      transform: translateY(-20px);
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active .modal-container {
+      transform: translateY(0);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: auto;
+      min-width: 0;
+      color: var(--text-color);
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .modal-close:hover {
+      opacity: 1;
+      background: transparent;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .modal-title {
+      margin-top: 0;
+      padding-right: 30px;
+    }
+    
+    /* Mobile Styles for Modal */
     @media (max-width: 600px) {
       body {
         margin: 10px auto;
@@ -332,6 +390,17 @@
         padding: 16px;
         margin-top: 16px;
       }
+      
+      .modal-container {
+        padding: 20px;
+        width: 95%;
+      }
+      
+      .modal-close {
+        top: 15px;
+        right: 15px;
+        font-size: 20px;
+      }
     }
   </style>
 </head>
@@ -392,31 +461,34 @@
     <button id="logout-button">Sign Out</button>
   </div>
 
-  <!-- Gemini API Settings Container -->
-  <div id="settings-container" class="hidden">
-    <h2>Gemini API Settings</h2>
-    <!-- Section to show saved settings -->
-    <div id="saved-api-section" class="hidden">
-      <p>Saved API Key: <span id="masked-api-key"></span></p>
-      <p>Preferred Model: <span id="saved-model"></span></p>
-      <button id="remove-api-key-button">Remove API Key</button>
-      <button id="change-api-key-button">Change API Key</button>
+  <!-- Gemini API Settings Modal -->
+  <div id="settings-modal" class="modal-overlay">
+    <div class="modal-container">
+      <button id="close-modal" class="modal-close">&times;</button>
+      <h2 class="modal-title">Gemini API Settings</h2>
+      <!-- Section to show saved settings -->
+      <div id="saved-api-section" class="hidden">
+        <p>Saved API Key: <span id="masked-api-key"></span></p>
+        <p>Preferred Model: <span id="saved-model"></span></p>
+        <button id="remove-api-key-button">Remove API Key</button>
+        <button id="change-api-key-button">Change API Key</button>
+      </div>
+      <!-- Form section to enter a new API key and select a model -->
+      <div id="api-form-section">
+        <form id="settings-form">
+          <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required />
+          <select id="geminiModelSelect">
+            <option value="gemini-2.0-flash">gemini-2.0-flash</option>
+            <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
+            <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21">gemini-2.0-flash-thinking-exp-01-21</option>
+          </select>
+          <button type="submit" id="save-settings-button">Save</button>
+          <button type="button" id="cancel-settings-button">Cancel</button>
+        </form>
+      </div>
+      <div id="settings-message"></div>
     </div>
-    <!-- Form section to enter a new API key and select a model -->
-    <div id="api-form-section">
-      <form id="settings-form">
-        <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required />
-        <select id="geminiModelSelect">
-          <option value="gemini-2.0-flash">gemini-2.0-flash</option>
-          <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
-          <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
-          <option value="gemini-2.0-flash-thinking-exp-01-21">gemini-2.0-flash-thinking-exp-01-21</option>
-        </select>
-        <button type="submit" id="save-settings-button">Save</button>
-        <button type="button" id="cancel-settings-button">Cancel</button>
-      </form>
-    </div>
-    <div id="settings-message"></div>
   </div>
 
   <script>
@@ -619,15 +691,38 @@
       document.getElementById("api-form-section").classList.remove("hidden");
     }
 
-    // Show the settings container when the Settings button is clicked
+    // Settings Modal Handling
+    const settingsModal = document.getElementById("settings-modal");
+    const closeModalBtn = document.getElementById("close-modal");
+    
+    // Show the settings modal when the Settings button is clicked
     document.getElementById("settings-button").addEventListener("click", async () => {
-      document.getElementById("settings-container").classList.remove("hidden");
+      settingsModal.classList.add("active");
       await loadUserSettings();
     });
-
-    // Hide the settings container when clicking Cancel
+    
+    // Hide the settings modal when clicking the close button
+    closeModalBtn.addEventListener("click", () => {
+      settingsModal.classList.remove("active");
+    });
+    
+    // Hide the settings modal when clicking Cancel
     document.getElementById("cancel-settings-button").addEventListener("click", () => {
-      document.getElementById("settings-container").classList.add("hidden");
+      settingsModal.classList.remove("active");
+    });
+    
+    // Hide the modal when clicking outside of it
+    settingsModal.addEventListener("click", (e) => {
+      if (e.target === settingsModal) {
+        settingsModal.classList.remove("active");
+      }
+    });
+    
+    // Also close modal with Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && settingsModal.classList.contains("active")) {
+        settingsModal.classList.remove("active");
+      }
     });
 
     // Handle settings form submission: validate and then save API key and model into Supabase
