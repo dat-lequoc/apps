@@ -297,18 +297,6 @@
 
       <!-- Update the exercise section to add configuration options -->
       <section id="exercise-section" class="mb-6">
-        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-          <select id="exercise-model-select" class="border rounded py-1 px-2 text-sm dark:bg-gray-800 dark:border-gray-700">
-            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
-            <option value="gemini-2.0-flash">Gemini Flash</option>
-            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
-            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
-          </select>
-          <div class="flex items-center">
-            <label for="exercise-cards-count" class="text-sm mr-2">Cards:</label>
-            <input type="number" id="exercise-cards-count" min="5" max="15" value="10" class="border rounded py-1 px-2 w-16 text-sm dark:bg-gray-800 dark:border-gray-700">
-          </div>
-        </div>
         <button id="start-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
           Fill-in-the-Blank Exercise
         </button>
@@ -468,6 +456,34 @@
           </button>
           <button id="confirm-delete-btn" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">
             Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add the Exercise Configuration Modal -->
+    <div id="exercise-config-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+        <h3 class="text-xl font-bold mb-4">Configure Exercise</h3>
+        <div class="mb-4">
+          <label for="modal-exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
+          <select id="modal-exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
+            <option value="gemini-2.0-flash">Gemini Flash</option>
+            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
+          </select>
+        </div>
+        <div class="mb-6">
+          <label for="modal-exercise-cards-count" class="block text-sm font-medium mb-1">Number of Cards</label>
+          <input type="number" id="modal-exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+        </div>
+        <div class="flex justify-end gap-2">
+          <button id="cancel-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
+            Cancel
+          </button>
+          <button id="confirm-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
+            Start Exercise
           </button>
         </div>
       </div>
@@ -1528,19 +1544,38 @@
       let selectedWords = [];
       let exerciseData = null;
       
-      // Updated event listener for the start exercise button:
-      document.getElementById('start-exercise-btn').addEventListener('click', async () => {
+      // Updated event listener for the start exercise button
+      document.getElementById('start-exercise-btn').addEventListener('click', () => {
+        // Get the current values from the model selection and card count
+        const exerciseModelSelect = document.getElementById('modal-exercise-model-select');
+        const exerciseCardsCount = document.getElementById('modal-exercise-cards-count');
+        
+        // Update the modal with due card count information
+        updateExerciseCardCount();
+        
+        // Show the modal
+        document.getElementById('exercise-config-modal').classList.remove('hidden');
+      });
+
+      // Event listener for cancel button
+      document.getElementById('cancel-exercise-btn').addEventListener('click', () => {
+        document.getElementById('exercise-config-modal').classList.add('hidden');
+      });
+
+      // Event listener for confirm/start exercise button
+      document.getElementById('confirm-exercise-btn').addEventListener('click', async () => {
         try {
-          const exerciseBtn = document.getElementById('start-exercise-btn');
+          const exerciseBtn = document.getElementById('confirm-exercise-btn');
           const originalText = exerciseBtn.textContent;
           exerciseBtn.textContent = "Preparing...";
           exerciseBtn.disabled = true;
           
-          // Load flashcards to filter for due ones.
+          // Load flashcards to filter for due ones
           await loadFlashcards();
           const now = new Date();
           const dueCards = flashcards.filter(card => new Date(card.due) <= now);
-          const requestedCardCount = parseInt(document.getElementById('exercise-cards-count').value) || 10;
+          const requestedCardCount = parseInt(document.getElementById('modal-exercise-cards-count').value) || 10;
+          
           if (dueCards.length < 1) {
             alert(`You need at least 1 card due for review to create an exercise. You currently have ${dueCards.length} cards due.`);
             exerciseBtn.textContent = originalText;
@@ -1548,16 +1583,20 @@
             return;
           }
           
-          // Shuffle cards and select the requested number.
+          // Hide the modal
+          document.getElementById('exercise-config-modal').classList.add('hidden');
+          
+          // Shuffle cards and select the requested number
           const shuffledDueCards = [...dueCards];
           for (let i = shuffledDueCards.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffledDueCards[i], shuffledDueCards[j]] = [shuffledDueCards[j], shuffledDueCards[i]];
           }
-          const selectedCards = shuffledDueCards.slice(0, Math.min(requestedCardCount, dueCards.length));
+          // Removed use of Math.min(...); now simply use the number provided by the user.
+          const selectedCards = shuffledDueCards.slice(0, requestedCardCount);
           const wordList = selectedCards.map(card => card.word);
           
-          // Create the LLM prompt.
+          // Create the LLM prompt
           const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordList.join(', ')}. 
           Write an interesting short paragraph.
           IMPORTANT: Use each word EXACTLY as provided - do not change the form, tense, plurality, etc.
@@ -1571,7 +1610,7 @@
             "answers": ["went", "buy"]
           }`;
           
-          // Get Gemini API credentials from user settings.
+          // Get Gemini API credentials from user settings
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) {
             alert("Your session has expired. Please sign in again.");
@@ -1583,20 +1622,21 @@
             .select('api_key, model')
             .eq('user_id', session.user.id)
             .single();
+          
           if (settingsError || !userSettings) {
             alert("Please configure your Gemini API key in Settings first.");
-            exerciseBtn.textContent = originalText;
-            exerciseBtn.disabled = false;
             return;
           }
           
           const apiKey = userSettings.api_key;
-          const selectedModel = document.getElementById('exercise-model-select').value || userSettings.model;
+          const selectedModel = document.getElementById('modal-exercise-model-select').value || userSettings.model;
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
           
-          exerciseBtn.textContent = "Generating exercise...";
+          // Update UI to show generating message on main button
+          document.getElementById('start-exercise-btn').textContent = "Generating exercise...";
+          document.getElementById('start-exercise-btn').disabled = true;
           
-          // Call the Gemini API and wait for the response.
+          // Call the Gemini API and wait for the response
           const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1609,12 +1649,12 @@
           
           const responseData = await response.json();
           const llmResponse = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-          console.log(llmResponse);
+          
           if (!llmResponse) {
             throw new Error("Invalid response from LLM API");
           }
           
-          // Extract the JSON portion from the response.
+          // Extract the JSON portion from the response
           let jsonMatch = llmResponse.match(/```json\n([\s\S]*?)\n```/) ||
                           llmResponse.match(/```\n([\s\S]*?)\n```/) ||
                           llmResponse.match(/{[\s\S]*?}/);
@@ -1626,38 +1666,40 @@
           }
           exerciseData = JSON.parse(jsonStr);
           
-          // --- New: Hide main sections only after receiving the model response ---
+          // Hide main sections after receiving the model response
           document.getElementById('app-title').classList.add('hidden');
           document.getElementById('upload-section').classList.add('hidden');
           document.getElementById('stats-section').classList.add('hidden');
           document.getElementById('review-section').classList.add('hidden');
           document.getElementById('exercise-section').classList.add('hidden');
           
-          // Display the fill-in-the-blank exercise.
+          // Display the fill-in-the-blank exercise
           displayExercise(exerciseData);
           document.getElementById('exercise-container').classList.remove('hidden');
           
-          // Reset the start exercise button state.
-          exerciseBtn.textContent = "Fill-in-the-Blank Exercise";
-          exerciseBtn.disabled = false;
+          // Reset the start exercise button state
+          document.getElementById('start-exercise-btn').textContent = "Fill-in-the-Blank Exercise";
+          document.getElementById('start-exercise-btn').disabled = false;
           
         } catch (err) {
           console.error("Error generating exercise:", err);
           alert("Error generating exercise. Please try again.");
           
-          const exerciseBtn = document.getElementById('start-exercise-btn');
-          exerciseBtn.textContent = "Fill-in-the-Blank Exercise";
-          exerciseBtn.disabled = false;
+          // Hide the modal if still open
+          document.getElementById('exercise-config-modal').classList.add('hidden');
           
-          // Show main sections again if an error occurred.
-          document.getElementById('app-title').classList.remove('hidden');
-          document.getElementById('upload-section').classList.remove('hidden');
-          document.getElementById('stats-section').classList.remove('hidden');
-          document.getElementById('review-section').classList.remove('hidden');
-          document.getElementById('exercise-section').classList.remove('hidden');
+          // Reset button state
+          document.getElementById('start-exercise-btn').textContent = "Fill-in-the-Blank Exercise";
+          document.getElementById('start-exercise-btn').disabled = false;
         }
       });
-      
+
+      // Function to update the cards count input based on available due cards
+      // Logic removed – the default value set in the HTML (value="5") is now used.
+      function updateExerciseCardCount() {
+        // Removed dynamic default value logic.
+      }
+
       // Display the exercise (updated to use answers array instead of words field)
       function displayExercise(data) {
         // Display the shuffled words
@@ -1678,16 +1720,12 @@
           wordSpan.textContent = word;
           wordSpan.draggable = true; // Make the word draggable
           
-          // Add drag events
+          // Update: Removed text-to-speech from the dragstart event
           wordSpan.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', word);
-            wordSpan.classList.add('opacity-50'); // Visual feedback while dragging
-            
+            wordSpan.classList.add('opacity-50');
             // Speak the word when it's dragged
             const utterance = new SpeechSynthesisUtterance(word);
-            // Optional: You can set language, rate, pitch, etc.
-            // utterance.lang = 'en-US';
-            // utterance.rate = 0.9;
             window.speechSynthesis.speak(utterance);
           });
           
@@ -1695,19 +1733,24 @@
             wordSpan.classList.remove('opacity-50');
           });
           
-          // Add click-to-fill functionality for the word list items
+          // Modify click-to-fill functionality:
+          // Now clicking on the word both fills the blank and speaks the word out loud.
           wordSpan.addEventListener('click', () => {
             // Find the first empty input field
             const emptyInputs = Array.from(document.querySelectorAll('.blank-input')).filter(input => !input.value.trim());
-            
+    
             if (emptyInputs.length > 0) {
               emptyInputs[0].value = word;
-              
+    
               // Optional: Visually mark the word as used
               if (!wordSpan.classList.contains('used')) {
                 wordSpan.classList.add('used');
               }
             }
+            
+            // Speak the word when it is clicked (selected)
+            const utterance = new SpeechSynthesisUtterance(word);
+            window.speechSynthesis.speak(utterance);
           });
           
           wordListContainer.appendChild(wordSpan);
@@ -2023,19 +2066,6 @@
         exerciseBtn.disabled = false;
       });
 
-      // Function to update the cards count input based on available cards
-      function updateExerciseCardCount() {
-        const now = new Date();
-        const dueCards = flashcards.filter(card => new Date(card.due) <= now);
-        const countInput = document.getElementById('exercise-cards-count');
-        
-        // Only update if there are due cards and the user hasn't manually modified the input
-        if (countInput && dueCards.length > 0 && !countInput.hasAttribute('data-user-changed')) {
-          const defaultCount = Math.min(dueCards.length, 5); // Changed from 10 to 5
-          countInput.value = defaultCount;
-        }
-      }
-
       // Add Reset button to exercise UI
       document.querySelector('.flex.justify-between.items-center').innerHTML += `
         <button id="reset-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
@@ -2068,7 +2098,7 @@
       });
 
       // DOM Elements
-      const countInput = document.getElementById('exercise-cards-count');
+      const countInput = document.getElementById('modal-exercise-cards-count');
       // Mark the exercise count input as user-modified once changed
       countInput.addEventListener('input', function () {
         this.setAttribute('data-user-changed', 'true');
