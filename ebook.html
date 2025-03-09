@@ -1598,10 +1598,11 @@
                 
                 // Split text into paragraphs
                 const paragraphs = chapter.content.split('\n');
-                paragraphs.forEach(paragraph => {
+                paragraphs.forEach((paragraph, index) => {
                     if (paragraph.trim()) {
                         const p = document.createElement('p');
                         p.textContent = paragraph;
+                        p.setAttribute('data-p-index', index); // Add index for position tracking
                         DOM.contentArea.appendChild(p);
                     } else {
                         // Add empty spacing for blank lines
@@ -1609,7 +1610,7 @@
                     }
                 });
                 
-                // Scroll to top
+                // Initially scroll to top (will be updated if restoring position)
                 DOM.contentArea.scrollTop = 0;
                 
                 // Update navigation buttons visibility
@@ -1982,7 +1983,85 @@
                 DOM.progressBar.style.width = `${overallProgress}%`;
                 
                 // Save reading progress to library after a delay
-                debounce(saveBookToLibrary, 3000)();
+                debounce(saveReadingProgress, 1500)();
+            }
+            
+            // Save reading progress with enhanced position tracking
+            function saveReadingProgress() {
+                // Store additional metadata for better position restoration
+                const currentPosition = {
+                    // Basic chapter position
+                    chapter: state.bookData.currentPosition,
+                    
+                    // Percentage through chapter (more resilient to font/layout changes)
+                    percentComplete: calculatePercentageComplete(),
+                    
+                    // Absolute scroll position as fallback
+                    scroll: DOM.contentArea.scrollTop || 0,
+                    
+                    // Current viewport data for validation
+                    viewportHeight: DOM.contentArea.clientHeight,
+                    contentHeight: DOM.contentArea.scrollHeight,
+                    
+                    // Timestamp for freshness check
+                    timestamp: new Date().getTime(),
+                    
+                    // Store text anchor for even more precise positioning
+                    textAnchor: findVisibleTextAnchor()
+                };
+                
+                // Store in local state
+                state.lastPosition = currentPosition;
+                
+                // Save to library storage
+                saveBookToLibrary();
+            }
+            
+            // Calculate percentage complete in current chapter
+            function calculatePercentageComplete() {
+                const scrollTop = DOM.contentArea.scrollTop;
+                const scrollHeight = DOM.contentArea.scrollHeight;
+                const clientHeight = DOM.contentArea.clientHeight;
+                
+                if (scrollHeight <= clientHeight) return 0;
+                return scrollTop / (scrollHeight - clientHeight);
+            }
+            
+            // Find the first visible text element as an anchor
+            function findVisibleTextAnchor() {
+                const paragraphs = DOM.contentArea.querySelectorAll('p');
+                const scrollTop = DOM.contentArea.scrollTop;
+                const viewportHeight = DOM.contentArea.clientHeight;
+                
+                // Add index attribute to paragraphs if not already there
+                if (!paragraphs[0]?.hasAttribute('data-p-index')) {
+                    paragraphs.forEach((p, index) => {
+                        p.setAttribute('data-p-index', index);
+                    });
+                }
+                
+                // Find the first paragraph that's visible in the viewport
+                for (let i = 0; i < paragraphs.length; i++) {
+                    const rect = paragraphs[i].getBoundingClientRect();
+                    const paragraphTop = rect.top + scrollTop - DOM.contentArea.offsetTop;
+                    
+                    // If this paragraph is fully or partially visible
+                    if (paragraphTop + rect.height > scrollTop && paragraphTop < scrollTop + viewportHeight) {
+                        // Get first 50 chars of content for validation, and calculate offset
+                        const text = paragraphs[i].textContent?.substring(0, 50) || '';
+                        const offset = (scrollTop - paragraphTop) / rect.height;
+                        
+                        // Return anchor data
+                        return {
+                            index: parseInt(paragraphs[i].getAttribute('data-p-index')),
+                            text: text,
+                            offset: Math.max(0, Math.min(1, offset))  // Clamp between 0 and 1
+                        };
+                    }
+                }
+                
+                // Fallback if no paragraph is found
+                return null;
             }
             
             // Utility functions
@@ -2223,10 +2302,12 @@
                         })
                     };
                     
-                    // Record current position
-                    const lastPosition = {
+                    // Use enhanced position data if available, otherwise create basic position
+                    const lastPosition = state.lastPosition || {
                         chapter: state.bookData.currentPosition,
-                        scroll: DOM.contentArea.scrollTop || 0
+                        scroll: DOM.contentArea.scrollTop || 0,
+                        percentComplete: calculatePercentageComplete(),
+                        timestamp: new Date().getTime()
                     };
                     
                     // Check if this book already exists
@@ -2311,19 +2392,19 @@
                         throw new Error('Book content not available');
                     }
                     
-                    // Restore last position
-                    if (book.last_position) {
-                        state.bookData.currentPosition = book.last_position.chapter || 0;
+                    // Save last position data for restoration after render
+                    const lastPosition = book.last_position || {};
+                    
+                    // Restore chapter position
+                    if (lastPosition.chapter !== undefined) {
+                        state.bookData.currentPosition = lastPosition.chapter;
                     }
                     
+                    // Show the book
                     showBook();
                     
-                    // Restore scroll position after a short delay
-                    if (book.last_position && book.last_position.scroll) {
-                        setTimeout(() => {
-                            DOM.contentArea.scrollTop = book.last_position.scroll;
-                        }, 100);
-                    }
+                    // Attempt to restore reading position with adaptive approach
+                    restoreReadingPosition(lastPosition);
                     
                     hideLoading();
                 } catch (error) {
@@ -2331,6 +2412,129 @@
                     hideLoading();
                     showToast('Error loading book: ' + error.message);
                 }
+            }
+            
+            // Restore reading position using multiple methods for reliability
+            function restoreReadingPosition(lastPosition) {
+                if (!lastPosition) return;
+                
+                // Show toast notification about restoring position
+                showToast('Restoring reading position...', 1500);
+                
+                // Use requestAnimationFrame to ensure content is rendered
+                requestAnimationFrame(() => {
+                    // Check if position information is fresh enough (within last 90 days)
+                    const isPositionRecent = lastPosition.timestamp && 
+                        (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
+                
+                    // First try restoring by text anchor (most reliable across different font sizes/layouts)
+                    if (isPositionRecent && lastPosition.textAnchor) {
+                        const restored = restoreByTextAnchor(lastPosition.textAnchor);
+                        if (restored) return;
+                    }
+                    
+                    // Next try percentage-based position (good for different screen sizes)
+                    if (lastPosition.percentComplete !== undefined) {
+                        const scrollHeight = DOM.contentArea.scrollHeight;
+                        const clientHeight = DOM.contentArea.clientHeight;
+                        
+                        if (scrollHeight > clientHeight) {
+                            const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight);
+                            DOM.contentArea.scrollTo({
+                                top: targetPosition,
+                                behavior: 'smooth'
+                            });
+                            return;
+                        }
+                    }
+                    
+                    // Fallback to absolute scroll position
+                    if (lastPosition.scroll) {
+                        // Check if content height ratio is similar to maintain relative position
+                        if (lastPosition.contentHeight && lastPosition.viewportHeight) {
+                            const oldRatio = lastPosition.contentHeight / lastPosition.viewportHeight;
+                            const newRatio = DOM.contentArea.scrollHeight / DOM.contentArea.clientHeight;
+                            
+                            // If ratios are reasonably similar, scale the scroll position
+                            if (Math.abs(oldRatio - newRatio) < 0.5) {
+                                const scaledPosition = lastPosition.scroll * (newRatio / oldRatio);
+                                DOM.contentArea.scrollTo({
+                                    top: scaledPosition,
+                                    behavior: 'smooth'
+                                });
+                                return;
+                            }
+                        }
+                        
+                        // Last resort: try direct scroll position
+                        DOM.contentArea.scrollTo({
+                            top: lastPosition.scroll,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            }
+            
+            // Try to find and scroll to the text anchor
+            function restoreByTextAnchor(textAnchor) {
+                if (!textAnchor || textAnchor.index === undefined) return false;
+                
+                // Find all paragraphs
+                const paragraphs = DOM.contentArea.querySelectorAll('p');
+                
+                // Try to find paragraph by index
+                const paragraph = paragraphs[textAnchor.index];
+                if (!paragraph) return false;
+                
+                // Verify content if text anchor has text (avoid wrong positioning)
+                if (textAnchor.text) {
+                    const actualText = paragraph.textContent?.substring(0, textAnchor.text.length) || '';
+                    // Simple similarity check
+                    const isSimilar = actualText.length > 0 && 
+                        (actualText === textAnchor.text || 
+                        (actualText.length > 10 && actualText.slice(0, 10) === textAnchor.text.slice(0, 10)));
+                    
+                    if (!isSimilar) {
+                        // Content doesn't match, try finding by text search
+                        for (let i = 0; i < paragraphs.length; i++) {
+                            const searchText = paragraphs[i].textContent?.substring(0, textAnchor.text.length) || '';
+                            if (searchText === textAnchor.text || 
+                                (searchText.length > 10 && searchText.slice(0, 10) === textAnchor.text.slice(0, 10))) {
+                                // Found matching paragraph
+                                const rect = paragraphs[i].getBoundingClientRect();
+                                const top = paragraphs[i].offsetTop - DOM.contentArea.offsetTop;
+                                
+                                // Apply offset within paragraph if available
+                                const offset = textAnchor.offset || 0;
+                                const scrollTarget = top + (offset * rect.height);
+                                
+                                // Scroll to position with slight offset for better reading
+                                DOM.contentArea.scrollTo({
+                                    top: Math.max(0, scrollTarget - 50),
+                                    behavior: 'smooth'
+                                });
+                                return true;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                
+                // Calculate position in paragraph
+                const rect = paragraph.getBoundingClientRect();
+                const top = paragraph.offsetTop - DOM.contentArea.offsetTop;
+                
+                // Apply offset within paragraph if available
+                const offset = textAnchor.offset || 0;
+                const scrollTarget = top + (offset * rect.height);
+                
+                // Scroll to position with slight offset for better reading
+                DOM.contentArea.scrollTo({
+                    top: Math.max(0, scrollTarget - 50),
+                    behavior: 'smooth'
+                });
+                
+                return true;
             }
             
             // AI features
