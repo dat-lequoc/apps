@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Tracker</title>
+  <!-- Include the Supabase JS library -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --background-color: #f8fafc;
+      --card-background: #ffffff;
+      --text-color: #1e293b;
+      --border-color: #e2e8f0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08);
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 15px;
+      background-color: var(--background-color);
+      color: var(--text-color);
+      line-height: 1.4;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      color: var(--primary-color);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    input, button, select {
+      padding: 8px 12px;
+      margin: 6px 0;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      width: 100%;
+      max-width: 250px;
+      transition: var(--transition);
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    #back-button {
+      background-color: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      margin-bottom: 15px;
+      width: auto;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    #back-button:hover {
+      background-color: #f1f5f9;
+    }
+
+    .control-buttons {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 100;
+      align-items: center;
+    }
+
+    .theme-toggle {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      font-size: 14px;
+      cursor: pointer;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-1px) rotate(10deg);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Clock styles */
+    #clocks-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .clock-card {
+      background: var(--card-background);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .clock-card.active {
+      border-color: var(--primary-color);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+      background: linear-gradient(to bottom, var(--card-background), rgba(59, 130, 246, 0.1));
+    }
+
+    .clock-name {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .clock-time {
+      font-family: monospace;
+      font-size: 1rem;
+      margin: 8px 0 4px;
+      transition: all 0.3s ease;
+    }
+
+    .clock-card.active .clock-time {
+      color: var(--primary-color);
+      font-weight: bold;
+      transform: scale(1.1);
+    }
+
+    /* Analog clock styles */
+    .analog-clock-container {
+      width: 140px;
+      height: 140px;
+      position: relative;
+      margin: 12px 0;
+      transition: all 0.3s ease;
+    }
+    
+    .clock-card.active .analog-clock-container {
+      transform: scale(1.05);
+    }
+
+    .analog-clock {
+      width: 100%;
+      height: 100%;
+    }
+
+    .clock-controls {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .clock-controls button {
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      width: auto;
+    }
+
+    .remove-clock {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 20px;
+      height: 20px;
+      min-width: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-size: 12px;
+      background: rgba(220, 38, 38, 0.1);
+      color: #dc2626;
+      border: 1px solid rgba(220, 38, 38, 0.2);
+      box-shadow: none;
+    }
+
+    .remove-clock:hover {
+      background: rgba(220, 38, 38, 0.2);
+      transform: none;
+    }
+
+    .total-time {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-color);
+      opacity: 0.8;
+    }
+
+    /* Activity form - new minimalistic design */
+    #activity-form {
+      background: transparent;
+      border: none;
+      padding: 4px 0 12px;
+      border-radius: 0;
+      box-shadow: none;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    #activity-form h2 {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+    
+    #new-activity-form {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      position: relative;
+    }
+    
+    #activity-name {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border-color);
+      border-radius: 0;
+      padding: 6px 2px;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+      max-width: none;
+    }
+    
+    #activity-name:focus {
+      border-color: var(--primary-color);
+      box-shadow: none;
+      outline: none;
+    }
+    
+    #new-activity-form button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      padding: 0;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    #new-activity-form button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+    }
+    
+    .section-header {
+      padding: 0;
+      margin-bottom: 10px;
+    }
+
+    /* Dark mode */
+    body.dark {
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --background-color: #0f172a;
+      --card-background: #1e293b;
+      --text-color: #e2e8f0;
+      --border-color: #334155;
+      --shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    body.dark #back-button {
+      color: #e2e8f0;
+      border-color: #334155;
+    }
+
+    body.dark #back-button:hover {
+      background-color: #334155;
+    }
+
+    /* Mobile styles */
+    @media (max-width: 600px) {
+      body {
+        margin: 10px auto;
+        padding: 10px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      h2 {
+        font-size: 1.2rem;
+      }
+
+      .analog-clock-container {
+        width: 120px;
+        height: 120px;
+      }
+
+      #clocks-container {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      }
+    }
+    
+    /* New styles for minimalist design and folding sections */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .section-header h2 {
+      margin-bottom: 0;
+    }
+    
+    .section-toggle {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+    }
+    
+    .section-toggle.collapsed {
+      transform: rotate(-90deg);
+    }
+    
+    .section-content {
+      overflow: hidden;
+      max-height: 1000px;
+      transition: max-height 0.3s ease;
+    }
+    
+    .section-content.collapsed {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+    
+    /* More minimalistic design */
+    body {
+      padding: 10px;
+    }
+    
+    h1 {
+      margin-bottom: 0.8rem;
+    }
+    
+    #activity-form {
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    
+    #stats-container {
+      padding: 12px;
+      margin-top: 12px;
+    }
+    
+    .clock-card {
+      padding: 10px;
+    }
+    
+    button {
+      padding: 6px 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Time Tracker</h1>
+  <div class="control-buttons">
+    <button id="theme-toggle" class="theme-toggle">🌙</button>
+  </div>
+
+  <button id="back-button">← Back to Dashboard</button>
+
+  <!-- Main content container -->
+  <div id="app-container">
+    <div id="activity-form">
+      <h2>Quick Add</h2>
+      <form id="new-activity-form">
+        <input type="text" id="activity-name" placeholder="Type an activity name..." required>
+        <button type="submit" title="Add activity">+</button>
+      </form>
+    </div>
+
+    <!-- Clocks grid -->
+    <div id="clocks-container"></div>
+  </div>
+
+  <script>
+    // Initialize Supabase client
+    const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // DOM Elements
+    const clocksContainer = document.getElementById('clocks-container');
+    const activityForm = document.getElementById('new-activity-form');
+    const activityNameInput = document.getElementById('activity-name');
+    const backButton = document.getElementById('back-button');
+
+    // State variables
+    let activities = [];
+    let activeTimers = {};
+    let timerIntervals = {};
+    let userId = null;
+    let clockCanvases = {};
+    let saveInterval = null;
+    
+    // Add a counter to ensure unique clock IDs
+    let clockCounter = 0;
+
+    // Helper functions
+    function formatTime(seconds) {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+      return [hrs, mins, secs]
+        .map(v => v < 10 ? "0" + v : v)
+        .join(":");
+    }
+
+    function getCurrentDate() {
+      const now = new Date();
+      return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+    }
+
+    // Draw analog clock
+    function drawClock(canvasId, seconds) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext('2d');
+      const radius = canvas.width / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Convert seconds to hours, minutes, seconds for clock hands
+      const hours = (seconds / 3600) % 12;
+      const minutes = (seconds % 3600) / 60;
+      const secs = seconds % 60;
+      
+      // Set canvas origin to center
+      ctx.translate(radius, radius);
+      
+      // Get if clock is active
+      const activityId = canvas.closest('.clock-card')?.dataset.activityId;
+      const isActive = activityId && activeTimers[activityId];
+      
+      // Draw clock face
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
+      ctx.fillStyle = document.body.classList.contains('dark') ? '#2d3748' : '#f8fafc';
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
+      ctx.strokeStyle = isActive ? 
+        (document.body.classList.contains('dark') ? '#60a5fa' : '#3b82f6') : 
+        (document.body.classList.contains('dark') ? '#4a5568' : '#cbd5e0');
+      ctx.lineWidth = radius * 0.05;
+      ctx.stroke();
+      
+      // Draw center dot
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 0.1, 0, 2 * Math.PI);
+      ctx.fillStyle = isActive ? 
+        (document.body.classList.contains('dark') ? '#93c5fd' : '#2563eb') : 
+        (document.body.classList.contains('dark') ? '#90cdf4' : '#3b82f6');
+      ctx.fill();
+      
+      // Draw hour markers
+      for (let i = 0; i < 12; i++) {
+        const angle = (i * Math.PI / 6);
+        ctx.beginPath();
+        ctx.rotate(angle);
+        ctx.moveTo(0, -radius * 0.7);
+        ctx.lineTo(0, -radius * 0.8);
+        ctx.lineWidth = radius * 0.04;
+        ctx.strokeStyle = document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c';
+        ctx.stroke();
+        ctx.rotate(-angle);
+      }
+      
+      // Draw minute markers
+      for (let i = 0; i < 60; i++) {
+        if (i % 5 !== 0) {  // Skip hour markers
+          const angle = (i * Math.PI / 30);
+          ctx.beginPath();
+          ctx.rotate(angle);
+          ctx.moveTo(0, -radius * 0.75);
+          ctx.lineTo(0, -radius * 0.8);
+          ctx.lineWidth = radius * 0.02;
+          ctx.strokeStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+          ctx.stroke();
+          ctx.rotate(-angle);
+        }
+      }
+      
+      // Draw hour hand
+      const hourAngle = (hours * Math.PI / 6) + (minutes * Math.PI / (6 * 60));
+      drawHand(ctx, hourAngle, radius * 0.5, radius * 0.07, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
+      
+      // Draw minute hand
+      const minuteAngle = (minutes * Math.PI / 30) + (secs * Math.PI / (30 * 60));
+      drawHand(ctx, minuteAngle, radius * 0.7, radius * 0.05, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
+      
+      // Draw second hand
+      const secondAngle = secs * Math.PI / 30;
+      drawHand(ctx, secondAngle, radius * 0.8, radius * 0.02, isActive ? 
+        (document.body.classList.contains('dark') ? '#f87171' : '#dc2626') : 
+        (document.body.classList.contains('dark') ? '#f56565' : '#e53e3e'));
+      
+      // Reset transformation
+      ctx.translate(-radius, -radius);
+    }
+    
+    // Draw clock hand
+    function drawHand(ctx, angle, length, width, color) {
+      ctx.beginPath();
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = color;
+      ctx.rotate(angle);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -length);
+      ctx.stroke();
+      ctx.rotate(-angle);
+    }
+
+    // Create a new clock
+    function createClock(activity) {
+      // Use clockCounter along with Date.now() to generate unique IDs
+      const clockId = `clock-${Date.now()}-${clockCounter++}`;
+      const canvasId = `canvas-${clockId}`;
+      console.log("Creating clock with clockId:", clockId, "for activity:", activity.id);
+      
+      const clockCard = document.createElement('div');
+      clockCard.className = 'clock-card';
+      clockCard.id = clockId;
+      clockCard.dataset.activityId = activity.id;
+      
+      const nameEl = document.createElement('div');
+      nameEl.className = 'clock-name';
+      nameEl.textContent = activity.name;
+      
+      // Create analog clock container
+      const analogClockContainer = document.createElement('div');
+      analogClockContainer.className = 'analog-clock-container';
+      
+      // Create canvas for analog clock
+      const clockCanvas = document.createElement('canvas');
+      clockCanvas.id = canvasId;
+      clockCanvas.className = 'analog-clock';
+      clockCanvas.width = 150;
+      clockCanvas.height = 150;
+      analogClockContainer.appendChild(clockCanvas);
+      
+      // Keep digital time as well, but smaller
+      const timeEl = document.createElement('div');
+      timeEl.className = 'clock-time';
+      timeEl.textContent = formatTime(activity.seconds || 0);
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-clock';
+      removeBtn.innerHTML = '&times;';
+      removeBtn.onclick = (e) => {
+        e.stopPropagation();
+        removeActivity(activity.id, clockId);
+      };
+      
+      clockCard.appendChild(nameEl);
+      clockCard.appendChild(analogClockContainer);
+      clockCard.appendChild(timeEl);
+      clockCard.appendChild(removeBtn);
+      
+      // Make the entire card clickable to toggle the timer
+      clockCard.addEventListener('click', () => {
+        if (activeTimers[activity.id]) {
+          console.log("Stopping timer for activity:", activity.id);
+          stopTimer(activity.id, clockId);
+        } else {
+          console.log("Starting timer for activity:", activity.id);
+          startTimer(activity.id, clockId);
+        }
+      });
+      
+      clocksContainer.appendChild(clockCard);
+      
+      // Store canvas ID for updating
+      clockCanvases[activity.id] = canvasId;
+      
+      // Draw initial clock
+      drawClock(canvasId, activity.seconds || 0);
+    }
+
+    // Start a timer
+    function startTimer(activityId, clockId) {
+      // If there's already an active timer for this activity, do nothing
+      if (activeTimers[activityId]) return;
+      
+      // Stop all other timers
+      for (const id in activeTimers) {
+        if (activeTimers[id]) {
+          const otherClockId = activeTimers[id];
+          stopTimer(id, otherClockId);
+        }
+      }
+      
+      const activity = activities.find(a => a.id === activityId);
+      if (!activity) return;
+      
+      const clockCard = document.getElementById(clockId);
+      const timeEl = clockCard.querySelector('.clock-time');
+      
+      clockCard.classList.add('active');
+      activeTimers[activityId] = clockId;
+      
+      // Start interval to update the timer
+      timerIntervals[activityId] = setInterval(() => {
+        activity.seconds = (activity.seconds || 0) + 1;
+        
+        // Update digital time display
+        timeEl.textContent = formatTime(activity.seconds);
+        
+        // Update analog clock
+        if (clockCanvases[activityId]) {
+          drawClock(clockCanvases[activityId], activity.seconds);
+        }
+      }, 1000);
+    }
+
+    // Stop a timer
+    function stopTimer(activityId, clockId) {
+      if (!activeTimers[activityId]) return;
+      
+      clearInterval(timerIntervals[activityId]);
+      delete timerIntervals[activityId];
+      delete activeTimers[activityId];
+      
+      const clockCard = document.getElementById(clockId);
+      if (clockCard) {
+        clockCard.classList.remove('active');
+      }
+    }
+
+    // Remove an activity
+    async function removeActivity(activityId, clockId) {
+      // Stop the timer if it's running
+      if (activeTimers[activityId]) {
+        stopTimer(activityId, clockId);
+      }
+      
+      // Remove from activities array
+      activities = activities.filter(a => a.id !== activityId);
+      
+      // Remove the clock element from DOM
+      const clockCard = document.getElementById(clockId);
+      if (clockCard) {
+        clockCard.remove();
+      }
+      
+      // Remove from canvases object
+      delete clockCanvases[activityId];
+      
+      // Save data to Supabase immediately when removing an activity
+      await saveToSupabase();
+    }
+
+    // Save data to Supabase
+    async function saveToSupabase() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('No active session. Data will not be saved.');
+          return;
+        }
+        
+        userId = session.user.id;
+        const date = getCurrentDate();
+        
+        // Prepare data for saving
+        const dataToSave = activities.map(activity => ({
+          user_id: userId,
+          activity_id: activity.id,
+          activity_name: activity.name,
+          total_seconds: activity.seconds || 0,
+          date
+        }));
+        
+        // Check if entries exist for today
+        const { data: existingData } = await supabase
+          .from('time_tracking')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('date', date);
+        
+        // If entries exist, delete them first
+        if (existingData && existingData.length > 0) {
+          await supabase
+            .from('time_tracking')
+            .delete()
+            .eq('user_id', userId)
+            .eq('date', date);
+        }
+        
+        // Only insert if we have activities to save
+        if (dataToSave.length > 0) {
+          const { error } = await supabase
+            .from('time_tracking')
+            .insert(dataToSave);
+          
+          if (error) {
+            console.error('Error saving data:', error);
+          } else {
+            console.log('Data saved successfully at', new Date().toLocaleTimeString());
+          }
+        }
+        
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    }
+
+    // Load data from Supabase
+    async function loadFromSupabase() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          console.log('No active session. Cannot load data.');
+          return;
+        }
+        
+        userId = session.user.id;
+        const date = getCurrentDate();
+        
+        const { data, error } = await supabase
+          .from('time_tracking')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('date', date);
+        
+        if (error) {
+          console.error('Error loading data:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          // Convert Supabase data to our activities format
+          activities = data.map(item => ({
+            id: item.activity_id,
+            name: item.activity_name,
+            seconds: item.total_seconds
+          }));
+          
+          // Update UI
+          renderActivities();
+          console.log('Data loaded successfully from Supabase');
+        } else {
+          console.log('No data found for today');
+          activities = [];
+        }
+        
+      } catch (err) {
+        console.error('Error:', err);
+      }
+    }
+
+    // Render all activities
+    function renderActivities() {
+      // Clear container first
+      clocksContainer.innerHTML = '';
+      
+      // Clear canvas references
+      clockCanvases = {};
+      
+      // Create clocks for each activity
+      activities.forEach(activity => {
+        createClock(activity);
+      });
+    }
+
+    // Start periodic saving
+    function startPeriodicSaving() {
+      // Clear any existing interval
+      if (saveInterval) {
+        clearInterval(saveInterval);
+      }
+      
+      // Set up new interval - save every 30 seconds
+      saveInterval = setInterval(saveToSupabase, 30000);
+      console.log('Periodic saving started - data will be saved every 30 seconds');
+    }
+
+    // Initialize app
+    async function initApp() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          userId = session.user.id;
+          
+          // Load data from Supabase
+          await loadFromSupabase();
+          
+          // Start periodic saving to Supabase
+          startPeriodicSaving();
+        } else {
+          console.log('Please sign in to use the Time Tracker with data saving');
+          // Show minimal UI or redirect to login
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
+      }
+    }
+
+    // Add event listeners
+    activityForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const activityName = activityNameInput.value.trim();
+      
+      if (activityName) {
+        const newActivity = {
+          id: `activity-${Date.now()}`,
+          name: activityName,
+          seconds: 0
+        };
+        
+        activities.push(newActivity);
+        createClock(newActivity);
+        
+        // Save immediately when adding a new activity
+        await saveToSupabase();
+        
+        // Clear input
+        activityNameInput.value = '';
+      }
+    });
+
+    backButton.addEventListener('click', () => {
+      window.location.href = 'index.html';
+    });
+
+    // Theme toggle
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set theme from local storage
+      const theme = localStorage.getItem('theme') || 'dark';
+      document.body.classList.add(theme);
+      
+      const themeToggle = document.getElementById('theme-toggle');
+      themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+      
+      themeToggle.addEventListener('click', () => {
+        if (document.body.classList.contains('dark')) {
+          document.body.classList.remove('dark');
+          document.body.classList.add('light');
+          localStorage.setItem('theme', 'light');
+          themeToggle.textContent = '🌙';
+          
+          // Redraw all clocks with new theme colors
+          for (const activityId in clockCanvases) {
+            const activity = activities.find(a => a.id === activityId);
+            if (activity) {
+              drawClock(clockCanvases[activityId], activity.seconds || 0);
+            }
+          }
+        } else {
+          document.body.classList.remove('light');
+          document.body.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+          themeToggle.textContent = '☀️';
+          
+          // Redraw all clocks with new theme colors
+          for (const activityId in clockCanvases) {
+            const activity = activities.find(a => a.id === activityId);
+            if (activity) {
+              drawClock(clockCanvases[activityId], activity.seconds || 0);
+            }
+          }
+        }
+      });
+    });
+
+    // Initialize app when page loads
+    window.addEventListener('load', initApp);
+
+    // Save data when page unloads
+    window.addEventListener('beforeunload', async () => {
+      // Stop all timers
+      for (const id in activeTimers) {
+        if (activeTimers[id]) {
+          const clockId = activeTimers[id];
+          stopTimer(id, clockId);
+        }
+      }
+      
+      // Final save to Supabase before unloading
+      await saveToSupabase();
+      
+      // Clear the saving interval
+      if (saveInterval) {
+        clearInterval(saveInterval);
+      }
+    });
+
+    // Function to reset all activities
+    async function resetActivities() {
+      if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
+        // Stop all timers
+        for (const id in activeTimers) {
+          if (activeTimers[id]) {
+            const clockId = activeTimers[id];
+            stopTimer(id, clockId);
+          }
+        }
+        
+        // Reset activities
+        activities = [];
+        clocksContainer.innerHTML = '';
+        clockCanvases = {}; // Clear canvas references
+        
+        // Save the empty state to Supabase
+        await saveToSupabase();
+      }
+    }
+  </script>
+</body>
+</html> 

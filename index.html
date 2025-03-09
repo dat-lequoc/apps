@@ -457,6 +457,11 @@
         <h3>Ebook Reader</h3>
         <p>Read and translate ebooks</p>
       </div>
+      <div class="app-card" id="timetrack-app-btn">
+        <div class="app-icon">⏱️</div>
+        <h3>Time Tracker</h3>
+        <p>Track time for your activities</p>
+      </div>
     </div>
     <button id="logout-button">Sign Out</button>
   </div>
@@ -613,6 +618,9 @@
     });
     document.getElementById("ebook-reader-btn").addEventListener("click", () => {
       window.location.href = "ebook.html";
+    });
+    document.getElementById("timetrack-app-btn").addEventListener("click", () => {
+      window.location.href = "timetrack.html";
     });
 
     // Check auth on initial load
