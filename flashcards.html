@@ -1774,7 +1774,7 @@
           
         } catch (err) {
           console.error("Error generating exercise:", err);
-          alert("Error generating exercise. Please try again after a minute or change model to Gemini Flash.");
+          alert("Error generating exercise. Please try again after a minute or Reload the page and change model to Gemini Flash.");
           
           // Hide the modal if still open
           document.getElementById('exercise-config-modal').classList.add('hidden');
@@ -1983,9 +1983,8 @@
               // Get all words used in the exercise
               const exerciseWords = exerciseData.answers;
               
-              // Find the card objects for each word
+              // Find the card objects for each word and prepare updates
               const cardsToUpdate = [];
-              
               for (const word of exerciseWords) {
                 const card = flashcards.find(c => c.word.toLowerCase() === word.toLowerCase());
                 if (card) {
@@ -2001,7 +2000,6 @@
               // Update each card with FSRS
               const now = new Date();
               const updates = [];
-              
               for (const card of cardsToUpdate) {
                 const fsrsCard = {
                   state: card.state || "new",
@@ -2014,14 +2012,13 @@
                   lapses: card.lapses || 0,
                 };
                 
-                // Update using FSRS implementation with Grade.Good
+                // Update the card using FSRS with Grade.Good
                 const result = fsrs.repeat(fsrsCard, Grade.Good, now);
                 
                 // Update local copy
                 Object.assign(card, result);
                 card.last_reviewed = now.toISOString();
                 
-                // Prepare database update
                 updates.push({
                   id: card.id,
                   state: result.state,
@@ -2070,20 +2067,9 @@
               // Update stats
               updateStats();
               
-              // Automatically exit the exercise after a short delay (1.5 seconds)
+              // Automatically reload after a short delay (1.5 seconds)
               setTimeout(() => {
-                // Hide exercise container
-                document.getElementById('exercise-container').classList.add('hidden');
-                
-                // Show main sections again
-                document.getElementById('app-title').classList.remove('hidden');
-                document.getElementById('upload-section').classList.remove('hidden');
-                document.getElementById('stats-section').classList.remove('hidden');
-                document.getElementById('review-section').classList.remove('hidden');
-                document.getElementById('exercise-section').classList.remove('hidden');
-                
-                // Reset exercise data
-                exerciseData = null;
+                window.location.reload();
               }, 1500);
               
             } catch (err) {
