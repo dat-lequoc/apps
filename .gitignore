@@ -1,2 +1,4 @@
 .prompts/
 .aider*
+**/.prompts/
+**/__pycache__/
