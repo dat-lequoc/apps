@@ -310,6 +310,30 @@
       margin-bottom: 10px;
     }
 
+    /* Status indicator */
+    .sync-status {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: white;
+      background-color: var(--primary-color);
+      transition: opacity 0.3s ease;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    .sync-status.visible {
+      opacity: 1;
+    }
+
+    .sync-status.error {
+      background-color: #ef4444;
+    }
+
     /* Dark mode */
     body.dark {
       --primary-color: #3b82f6;
@@ -439,6 +463,9 @@
 
     <!-- Clocks grid -->
     <div id="clocks-container"></div>
+
+    <!-- Sync status indicator -->
+    <div id="sync-status" class="sync-status">Syncing...</div>
   </div>
 
   <script>
@@ -452,439 +479,980 @@
     const activityForm = document.getElementById('new-activity-form');
     const activityNameInput = document.getElementById('activity-name');
     const backButton = document.getElementById('back-button');
+    const syncStatusEl = document.getElementById('sync-status');
 
-    // State variables
-    let activities = [];
-    let activeTimers = {};
-    let timerIntervals = {};
-    let userId = null;
-    let clockCanvases = {};
-    let saveInterval = null;
-    
-    // Add a counter to ensure unique clock IDs
-    let clockCounter = 0;
+    // Create a TrackerStore for handling data persistence
+    class TrackerStore {
+      constructor() {
+        this.activities = [];
+        this.sessionsCache = {};
+        this.userId = null;
+        this.syncInProgress = false;
+        this.syncQueue = [];
+        this.lastSyncTime = 0;
+        this.lastDbUpdateTime = 0;
+        this.offlineChanges = false;
+        this.syncRetryTimeout = null;
+        this.supportsIndexedDB = 'indexedDB' in window;
+        this.dbName = 'timeTrackerOfflineDb';
+        this.online = navigator.onLine;
+      }
 
-    // Helper functions
-    function formatTime(seconds) {
-      const hrs = Math.floor(seconds / 3600);
-      const mins = Math.floor((seconds % 3600) / 60);
-      const secs = seconds % 60;
-      return [hrs, mins, secs]
-        .map(v => v < 10 ? "0" + v : v)
-        .join(":");
+      async initializeStore() {
+        try {
+          // Set up online/offline event listeners
+          window.addEventListener('online', () => {
+            this.online = true;
+            this.showSyncStatus('Reconnected. Syncing...', false, 3000);
+            this.syncWithSupabase();
+          });
+          
+          window.addEventListener('offline', () => {
+            this.online = false;
+            this.showSyncStatus('Offline. Changes will sync when reconnected.', false, 5000);
+          });
+          
+          // Initialize IndexedDB for offline support if available
+          if (this.supportsIndexedDB) {
+            await this.initIndexedDB();
+          }
+          
+          // Get Supabase session
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            console.log('No active session. Cannot load data.');
+            return false;
+          }
+          
+          this.userId = session.user.id;
+          
+          // Try to load data from IndexedDB first if available
+          if (this.supportsIndexedDB) {
+            const offlineData = await this.getDataFromIndexedDB();
+            if (offlineData && offlineData.length > 0) {
+              console.log('Loaded data from offline storage');
+              this.activities = offlineData;
+              this.offlineChanges = true;
+            }
+          }
+          
+          // If we're online, sync with Supabase
+          if (this.online) {
+            await this.syncWithSupabase();
+          }
+          
+          return true;
+        } catch (error) {
+          console.error('Error initializing store:', error);
+          return false;
+        }
+      }
+      
+      // Setup IndexedDB
+      async initIndexedDB() {
+        return new Promise((resolve, reject) => {
+          if (!this.supportsIndexedDB) {
+            return resolve();
+          }
+          
+          const request = indexedDB.open(this.dbName, 1);
+          
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('activities')) {
+              db.createObjectStore('activities', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('sessions')) {
+              db.createObjectStore('sessions', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('syncState')) {
+              db.createObjectStore('syncState', { keyPath: 'id' });
+            }
+          };
+          
+          request.onsuccess = (event) => {
+            console.log('IndexedDB initialized successfully');
+            resolve();
+          };
+          
+          request.onerror = (event) => {
+            console.error('Error initializing IndexedDB:', event.target.error);
+            reject(event.target.error);
+          };
+        });
+      }
+      
+      // Get data from IndexedDB
+      async getDataFromIndexedDB() {
+        return new Promise((resolve, reject) => {
+          if (!this.supportsIndexedDB) {
+            return resolve([]);
+          }
+          
+          const request = indexedDB.open(this.dbName, 1);
+          
+          request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['activities'], 'readonly');
+            const store = transaction.objectStore('activities');
+            const getAll = store.getAll();
+            
+            getAll.onsuccess = () => {
+              resolve(getAll.result);
+            };
+            
+            getAll.onerror = (error) => {
+              console.error('Error getting data from IndexedDB:', error);
+              resolve([]);
+            };
+          };
+          
+          request.onerror = (event) => {
+            console.error('Error opening IndexedDB:', event.target.error);
+            resolve([]);
+          };
+        });
+      }
+      
+      // Save data to IndexedDB
+      async saveToIndexedDB() {
+        return new Promise((resolve, reject) => {
+          if (!this.supportsIndexedDB) {
+            return resolve();
+          }
+          
+          const request = indexedDB.open(this.dbName, 1);
+          
+          request.onsuccess = (event) => {
+            const db = event.target.result;
+            const transaction = db.transaction(['activities'], 'readwrite');
+            const store = transaction.objectStore('activities');
+            
+            // Clear existing data first
+            store.clear().onsuccess = () => {
+              // Add all current activities
+              let counter = 0;
+              this.activities.forEach(activity => {
+                store.add(activity).onsuccess = () => {
+                  counter++;
+                  if (counter === this.activities.length) {
+                    this.lastDbUpdateTime = Date.now();
+                    resolve();
+                  }
+                };
+              });
+              
+              // Handle empty activities case
+              if (this.activities.length === 0) {
+                this.lastDbUpdateTime = Date.now();
+                resolve();
+              }
+            };
+            
+            transaction.onerror = (error) => {
+              console.error('Transaction error:', error);
+              reject(error);
+            };
+          };
+          
+          request.onerror = (event) => {
+            console.error('Error opening IndexedDB:', event.target.error);
+            reject(event.target.error);
+          };
+        });
+      }
+      
+      // Load activities from Supabase
+      async loadFromSupabase() {
+        try {
+          if (!this.userId || !this.online) {
+            return false;
+          }
+          
+          const date = this.getCurrentDate();
+          
+          // Get time tracking entries for today
+          const { data: timeTrackingData, error: timeTrackingError } = await supabase
+            .from('time_tracking')
+            .select('*')
+            .eq('user_id', this.userId)
+            .eq('date', date);
+          
+          if (timeTrackingError) {
+            console.error('Error loading time tracking data:', timeTrackingError);
+            return false;
+          }
+          
+          if (timeTrackingData && timeTrackingData.length > 0) {
+            // Convert Supabase data to our activities format
+            this.activities = timeTrackingData.map(item => ({
+              id: item.activity_id,
+              name: item.activity_name,
+              seconds: item.total_seconds,
+              active: false,
+              startedAt: null,
+              lastUpdated: Date.now()
+            }));
+            
+            // Get any active sessions
+            const { data: sessionsData, error: sessionsError } = await supabase
+              .from('activity_sessions')
+              .select('*')
+              .eq('user_id', this.userId)
+              .eq('date', date)
+              .is('end_time', null);
+            
+            // If there are any active sessions, update the activities
+            if (!sessionsError && sessionsData && sessionsData.length > 0) {
+              for (const session of sessionsData) {
+                const activity = this.activities.find(a => a.id === session.activity_id);
+                if (activity) {
+                  // Update the cached session data
+                  this.sessionsCache[session.id] = {
+                    id: session.id,
+                    activityId: session.activity_id,
+                    startTime: new Date(session.start_time).getTime()
+                  };
+                }
+              }
+            }
+            
+            this.lastSyncTime = Date.now();
+            return true;
+          } else {
+            console.log('No data found for today');
+            this.activities = [];
+            this.lastSyncTime = Date.now();
+            return true;
+          }
+          
+        } catch (err) {
+          console.error('Error loading from Supabase:', err);
+          return false;
+        }
+      }
+      
+      // Save data to Supabase
+      async saveToSupabase(forceSyncAll = false) {
+        try {
+          if (this.syncInProgress || !this.userId || !this.online) {
+            // If we're offline or already syncing, queue the sync for later
+            if (!this.syncInProgress && !this.online) {
+              this.offlineChanges = true;
+            }
+            return false;
+          }
+          
+          this.syncInProgress = true;
+          this.showSyncStatus('Syncing...', false);
+          
+          // Update active timers before sync
+          this.updateActiveTimers();
+          
+          const date = this.getCurrentDate();
+          
+          // Prepare data for saving
+          const dataToSave = this.activities.map(activity => ({
+            user_id: this.userId,
+            activity_id: activity.id,
+            activity_name: activity.name,
+            total_seconds: activity.seconds || 0,
+            date
+          }));
+          
+          // If force syncing, delete all existing data first
+          if (forceSyncAll) {
+            const { error: deleteError } = await supabase
+              .from('time_tracking')
+              .delete()
+              .eq('user_id', this.userId)
+              .eq('date', date);
+            
+            if (deleteError) {
+              console.error('Error deleting existing data:', deleteError);
+              this.syncInProgress = false;
+              this.showSyncStatus('Sync Failed', true, 3000);
+              return false;
+            }
+          }
+          
+          // Only do the insert if we have data to save
+          if (dataToSave.length > 0) {
+            const { error } = await supabase
+              .from('time_tracking')
+              .upsert(dataToSave, { onConflict: 'user_id,activity_id,date' });
+            
+            if (error) {
+              console.error('Error saving data:', error);
+              this.syncInProgress = false;
+              this.showSyncStatus('Sync Failed', true, 3000);
+              return false;
+            }
+          }
+          
+          // Save any unsaved sessions
+          for (const activity of this.activities) {
+            if (activity.active && activity.startedAt) {
+              // Check if we have a session for this active timer
+              const existingSessionId = Object.values(this.sessionsCache)
+                .find(session => session.activityId === activity.id)?.id;
+              
+              if (!existingSessionId) {
+                // Create a new session record
+                const { data: newSession, error } = await supabase
+                  .from('activity_sessions')
+                  .insert([{
+                    user_id: this.userId,
+                    activity_id: activity.id,
+                    start_time: new Date(activity.startedAt).toISOString(),
+                    date
+                  }])
+                  .select();
+                
+                if (!error && newSession && newSession.length > 0) {
+                  this.sessionsCache[newSession[0].id] = {
+                    id: newSession[0].id,
+                    activityId: activity.id,
+                    startTime: activity.startedAt
+                  };
+                }
+              }
+            }
+          }
+          
+          // Reset offline changes flag
+          this.offlineChanges = false;
+          this.lastSyncTime = Date.now();
+          
+          this.syncInProgress = false;
+          this.showSyncStatus('Synced!', false, 1500);
+          return true;
+          
+        } catch (err) {
+          console.error('Error saving to Supabase:', err);
+          this.syncInProgress = false;
+          this.showSyncStatus('Sync Failed', true, 3000);
+          
+          // Set a retry if online
+          if (this.online) {
+            if (this.syncRetryTimeout) {
+              clearTimeout(this.syncRetryTimeout);
+            }
+            this.syncRetryTimeout = setTimeout(() => this.syncWithSupabase(), 30000);
+          }
+          
+          return false;
+        }
+      }
+      
+      // Helper: Get current date in YYYY-MM-DD format
+      getCurrentDate() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+      
+      // Format time for display
+      formatTime(seconds) {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return [hrs, mins, secs]
+          .map(v => v < 10 ? "0" + v : v)
+          .join(":");
+      }
+      
+      // Update all active timers with current elapsed time
+      updateActiveTimers() {
+        const now = Date.now();
+        
+        for (const activity of this.activities) {
+          if (activity.active && activity.startedAt) {
+            // Calculate elapsed time and update seconds
+            const elapsed = Math.floor((now - activity.startedAt) / 1000);
+            activity.seconds = (activity.seconds || 0) + elapsed;
+            
+            // Reset the start time to now
+            activity.startedAt = now;
+            activity.lastUpdated = now;
+          }
+        }
+      }
+      
+      // Sync with Supabase (handles both directions)
+      async syncWithSupabase() {
+        // If there are offline changes or it's been more than 5 minutes since last sync
+        const needsFullSync = this.offlineChanges || (Date.now() - this.lastSyncTime > 300000);
+        
+        if (needsFullSync) {
+          return this.saveToSupabase(true);
+        } else {
+          // Just do a regular save
+          return this.saveToSupabase(false);
+        }
+      }
+      
+      // Add a new activity
+      async addActivity(name) {
+        const newActivity = {
+          id: `activity-${Date.now()}`,
+          name: name,
+          seconds: 0,
+          active: false,
+          startedAt: null,
+          lastUpdated: Date.now()
+        };
+        
+        this.activities.push(newActivity);
+        
+        // Save to IndexedDB
+        if (this.supportsIndexedDB) {
+          await this.saveToIndexedDB();
+        }
+        
+        // Sync with Supabase
+        if (this.online) {
+          await this.saveToSupabase();
+        } else {
+          this.offlineChanges = true;
+        }
+        
+        return newActivity;
+      }
+      
+      // Start timer for an activity
+      async startTimer(activityId) {
+        // Stop any other active timers first
+        await this.stopAllTimers(activityId);
+        
+        const activity = this.activities.find(a => a.id === activityId);
+        if (!activity) return null;
+        
+        const startTime = Date.now();
+        
+        // Update activity state
+        activity.active = true;
+        activity.startedAt = startTime;
+        activity.lastUpdated = startTime;
+        
+        // If we're online, create a session in Supabase
+        if (this.online && this.userId) {
+          try {
+            const date = this.getCurrentDate();
+            
+            const { data: newSession, error } = await supabase
+              .from('activity_sessions')
+              .insert([{
+                user_id: this.userId,
+                activity_id: activityId,
+                start_time: new Date(startTime).toISOString(),
+                date
+              }])
+              .select();
+            
+            if (!error && newSession && newSession.length > 0) {
+              // Cache the session information
+              this.sessionsCache[newSession[0].id] = {
+                id: newSession[0].id,
+                activityId: activityId,
+                startTime: startTime
+              };
+            }
+          } catch (err) {
+            console.error('Error creating session:', err);
+            // We can continue even if this fails
+          }
+        }
+        
+        // Save to IndexedDB
+        if (this.supportsIndexedDB) {
+          await this.saveToIndexedDB();
+        }
+        
+        return activity;
+      }
+      
+      // Stop timer for an activity
+      async stopTimer(activityId) {
+        const activity = this.activities.find(a => a.id === activityId);
+        if (!activity || !activity.active) return null;
+        
+        const now = Date.now();
+        const elapsed = Math.floor((now - activity.startedAt) / 1000);
+        
+        // Update activity state
+        activity.seconds = (activity.seconds || 0) + elapsed;
+        activity.active = false;
+        activity.lastUpdated = now;
+        
+        // Update the session in Supabase if online
+        if (this.online && this.userId) {
+          try {
+            // Find the session ID for this activity
+            const sessionId = Object.entries(this.sessionsCache)
+              .find(([id, session]) => session.activityId === activityId)?.[0];
+            
+            if (sessionId) {
+              // Update the session with an end time
+              const { error } = await supabase
+                .from('activity_sessions')
+                .update({
+                  end_time: new Date(now).toISOString(),
+                  duration_seconds: elapsed
+                })
+                .eq('id', sessionId);
+              
+              if (!error) {
+                // Remove from cache
+                delete this.sessionsCache[sessionId];
+              }
+            }
+          } catch (err) {
+            console.error('Error updating session:', err);
+            // We can continue even if this fails
+          }
+        }
+        
+        // Save to IndexedDB and Supabase
+        if (this.supportsIndexedDB) {
+          await this.saveToIndexedDB();
+        }
+        
+        if (this.online) {
+          await this.saveToSupabase();
+        } else {
+          this.offlineChanges = true;
+        }
+        
+        return activity;
+      }
+      
+      // Stop all timers (except for the one we're about to start)
+      async stopAllTimers(exceptActivityId = null) {
+        for (const activity of this.activities) {
+          if (activity.active && activity.id !== exceptActivityId) {
+            await this.stopTimer(activity.id);
+          }
+        }
+      }
+      
+      // Remove an activity
+      async removeActivity(activityId) {
+        // Stop the timer if it's running
+        const activity = this.activities.find(a => a.id === activityId);
+        if (activity && activity.active) {
+          await this.stopTimer(activityId);
+        }
+        
+        // Remove the activity
+        this.activities = this.activities.filter(a => a.id !== activityId);
+        
+        // Save changes
+        if (this.supportsIndexedDB) {
+          await this.saveToIndexedDB();
+        }
+        
+        if (this.online) {
+          try {
+            // Delete from Supabase
+            const date = this.getCurrentDate();
+            const { error } = await supabase
+              .from('time_tracking')
+              .delete()
+              .eq('user_id', this.userId)
+              .eq('activity_id', activityId)
+              .eq('date', date);
+            
+            if (error) {
+              console.error('Error deleting activity:', error);
+              this.offlineChanges = true;
+            }
+          } catch (err) {
+            console.error('Error removing activity:', err);
+            this.offlineChanges = true;
+          }
+        } else {
+          this.offlineChanges = true;
+        }
+      }
+      
+      // Show sync status indicator
+      showSyncStatus(message, isError = false, duration = 0) {
+        syncStatusEl.textContent = message;
+        syncStatusEl.classList.add('visible');
+        
+        if (isError) {
+          syncStatusEl.classList.add('error');
+        } else {
+          syncStatusEl.classList.remove('error');
+        }
+        
+        if (duration > 0) {
+          setTimeout(() => {
+            syncStatusEl.classList.remove('visible');
+          }, duration);
+        }
+      }
+      
+      // Hide sync status indicator
+      hideSyncStatus() {
+        syncStatusEl.classList.remove('visible');
+      }
     }
 
-    function getCurrentDate() {
-      const now = new Date();
-      return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
-    }
-
-    // Draw analog clock
-    function drawClock(canvasId, seconds) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return;
+    // Clock rendering helper
+    class ClockRenderer {
+      constructor(store) {
+        this.store = store;
+        this.canvasRefs = {};
+        this.clockElements = {};
+        this.animationFrames = {};
+      }
       
-      const ctx = canvas.getContext('2d');
-      const radius = canvas.width / 2;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Convert seconds to hours, minutes, seconds for clock hands
-      const hours = (seconds / 3600) % 12;
-      const minutes = (seconds % 3600) / 60;
-      const secs = seconds % 60;
-      
-      // Set canvas origin to center
-      ctx.translate(radius, radius);
-      
-      // Get if clock is active
-      const activityId = canvas.closest('.clock-card')?.dataset.activityId;
-      const isActive = activityId && activeTimers[activityId];
-      
-      // Draw clock face
-      ctx.beginPath();
-      ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
-      ctx.fillStyle = document.body.classList.contains('dark') ? '#2d3748' : '#f8fafc';
-      ctx.fill();
-      
-      ctx.beginPath();
-      ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
-      ctx.strokeStyle = isActive ? 
-        (document.body.classList.contains('dark') ? '#60a5fa' : '#3b82f6') : 
-        (document.body.classList.contains('dark') ? '#4a5568' : '#cbd5e0');
-      ctx.lineWidth = radius * 0.05;
-      ctx.stroke();
-      
-      // Draw center dot
-      ctx.beginPath();
-      ctx.arc(0, 0, radius * 0.1, 0, 2 * Math.PI);
-      ctx.fillStyle = isActive ? 
-        (document.body.classList.contains('dark') ? '#93c5fd' : '#2563eb') : 
-        (document.body.classList.contains('dark') ? '#90cdf4' : '#3b82f6');
-      ctx.fill();
-      
-      // Draw hour markers
-      for (let i = 0; i < 12; i++) {
-        const angle = (i * Math.PI / 6);
+      // Draw an analog clock for the given activity
+      drawClock(canvasId, seconds, isActive = false) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const radius = canvas.width / 2;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.translate(radius, radius);
+        
+        // Convert seconds to hours, minutes, seconds for clock hands
+        const hours = (seconds / 3600) % 12;
+        const minutes = (seconds % 3600) / 60;
+        const secs = seconds % 60;
+        
+        // Draw clock face
         ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
+        ctx.fillStyle = document.body.classList.contains('dark') ? '#2d3748' : '#f8fafc';
+        ctx.fill();
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.9, 0, 2 * Math.PI);
+        ctx.strokeStyle = isActive ? 
+          (document.body.classList.contains('dark') ? '#60a5fa' : '#3b82f6') : 
+          (document.body.classList.contains('dark') ? '#4a5568' : '#cbd5e0');
+        ctx.lineWidth = radius * 0.05;
+        ctx.stroke();
+        
+        // Draw center dot
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * 0.1, 0, 2 * Math.PI);
+        ctx.fillStyle = isActive ? 
+          (document.body.classList.contains('dark') ? '#93c5fd' : '#2563eb') : 
+          (document.body.classList.contains('dark') ? '#90cdf4' : '#3b82f6');
+        ctx.fill();
+        
+        // Draw hour markers
+        for (let i = 0; i < 12; i++) {
+          const angle = (i * Math.PI / 6);
+          ctx.beginPath();
+          ctx.rotate(angle);
+          ctx.moveTo(0, -radius * 0.7);
+          ctx.lineTo(0, -radius * 0.8);
+          ctx.lineWidth = radius * 0.04;
+          ctx.strokeStyle = document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c';
+          ctx.stroke();
+          ctx.rotate(-angle);
+        }
+        
+        // Draw minute markers
+        for (let i = 0; i < 60; i++) {
+          if (i % 5 !== 0) {  // Skip hour markers
+            const angle = (i * Math.PI / 30);
+            ctx.beginPath();
+            ctx.rotate(angle);
+            ctx.moveTo(0, -radius * 0.75);
+            ctx.lineTo(0, -radius * 0.8);
+            ctx.lineWidth = radius * 0.02;
+            ctx.strokeStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
+            ctx.stroke();
+            ctx.rotate(-angle);
+          }
+        }
+        
+        // Draw hour hand
+        const hourAngle = (hours * Math.PI / 6) + (minutes * Math.PI / (6 * 60));
+        this.drawHand(ctx, hourAngle, radius * 0.5, radius * 0.07, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
+        
+        // Draw minute hand
+        const minuteAngle = (minutes * Math.PI / 30) + (secs * Math.PI / (30 * 60));
+        this.drawHand(ctx, minuteAngle, radius * 0.7, radius * 0.05, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
+        
+        // Draw second hand
+        const secondAngle = secs * Math.PI / 30;
+        this.drawHand(ctx, secondAngle, radius * 0.8, radius * 0.02, isActive ? 
+          (document.body.classList.contains('dark') ? '#f87171' : '#dc2626') : 
+          (document.body.classList.contains('dark') ? '#f56565' : '#e53e3e'));
+        
+        // Reset transformation
+        ctx.translate(-radius, -radius);
+      }
+      
+      // Draw a clock hand
+      drawHand(ctx, angle, length, width, color) {
+        ctx.beginPath();
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = color;
         ctx.rotate(angle);
-        ctx.moveTo(0, -radius * 0.7);
-        ctx.lineTo(0, -radius * 0.8);
-        ctx.lineWidth = radius * 0.04;
-        ctx.strokeStyle = document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c';
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -length);
         ctx.stroke();
         ctx.rotate(-angle);
       }
       
-      // Draw minute markers
-      for (let i = 0; i < 60; i++) {
-        if (i % 5 !== 0) {  // Skip hour markers
-          const angle = (i * Math.PI / 30);
-          ctx.beginPath();
-          ctx.rotate(angle);
-          ctx.moveTo(0, -radius * 0.75);
-          ctx.lineTo(0, -radius * 0.8);
-          ctx.lineWidth = radius * 0.02;
-          ctx.strokeStyle = document.body.classList.contains('dark') ? '#a0aec0' : '#4a5568';
-          ctx.stroke();
-          ctx.rotate(-angle);
-        }
-      }
-      
-      // Draw hour hand
-      const hourAngle = (hours * Math.PI / 6) + (minutes * Math.PI / (6 * 60));
-      drawHand(ctx, hourAngle, radius * 0.5, radius * 0.07, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
-      
-      // Draw minute hand
-      const minuteAngle = (minutes * Math.PI / 30) + (secs * Math.PI / (30 * 60));
-      drawHand(ctx, minuteAngle, radius * 0.7, radius * 0.05, document.body.classList.contains('dark') ? '#e2e8f0' : '#1a202c');
-      
-      // Draw second hand
-      const secondAngle = secs * Math.PI / 30;
-      drawHand(ctx, secondAngle, radius * 0.8, radius * 0.02, isActive ? 
-        (document.body.classList.contains('dark') ? '#f87171' : '#dc2626') : 
-        (document.body.classList.contains('dark') ? '#f56565' : '#e53e3e'));
-      
-      // Reset transformation
-      ctx.translate(-radius, -radius);
-    }
-    
-    // Draw clock hand
-    function drawHand(ctx, angle, length, width, color) {
-      ctx.beginPath();
-      ctx.lineWidth = width;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = color;
-      ctx.rotate(angle);
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, -length);
-      ctx.stroke();
-      ctx.rotate(-angle);
-    }
-
-    // Create a new clock
-    function createClock(activity) {
-      // Use clockCounter along with Date.now() to generate unique IDs
-      const clockId = `clock-${Date.now()}-${clockCounter++}`;
-      const canvasId = `canvas-${clockId}`;
-      console.log("Creating clock with clockId:", clockId, "for activity:", activity.id);
-      
-      const clockCard = document.createElement('div');
-      clockCard.className = 'clock-card';
-      clockCard.id = clockId;
-      clockCard.dataset.activityId = activity.id;
-      
-      const nameEl = document.createElement('div');
-      nameEl.className = 'clock-name';
-      nameEl.textContent = activity.name;
-      
-      // Create analog clock container
-      const analogClockContainer = document.createElement('div');
-      analogClockContainer.className = 'analog-clock-container';
-      
-      // Create canvas for analog clock
-      const clockCanvas = document.createElement('canvas');
-      clockCanvas.id = canvasId;
-      clockCanvas.className = 'analog-clock';
-      clockCanvas.width = 150;
-      clockCanvas.height = 150;
-      analogClockContainer.appendChild(clockCanvas);
-      
-      // Keep digital time as well, but smaller
-      const timeEl = document.createElement('div');
-      timeEl.className = 'clock-time';
-      timeEl.textContent = formatTime(activity.seconds || 0);
-      
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'remove-clock';
-      removeBtn.innerHTML = '&times;';
-      removeBtn.onclick = (e) => {
-        e.stopPropagation();
-        removeActivity(activity.id, clockId);
-      };
-      
-      clockCard.appendChild(nameEl);
-      clockCard.appendChild(analogClockContainer);
-      clockCard.appendChild(timeEl);
-      clockCard.appendChild(removeBtn);
-      
-      // Make the entire card clickable to toggle the timer
-      clockCard.addEventListener('click', () => {
-        if (activeTimers[activity.id]) {
-          console.log("Stopping timer for activity:", activity.id);
-          stopTimer(activity.id, clockId);
+      // Create a clock element for an activity
+      createClockElement(activity) {
+        const clockId = `clock-${activity.id}`;
+        const canvasId = `canvas-${activity.id}`;
+        
+        const clockCard = document.createElement('div');
+        clockCard.className = activity.active ? 'clock-card active' : 'clock-card';
+        clockCard.id = clockId;
+        clockCard.dataset.activityId = activity.id;
+        
+        const nameEl = document.createElement('div');
+        nameEl.className = 'clock-name';
+        nameEl.textContent = activity.name;
+        
+        // Create analog clock container
+        const analogClockContainer = document.createElement('div');
+        analogClockContainer.className = 'analog-clock-container';
+        
+        // Create canvas for analog clock
+        const clockCanvas = document.createElement('canvas');
+        clockCanvas.id = canvasId;
+        clockCanvas.className = 'analog-clock';
+        clockCanvas.width = 150;
+        clockCanvas.height = 150;
+        analogClockContainer.appendChild(clockCanvas);
+        
+        // Digital time
+        const timeEl = document.createElement('div');
+        timeEl.className = 'clock-time';
+        timeEl.textContent = this.store.formatTime(activity.seconds || 0);
+        
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-clock';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.title = 'Remove activity';
+        removeBtn.onclick = (e) => {
+          e.stopPropagation();
+          this.removeClockElement(activity.id);
+          this.store.removeActivity(activity.id);
+        };
+        
+        // Assemble the clock card
+        clockCard.appendChild(nameEl);
+        clockCard.appendChild(analogClockContainer);
+        clockCard.appendChild(timeEl);
+        clockCard.appendChild(removeBtn);
+        
+        // Make the entire card clickable for toggling the timer
+        clockCard.addEventListener('click', () => this.toggleTimer(activity.id));
+        
+        // Save references
+        this.canvasRefs[activity.id] = canvasId;
+        this.clockElements[activity.id] = clockId;
+        
+        // Start the animation if the clock is active
+        if (activity.active) {
+          this.startClockAnimation(activity.id);
         } else {
-          console.log("Starting timer for activity:", activity.id);
-          startTimer(activity.id, clockId);
+          // Just draw once if not active
+          this.drawClock(canvasId, activity.seconds || 0, false);
         }
-      });
+        
+        return clockCard;
+      }
       
-      clocksContainer.appendChild(clockCard);
-      
-      // Store canvas ID for updating
-      clockCanvases[activity.id] = canvasId;
-      
-      // Draw initial clock
-      drawClock(canvasId, activity.seconds || 0);
-    }
-
-    // Start a timer
-    function startTimer(activityId, clockId) {
-      // If there's already an active timer for this activity, do nothing
-      if (activeTimers[activityId]) return;
-      
-      // Stop all other timers
-      for (const id in activeTimers) {
-        if (activeTimers[id]) {
-          const otherClockId = activeTimers[id];
-          stopTimer(id, otherClockId);
+      // Toggle the timer for an activity
+      async toggleTimer(activityId) {
+        const activity = this.store.activities.find(a => a.id === activityId);
+        if (!activity) return;
+        
+        if (activity.active) {
+          // Stop the timer
+          await this.store.stopTimer(activityId);
+          this.stopClockAnimation(activityId);
+          this.updateClockDisplay(activityId, false);
+        } else {
+          // Start the timer
+          await this.store.startTimer(activityId);
+          this.startClockAnimation(activityId);
+          this.updateClockDisplay(activityId, true);
         }
       }
       
-      const activity = activities.find(a => a.id === activityId);
-      if (!activity) return;
-      
-      const clockCard = document.getElementById(clockId);
-      const timeEl = clockCard.querySelector('.clock-time');
-      
-      clockCard.classList.add('active');
-      activeTimers[activityId] = clockId;
-      
-      // Start interval to update the timer
-      timerIntervals[activityId] = setInterval(() => {
-        activity.seconds = (activity.seconds || 0) + 1;
+      // Update the clock display to reflect active/inactive state
+      updateClockDisplay(activityId, isActive) {
+        const clockId = this.clockElements[activityId];
+        const clockElement = document.getElementById(clockId);
+        if (!clockElement) return;
         
-        // Update digital time display
-        timeEl.textContent = formatTime(activity.seconds);
-        
-        // Update analog clock
-        if (clockCanvases[activityId]) {
-          drawClock(clockCanvases[activityId], activity.seconds);
-        }
-      }, 1000);
-    }
-
-    // Stop a timer
-    function stopTimer(activityId, clockId) {
-      if (!activeTimers[activityId]) return;
-      
-      clearInterval(timerIntervals[activityId]);
-      delete timerIntervals[activityId];
-      delete activeTimers[activityId];
-      
-      const clockCard = document.getElementById(clockId);
-      if (clockCard) {
-        clockCard.classList.remove('active');
-      }
-    }
-
-    // Remove an activity
-    async function removeActivity(activityId, clockId) {
-      // Stop the timer if it's running
-      if (activeTimers[activityId]) {
-        stopTimer(activityId, clockId);
-      }
-      
-      // Remove from activities array
-      activities = activities.filter(a => a.id !== activityId);
-      
-      // Remove the clock element from DOM
-      const clockCard = document.getElementById(clockId);
-      if (clockCard) {
-        clockCard.remove();
-      }
-      
-      // Remove from canvases object
-      delete clockCanvases[activityId];
-      
-      // Save data to Supabase immediately when removing an activity
-      await saveToSupabase();
-    }
-
-    // Save data to Supabase
-    async function saveToSupabase() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log('No active session. Data will not be saved.');
-          return;
+        if (isActive) {
+          clockElement.classList.add('active');
+        } else {
+          clockElement.classList.remove('active');
         }
         
-        userId = session.user.id;
-        const date = getCurrentDate();
-        
-        // Prepare data for saving
-        const dataToSave = activities.map(activity => ({
-          user_id: userId,
-          activity_id: activity.id,
-          activity_name: activity.name,
-          total_seconds: activity.seconds || 0,
-          date
-        }));
-        
-        // Check if entries exist for today
-        const { data: existingData } = await supabase
-          .from('time_tracking')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('date', date);
-        
-        // If entries exist, delete them first
-        if (existingData && existingData.length > 0) {
-          await supabase
-            .from('time_tracking')
-            .delete()
-            .eq('user_id', userId)
-            .eq('date', date);
+        // Update the time display
+        const activity = this.store.activities.find(a => a.id === activityId);
+        if (activity) {
+          const timeEl = clockElement.querySelector('.clock-time');
+          timeEl.textContent = this.store.formatTime(activity.seconds || 0);
+        }
+      }
+      
+      // Start the animation for an active clock
+      startClockAnimation(activityId) {
+        // Cancel any existing animation
+        if (this.animationFrames[activityId]) {
+          cancelAnimationFrame(this.animationFrames[activityId]);
         }
         
-        // Only insert if we have activities to save
-        if (dataToSave.length > 0) {
-          const { error } = await supabase
-            .from('time_tracking')
-            .insert(dataToSave);
+        const canvasId = this.canvasRefs[activityId];
+        const activity = this.store.activities.find(a => a.id === activityId);
+        
+        if (!activity || !activity.active) return;
+        
+        const animate = () => {
+          // Get the current accumulated time plus elapsed time since timer started
+          const totalSeconds = activity.seconds + 
+            Math.floor((Date.now() - activity.startedAt) / 1000);
           
-          if (error) {
-            console.error('Error saving data:', error);
-          } else {
-            console.log('Data saved successfully at', new Date().toLocaleTimeString());
+          // Update the clock display
+          this.drawClock(canvasId, totalSeconds, true);
+          
+          // Update the time text
+          const clockElement = document.getElementById(this.clockElements[activityId]);
+          if (clockElement) {
+            const timeEl = clockElement.querySelector('.clock-time');
+            timeEl.textContent = this.store.formatTime(totalSeconds);
           }
-        }
-        
-      } catch (err) {
-        console.error('Error:', err);
-      }
-    }
-
-    // Load data from Supabase
-    async function loadFromSupabase() {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.log('No active session. Cannot load data.');
-          return;
-        }
-        
-        userId = session.user.id;
-        const date = getCurrentDate();
-        
-        const { data, error } = await supabase
-          .from('time_tracking')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('date', date);
-        
-        if (error) {
-          console.error('Error loading data:', error);
-          return;
-        }
-        
-        if (data && data.length > 0) {
-          // Convert Supabase data to our activities format
-          activities = data.map(item => ({
-            id: item.activity_id,
-            name: item.activity_name,
-            seconds: item.total_seconds
-          }));
           
-          // Update UI
-          renderActivities();
-          console.log('Data loaded successfully from Supabase');
-        } else {
-          console.log('No data found for today');
-          activities = [];
+          // Continue the animation
+          this.animationFrames[activityId] = requestAnimationFrame(animate);
+        };
+        
+        // Start the animation
+        this.animationFrames[activityId] = requestAnimationFrame(animate);
+      }
+      
+      // Stop the animation for a clock
+      stopClockAnimation(activityId) {
+        if (this.animationFrames[activityId]) {
+          cancelAnimationFrame(this.animationFrames[activityId]);
+          delete this.animationFrames[activityId];
         }
         
-      } catch (err) {
-        console.error('Error:', err);
+        // Draw the clock one last time with the final time
+        const activity = this.store.activities.find(a => a.id === activityId);
+        if (activity) {
+          this.drawClock(this.canvasRefs[activityId], activity.seconds || 0, false);
+        }
+      }
+      
+      // Remove a clock element
+      removeClockElement(activityId) {
+        // Stop any animation
+        this.stopClockAnimation(activityId);
+        
+        // Remove the element
+        const clockId = this.clockElements[activityId];
+        const clockElement = document.getElementById(clockId);
+        if (clockElement) {
+          clockElement.remove();
+        }
+        
+        // Clean up references
+        delete this.canvasRefs[activityId];
+        delete this.clockElements[activityId];
+      }
+      
+      // Render all activities
+      renderAllClocks() {
+        // Clear the container first
+        clocksContainer.innerHTML = '';
+        
+        // Clean up animation frames
+        for (const activityId in this.animationFrames) {
+          cancelAnimationFrame(this.animationFrames[activityId]);
+        }
+        
+        // Reset references
+        this.canvasRefs = {};
+        this.clockElements = {};
+        this.animationFrames = {};
+        
+        // Create clocks for each activity
+        this.store.activities.forEach(activity => {
+          const clockElement = this.createClockElement(activity);
+          clocksContainer.appendChild(clockElement);
+        });
       }
     }
 
-    // Render all activities
-    function renderActivities() {
-      // Clear container first
-      clocksContainer.innerHTML = '';
-      
-      // Clear canvas references
-      clockCanvases = {};
-      
-      // Create clocks for each activity
-      activities.forEach(activity => {
-        createClock(activity);
-      });
-    }
+    // Create the store and renderer
+    const store = new TrackerStore();
+    const renderer = new ClockRenderer(store);
 
-    // Start periodic saving
-    function startPeriodicSaving() {
-      // Clear any existing interval
-      if (saveInterval) {
-        clearInterval(saveInterval);
-      }
-      
-      // Set up new interval - save every 30 seconds
-      saveInterval = setInterval(saveToSupabase, 30000);
-      console.log('Periodic saving started - data will be saved every 30 seconds');
-    }
-
-    // Initialize app
+    // Initialize the app
     async function initApp() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          userId = session.user.id;
+        // Initialize the store
+        const initialized = await store.initializeStore();
+        
+        if (initialized) {
+          // Render all activities
+          renderer.renderAllClocks();
           
-          // Load data from Supabase
-          await loadFromSupabase();
+          // Set up periodic syncing - every 30 seconds
+          setInterval(() => {
+            if (store.online && !store.syncInProgress) {
+              store.saveToSupabase();
+            }
+          }, 30000);
           
-          // Start periodic saving to Supabase
-          startPeriodicSaving();
+          // Set up visibility change detection for better active time tracking
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+              // We're back - sync immediately if there's an active timer
+              const hasActiveTimer = store.activities.some(a => a.active);
+              if (hasActiveTimer && store.online) {
+                store.saveToSupabase();
+              }
+            }
+          });
         } else {
-          console.log('Please sign in to use the Time Tracker with data saving');
-          // Show minimal UI or redirect to login
+          console.log('Failed to initialize store. Check if you are logged in.');
+          // Show a login prompt or error message
         }
       } catch (error) {
         console.error('Error initializing app:', error);
       }
     }
 
-    // Add event listeners
+    // Event Listeners
     activityForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const activityName = activityNameInput.value.trim();
       
       if (activityName) {
-        const newActivity = {
-          id: `activity-${Date.now()}`,
-          name: activityName,
-          seconds: 0
-        };
+        // Add the activity to the store
+        const newActivity = await store.addActivity(activityName);
         
-        activities.push(newActivity);
-        createClock(newActivity);
+        // Create and render the new clock
+        const clockElement = renderer.createClockElement(newActivity);
+        clocksContainer.appendChild(clockElement);
         
-        // Save immediately when adding a new activity
-        await saveToSupabase();
-        
-        // Clear input
+        // Clear the input
         activityNameInput.value = '';
       }
     });
@@ -908,28 +1476,20 @@
           document.body.classList.add('light');
           localStorage.setItem('theme', 'light');
           themeToggle.textContent = '🌙';
-          
-          // Redraw all clocks with new theme colors
-          for (const activityId in clockCanvases) {
-            const activity = activities.find(a => a.id === activityId);
-            if (activity) {
-              drawClock(clockCanvases[activityId], activity.seconds || 0);
-            }
-          }
         } else {
           document.body.classList.remove('light');
           document.body.classList.add('dark');
           localStorage.setItem('theme', 'dark');
           themeToggle.textContent = '☀️';
-          
-          // Redraw all clocks with new theme colors
-          for (const activityId in clockCanvases) {
-            const activity = activities.find(a => a.id === activityId);
-            if (activity) {
-              drawClock(clockCanvases[activityId], activity.seconds || 0);
-            }
-          }
         }
+        
+        // Redraw all clocks with new theme colors
+        store.activities.forEach(activity => {
+          const canvasId = renderer.canvasRefs[activity.id];
+          if (canvasId) {
+            renderer.drawClock(canvasId, activity.seconds || 0, activity.active);
+          }
+        });
       });
     });
 
@@ -937,44 +1497,37 @@
     window.addEventListener('load', initApp);
 
     // Save data when page unloads
-    window.addEventListener('beforeunload', async () => {
-      // Stop all timers
-      for (const id in activeTimers) {
-        if (activeTimers[id]) {
-          const clockId = activeTimers[id];
-          stopTimer(id, clockId);
-        }
+    window.addEventListener('beforeunload', () => {
+      // Don't stop active timers, just update their seconds
+      store.updateActiveTimers();
+      
+      // Final save to IndexedDB and Supabase if online
+      if (store.supportsIndexedDB) {
+        store.saveToIndexedDB();
       }
       
-      // Final save to Supabase before unloading
-      await saveToSupabase();
-      
-      // Clear the saving interval
-      if (saveInterval) {
-        clearInterval(saveInterval);
+      if (store.online) {
+        store.saveToSupabase();
       }
     });
 
-    // Function to reset all activities
-    async function resetActivities() {
+    // Reset all activities (for development testing)
+    function resetActivities() {
       if (confirm('Are you sure you want to reset all data? This cannot be undone.')) {
         // Stop all timers
-        for (const id in activeTimers) {
-          if (activeTimers[id]) {
-            const clockId = activeTimers[id];
-            stopTimer(id, clockId);
-          }
-        }
+        store.stopAllTimers();
         
         // Reset activities
-        activities = [];
-        clocksContainer.innerHTML = '';
-        clockCanvases = {}; // Clear canvas references
+        store.activities = [];
         
-        // Save the empty state to Supabase
-        await saveToSupabase();
+        // Clear UI
+        renderer.renderAllClocks();
+        
+        // Save empty state
+        store.saveToIndexedDB();
+        store.saveToSupabase(true);
       }
     }
   </script>
 </body>
-</html> 
+</html>
