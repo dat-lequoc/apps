@@ -886,10 +886,11 @@
         
         /* Style to disable the default selection UI on mobile */
         @media (pointer: coarse) {
-            #content-area {
-                -webkit-touch-callout: none; /* iOS Safari */
-                -webkit-user-select: none;   /* Chrome/Safari/Opera */
-                user-select: none;           /* Non-prefixed version */
+            #content-area, 
+            #content-area p {
+                -webkit-touch-callout: none; /* Prevents the Callout menu */
+                -webkit-user-select: text;
+                user-select: text;
             }
             
             .selectable-text {
@@ -1197,6 +1198,13 @@
                 
                 // Keyboard shortcuts
                 document.addEventListener('keydown', handleKeyPress);
+                
+                // Disable context menu (native option bar) on mobile
+                if (window.matchMedia('(pointer: coarse)').matches) {
+                    document.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                    }, false);
+                }
             }
             
             // Handle keyboard shortcuts
@@ -1912,14 +1920,14 @@
                         // For mobile: might want to collapse the selection after getting coordinates
                         // to prevent the native selection UI from appearing
                         if (isMobileDevice) {
-                            // Slight delay to ensure translation popup is positioned correctly
+                            // Collapse the selection as soon as possible on mobile
                             setTimeout(() => {
                                 // Store selected text before collapsing selection
                                 if (selection.rangeCount > 0) {
                                     // Collapse the selection
                                     selection.collapseToEnd();
                                 }
-                            }, 50);
+                            }, 20);
                         }
                     }, 750);
                 }
