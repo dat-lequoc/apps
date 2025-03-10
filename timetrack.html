@@ -707,6 +707,10 @@
               for (const session of sessionsData) {
                 const activity = this.activities.find(a => a.id === session.activity_id);
                 if (activity) {
+                  // Update the activity to be active with the correct start time
+                  activity.active = true;
+                  activity.startedAt = new Date(session.start_time).getTime();
+                  
                   // Update the cached session data
                   this.sessionsCache[session.id] = {
                     id: session.id,
@@ -880,14 +884,45 @@
       
       // Sync with Supabase (handles both directions)
       async syncWithSupabase() {
-        // If there are offline changes or it's been more than 5 minutes since last sync
-        const needsFullSync = this.offlineChanges || (Date.now() - this.lastSyncTime > 300000);
-        
-        if (needsFullSync) {
-          return this.saveToSupabase(true);
-        } else {
-          // Just do a regular save
-          return this.saveToSupabase(false);
+        try {
+          if (!this.online || !this.userId) return false;
+          
+          // Check if there are newer changes on the server
+          const { data: latestUpdates, error: fetchError } = await supabase
+            .from('time_tracking')
+            .select('activity_id, total_seconds, updated_at')
+            .eq('user_id', this.userId)
+            .eq('date', this.getCurrentDate());
+          
+          if (!fetchError && latestUpdates && latestUpdates.length > 0) {
+            // Check if any server data is newer than our last sync
+            const hasNewerServerData = latestUpdates.some(item => {
+              if (!item.updated_at) return false;
+              const serverUpdateTime = new Date(item.updated_at).getTime();
+              return serverUpdateTime > this.lastSyncTime;
+            });
+            
+            // If there are newer changes on server, do a full refresh
+            if (hasNewerServerData) {
+              await this.loadFromSupabase();
+              // Re-render all clocks after refresh
+              window.dispatchEvent(new CustomEvent('activities-updated'));
+              return true;
+            }
+          }
+          
+          // If there are offline changes or it's been more than 5 minutes since last sync
+          const needsFullSync = this.offlineChanges || (Date.now() - this.lastSyncTime > 300000);
+          
+          if (needsFullSync) {
+            return this.saveToSupabase(true);
+          } else {
+            // Just do a regular save
+            return this.saveToSupabase(false);
+          }
+        } catch (err) {
+          console.error('Error during sync:', err);
+          return false;
         }
       }
       
@@ -1413,20 +1448,24 @@
           // Render all activities
           renderer.renderAllClocks();
           
-          // Set up periodic syncing - every 30 seconds
+          // Listen for activities-updated event
+          window.addEventListener('activities-updated', () => {
+            renderer.renderAllClocks();
+          });
+          
+          // Set up bidirectional syncing - every 30 seconds
           setInterval(() => {
             if (store.online && !store.syncInProgress) {
-              store.saveToSupabase();
+              store.syncWithSupabase(); // Now this checks for server changes too
             }
           }, 30000);
           
           // Set up visibility change detection for better active time tracking
           document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
-              // We're back - sync immediately if there's an active timer
-              const hasActiveTimer = store.activities.some(a => a.active);
-              if (hasActiveTimer && store.online) {
-                store.saveToSupabase();
+              // We're back - sync immediately
+              if (store.online) {
+                store.syncWithSupabase(); // Get latest from server when tab becomes visible again
               }
             }
           });
@@ -1507,7 +1546,7 @@
       }
       
       if (store.online) {
-        store.saveToSupabase();
+        store.syncWithSupabase();
       }
     });
 
@@ -1525,7 +1564,7 @@
         
         // Save empty state
         store.saveToIndexedDB();
-        store.saveToSupabase(true);
+        store.syncWithSupabase();
       }
     }
   </script>
