@@ -1095,7 +1095,8 @@
                 
                 // Event handling
                 touchStartY: 0,
-                touchEndY: 0
+                touchEndY: 0,
+                lastSelectionRect: null
             };
             
             // Initialize the app
@@ -1852,18 +1853,19 @@
                     return;
                 }
                 
-                // Only proceed for reasonable text selection (not too short, not too long)
+                // Only proceed for reasonable text selection
                 if (selectedText.length > 1 && selectedText.length < 500) {
                     // Clear any existing timer
                     clearTimeout(state.translationTimer);
                     
-                    // Set a new timer for translation (750ms delay to avoid flicker on rapid selections)
+                    // Set a new timer for translation (750ms delay)
                     state.translationTimer = setTimeout(() => {
                         // Get the selection's bounding box
                         const range = selection.getRangeAt(0);
                         const rect = range.getBoundingClientRect();
+                        state.lastSelectionRect = rect; // <-- SAVE the rect for flashcard positioning
                         
-                        // Position popup safely within viewport
+                        // Position the translation popup safely within viewport
                         positionTranslationPopup(rect);
                         
                         // Show loading state
@@ -2709,6 +2711,28 @@
                 const toast = document.createElement('div');
                 toast.className = 'flashcard-toast visible';
                 
+                // New positioning logic: if we have a selection rectangle, position near it
+                if (state.lastSelectionRect) {
+                    let left = state.lastSelectionRect.left;
+                    let top = state.lastSelectionRect.bottom + 10; // 10px offset below the selection
+                    
+                    // Ensure the flashcard does not run off-screen horizontally.
+                    const flashcardWidth = 240; // using the width from our CSS (flashcard-toast width)
+                    if (left + flashcardWidth > window.innerWidth) {
+                        left = window.innerWidth - flashcardWidth - 10;
+                    }
+                    
+                    // Set inline style to override default CSS positioning
+                    toast.style.left = `${left}px`;
+                    toast.style.top = `${top}px`;
+                    toast.style.bottom = 'auto';
+                    toast.style.right = 'auto';
+                } else {
+                    // Fallback to default bottom-right positioning if no selection rect is available
+                    toast.style.bottom = "20px";
+                    toast.style.right = "20px";
+                }
+                
                 // Create flashcard content with HTML escaping for security
                 toast.innerHTML = `
                     <div class="flashcard-header">
@@ -2722,7 +2746,7 @@
                     </div>
                 `;
                 
-                // Add to document
+                // Add to the document
                 document.body.appendChild(toast);
                 
                 // Add close button functionality
@@ -2818,6 +2842,105 @@
                         setTimeout(() => toast.remove(), 500);
                     }
                 }, 20000);
+                
+                // Smart positioning to avoid overlaps with selection and translation popup
+                if (state.lastSelectionRect) {
+                    // Get necessary rectangles and dimensions
+                    const toastRect = toast.getBoundingClientRect();
+                    const selRect = state.lastSelectionRect;
+                    const viewportHeight = window.innerHeight;
+                    const viewportWidth = window.innerWidth;
+                    const margin = 10; // Margin to maintain between elements
+                    
+                    // Calculate possible positions
+                    const positions = {
+                        below: {
+                            top: selRect.bottom + margin,
+                            left: Math.min(selRect.left, viewportWidth - toastRect.width - margin)
+                        },
+                        above: {
+                            top: selRect.top - toastRect.height - margin,
+                            left: Math.min(selRect.left, viewportWidth - toastRect.width - margin)
+                        },
+                        right: {
+                            top: Math.min(selRect.top, viewportHeight - toastRect.height - margin),
+                            left: selRect.right + margin
+                        },
+                        left: {
+                            top: Math.min(selRect.top, viewportHeight - toastRect.height - margin),
+                            left: selRect.left - toastRect.width - margin
+                        }
+                    };
+                    
+                    // Check if translation popup is visible
+                    let transRect = null;
+                    if (DOM.translationPopup.classList.contains('visible')) {
+                        transRect = DOM.translationPopup.getBoundingClientRect();
+                    }
+                    
+                    // Function to check if a position would overlap with an element
+                    const wouldOverlap = (pos, rect) => {
+                        if (!rect) return false;
+                        
+                        const posRight = pos.left + toastRect.width;
+                        const posBottom = pos.top + toastRect.height;
+                        
+                        return !(posBottom < rect.top || 
+                                 pos.top > rect.bottom || 
+                                 posRight < rect.left || 
+                                 pos.left > rect.right);
+                    };
+                    
+                    // Function to check if position is on screen
+                    const isOnScreen = (pos) => {
+                        return pos.top >= 0 && 
+                               pos.left >= 0 && 
+                               pos.left + toastRect.width <= viewportWidth &&
+                               pos.top + toastRect.height <= viewportHeight;
+                    };
+                    
+                    // Try each position in order of preference
+                    const positionOrder = ['below', 'above', 'right', 'left'];
+                    let bestPosition = null;
+                    
+                    for (const posName of positionOrder) {
+                        const pos = positions[posName];
+                        
+                        // Skip positions that would be off-screen
+                        if (!isOnScreen(pos)) continue;
+                        
+                        // Check overlaps
+                        const overlapsSelection = wouldOverlap(pos, selRect);
+                        const overlapsTranslation = wouldOverlap(pos, transRect);
+                        
+                        // Perfect position - no overlaps
+                        if (!overlapsSelection && !overlapsTranslation) {
+                            bestPosition = pos;
+                            break;
+                        }
+                        
+                        // If we haven't found any valid position yet, use one that at least
+                        // doesn't overlap the translation popup (overlapping selection is less problematic)
+                        if (!bestPosition && !overlapsTranslation) {
+                            bestPosition = pos;
+                        }
+                    }
+                    
+                    // If no good position was found, use a fallback
+                    if (!bestPosition) {
+                        // Try bottom-right corner of viewport as last resort
+                        bestPosition = {
+                            top: viewportHeight - toastRect.height - margin,
+                            left: viewportWidth - toastRect.width - margin
+                        };
+                    }
+                    
+                    // Apply the best position
+                    toast.style.top = `${bestPosition.top}px`;
+                    toast.style.left = `${bestPosition.left}px`;
+                    toast.style.bottom = 'auto';
+                    toast.style.right = 'auto';
+                }
             }
             
             // Function to speak text aloud
