@@ -878,26 +878,6 @@
             align-items: center;
             gap: 1rem;
         }
-        
-        /* Add this to your CSS styles section */
-        :root {
-            /* Existing CSS variables... */
-        }
-        
-        /* Style to disable the default selection UI on mobile */
-        @media (pointer: coarse) {
-            #content-area, 
-            #content-area p {
-                -webkit-touch-callout: none; /* Prevents the Callout menu */
-                -webkit-user-select: text;
-                user-select: text;
-            }
-            
-            .selectable-text {
-                -webkit-user-select: text;
-                user-select: text;
-            }
-        }
     </style>
 </head>
 <body class="dark-theme">
@@ -1198,13 +1178,6 @@
                 
                 // Keyboard shortcuts
                 document.addEventListener('keydown', handleKeyPress);
-                
-                // Disable context menu (native option bar) on mobile
-                if (window.matchMedia('(pointer: coarse)').matches) {
-                    document.addEventListener('contextmenu', function(e) {
-                        e.preventDefault();
-                    }, false);
-                }
             }
             
             // Handle keyboard shortcuts
@@ -1665,9 +1638,7 @@
                 const paragraphs = chapter.content.split('\n');
                 paragraphs.forEach((paragraph, index) => {
                     if (paragraph.trim()) {
-                        // Create paragraph with selectable-text class
                         const p = document.createElement('p');
-                        p.className = 'selectable-text';
                         p.textContent = paragraph;
                         p.setAttribute('data-p-index', index); // Add index for position tracking
                         DOM.contentArea.appendChild(p);
@@ -1866,17 +1837,14 @@
             
             // Handle text selection for translation
             function handleTextSelection() {
-                // Check if using mobile/touch device
-                const isMobileDevice = window.matchMedia('(pointer: coarse)').matches;
-                
                 // Check if translation is enabled
                 const translationEnabled = DOM.translationToggle.checked;
                 if (!translationEnabled) {
                     return;
                 }
                 
-                let selection = window.getSelection();
-                let selectedText = selection.toString().trim();
+                const selection = window.getSelection();
+                const selectedText = selection.toString().trim();
                 
                 // Hide the popup if no text is selected
                 if (!selectedText) {
@@ -1885,9 +1853,6 @@
                     return;
                 }
                 
-                // Store selection for later use
-                const savedRange = selection.rangeCount > 0 ? selection.getRangeAt(0).cloneRange() : null;
-                
                 // Only proceed for reasonable text selection
                 if (selectedText.length > 1 && selectedText.length < 500) {
                     // Clear any existing timer
@@ -1895,13 +1860,6 @@
                     
                     // Set a new timer for translation (750ms delay)
                     state.translationTimer = setTimeout(() => {
-                        // If on mobile, we might need to restore the selection that could have been cleared
-                        if (isMobileDevice && savedRange) {
-                            selection = window.getSelection();
-                            selection.removeAllRanges();
-                            selection.addRange(savedRange);
-                        }
-                        
                         // Get the selection's bounding box
                         const range = selection.getRangeAt(0);
                         const rect = range.getBoundingClientRect();
@@ -1916,19 +1874,6 @@
                         
                         // Get translation
                         translateText(selectedText);
-                        
-                        // For mobile: might want to collapse the selection after getting coordinates
-                        // to prevent the native selection UI from appearing
-                        if (isMobileDevice) {
-                            // Collapse the selection as soon as possible on mobile
-                            setTimeout(() => {
-                                // Store selected text before collapsing selection
-                                if (selection.rangeCount > 0) {
-                                    // Collapse the selection
-                                    selection.collapseToEnd();
-                                }
-                            }, 20);
-                        }
                     }, 750);
                 }
             }
@@ -2907,30 +2852,42 @@
                     const viewportWidth = window.innerWidth;
                     const margin = 10; // Margin to maintain between elements
                     
+                    // Check if translation popup is visible first
+                    let transRect = null;
+                    if (DOM.translationPopup.classList.contains('visible')) {
+                        transRect = DOM.translationPopup.getBoundingClientRect();
+                    }
+                    
                     // Calculate possible positions
                     const positions = {
                         below: {
                             top: selRect.bottom + margin,
-                            left: Math.min(selRect.left, viewportWidth - toastRect.width - margin)
+                            left: Math.max(viewportWidth - toastRect.width - margin, 
+                                  Math.min(selRect.left, viewportWidth - toastRect.width - margin))
                         },
                         above: {
                             top: selRect.top - toastRect.height - margin,
-                            left: Math.min(selRect.left, viewportWidth - toastRect.width - margin)
+                            left: Math.max(viewportWidth - toastRect.width - margin, 
+                                  Math.min(selRect.left, viewportWidth - toastRect.width - margin))
                         },
                         right: {
                             top: Math.min(selRect.top, viewportHeight - toastRect.height - margin),
-                            left: selRect.right + margin
+                            left: Math.max(viewportWidth - toastRect.width - margin, selRect.right + margin)
                         },
                         left: {
                             top: Math.min(selRect.top, viewportHeight - toastRect.height - margin),
-                            left: selRect.left - toastRect.width - margin
+                            left: Math.max(viewportWidth - toastRect.width - margin, 
+                                  selRect.left - toastRect.width - margin)
                         }
                     };
                     
-                    // Check if translation popup is visible
-                    let transRect = null;
-                    if (DOM.translationPopup.classList.contains('visible')) {
-                        transRect = DOM.translationPopup.getBoundingClientRect();
+                    // If translation popup is visible, add position below the translation
+                    if (transRect) {
+                        positions.belowTranslation = {
+                            top: transRect.bottom + margin,
+                            left: Math.max(viewportWidth - toastRect.width - margin, 
+                                  Math.min(transRect.left, viewportWidth - toastRect.width - margin))
+                        };
                     }
                     
                     // Function to check if a position would overlap with an element
@@ -2955,11 +2912,17 @@
                     };
                     
                     // Try each position in order of preference
-                    const positionOrder = ['below', 'above', 'right', 'left'];
+                    const positionOrder = transRect ? 
+                        ['belowTranslation', 'below', 'right', 'left', 'above'] : 
+                        ['below', 'right', 'left', 'above'];
+                    
                     let bestPosition = null;
                     
                     for (const posName of positionOrder) {
                         const pos = positions[posName];
+                        
+                        // Skip if position doesn't exist
+                        if (!pos) continue;
                         
                         // Skip positions that would be off-screen
                         if (!isOnScreen(pos)) continue;
