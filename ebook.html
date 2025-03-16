@@ -213,6 +213,21 @@
             text-overflow: ellipsis;
         }
         
+        .progress-bar-container {
+            height: 4px;
+            background-color: rgba(var(--text-color), 0.1);
+            border-radius: 2px;
+            margin-top: 0.3rem;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+        
         .library-item-actions {
             display: flex;
             gap: 0.5rem;
@@ -2309,6 +2324,7 @@
                     libraryList.innerHTML = '';
                     books.forEach(book => {
                         const date = new Date(book.updated_at).toLocaleDateString();
+                        const progress = calculateOverallProgress(book);
                         
                         const item = document.createElement('div');
                         item.className = 'library-item';
@@ -2316,7 +2332,10 @@
                             <div class="library-item-details">
                                 <div class="library-item-title">${escapeHTML(book.title)}</div>
                                 <div class="library-item-meta">
-                                    ${book.file_type.toUpperCase()} • Last read: ${date}
+                                    ${book.file_type.toUpperCase()} • Last read: ${date} • ${progress}% complete
+                                </div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" style="width: ${progress}%"></div>
                                 </div>
                             </div>
                             <div class="library-item-actions">
@@ -3257,6 +3276,26 @@
         document.addEventListener('DOMContentLoaded', function() {
             EbookApp.init();
         });
+
+        // Calculate overall reading progress for a book
+        function calculateOverallProgress(book) {
+            if (!book.last_position) return 0;
+            
+            // If we have chapters, calculate based on chapter position and chapter progress
+            if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
+                const chaptersLength = book.metadata.chapters.length;
+                const currentChapter = book.last_position.chapter || 0;
+                const chapterProgress = book.last_position.percentComplete || 0;
+                
+                // Same formula as in updateProgressBar
+                const chaptersProgress = currentChapter / Math.max(1, chaptersLength - 1);
+                const weightedChapterProgress = chapterProgress / chaptersLength;
+                return Math.round((chaptersProgress + weightedChapterProgress) * 100);
+            }
+            
+            // If we don't have chapters, just use the percentComplete
+            return Math.round((book.last_position.percentComplete || 0) * 100);
+        }
     </script>
 </body>
 </html>
