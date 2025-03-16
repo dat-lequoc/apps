@@ -892,6 +892,19 @@
                     <button id="login-btn" class="button" style="display: none;">Sign In</button>
                 </div>
                 
+                <!-- Text Input Section - now a more subtle option -->
+                <div style="text-align: center; margin-top: 0.5rem;">
+                    <a href="#" id="toggle-text-input" style="font-size: 0.9rem; color: var(--text-muted);">or paste text directly</a>
+                </div>
+                
+                <div id="text-input-container" style="width: 100%; margin-top: 0.75rem; display: none;">
+                    <textarea id="text-input" class="full-width-input" style="width: 100%; min-height: 150px; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); margin-bottom: 0.75rem; font-family: inherit;"></textarea>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <input id="text-input-title" type="text" placeholder="Enter a title (optional)" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); margin-right: 0.75rem; font-family: inherit;">
+                        <button id="process-text-btn" class="button">Read Text</button>
+                    </div>
+                </div>
+                
                 <!-- Example Ebook Section -->
                 <div class="example-book-section">
                     <p>Don't have an ebook? Download our example:</p>
@@ -1042,6 +1055,11 @@
                 fileInput: document.getElementById('file-input'),
                 openFileBtn: document.getElementById('open-file-btn'),
                 exampleBookBtn: document.getElementById('example-book-btn'),
+                textInput: document.getElementById('text-input'),
+                textInputTitle: document.getElementById('text-input-title'),
+                processTextBtn: document.getElementById('process-text-btn'),
+                toggleTextInput: document.getElementById('toggle-text-input'),
+                textInputContainer: document.getElementById('text-input-container'),
                 fontDecreaseBtn: document.getElementById('font-decrease-btn'),
                 fontIncreaseBtn: document.getElementById('font-increase-btn'),
                 fontSizeValue: document.getElementById('font-size-value'),
@@ -1111,6 +1129,14 @@
                 // File handling
                 DOM.openFileBtn.addEventListener('click', () => DOM.fileInput.click());
                 DOM.fileInput.addEventListener('change', handleFileSelected);
+                DOM.processTextBtn.addEventListener('click', processInputText);
+                DOM.exampleBookBtn.addEventListener('click', function() {
+                    downloadExampleBook();
+                });
+                DOM.toggleTextInput.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    DOM.textInputContainer.style.display = DOM.textInputContainer.style.display === 'none' ? 'block' : 'none';
+                });
                 
                 // Navigation
                 DOM.tocBtn.addEventListener('click', toggleTocPanel);
@@ -1176,8 +1202,9 @@
                     window.open('index.html', '_blank');
                 });
                 
-                // Keyboard shortcuts
+                // Global document events
                 document.addEventListener('keydown', handleKeyPress);
+                document.addEventListener('selectionchange', debounce(handleTextSelection, 300));
             }
             
             // Handle keyboard shortcuts
@@ -1278,6 +1305,50 @@
                 } else {
                     hideLoading();
                     showToast('Unsupported file format');
+                }
+            }
+            
+            function processInputText() {
+                const text = DOM.textInput.value.trim();
+                if (!text) {
+                    showToast('Please enter some text');
+                    return;
+                }
+                
+                showLoading();
+                
+                // Update book title
+                let customTitle = DOM.textInputTitle.value.trim();
+                
+                // If no title is given, use the first 30 characters of the text
+                if (!customTitle) {
+                    customTitle = text.substring(0, 20).trim();
+                    // Add ellipsis if the text was truncated
+                    if (text.length > 20) {
+                        customTitle += '...';
+                    }
+                }
+                
+                DOM.bookTitle.textContent = customTitle;
+                state.bookData.title = customTitle;
+                
+                try {
+                    state.bookData.content = text;
+                    
+                    // Create a single chapter with all the text content
+                    state.bookData.chapters = [{
+                        title: customTitle,
+                        content: text,
+                        startLine: 0,
+                        endLine: text.split('\n').length
+                    }];
+                    
+                    showBook();
+                } catch (error) {
+                    console.error('Error processing input text:', error);
+                    showToast('Error processing text');
+                } finally {
+                    hideLoading();
                 }
             }
             
@@ -1784,6 +1855,8 @@
                 DOM.navbar.classList.remove('visible');
                 closeAllPanels();
                 DOM.fileInput.value = ''; // Reset file input
+                DOM.textInput.value = ''; // Reset text input
+                DOM.textInputTitle.value = ''; // Reset text input title
                 
                 // Reset book data
                 state.bookData = {
