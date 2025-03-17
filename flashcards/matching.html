@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matching Exercise</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+      /* Theme styles */
+      body.dark {
+        background-color: #121212;
+        color: #e0e0e0;
+      }
+
+      body.dark .bg-white,
+      body.dark .bg-gray-50 {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .text-gray-700 {
+        color: #e0e0e0;
+      }
+
+      body.dark .text-gray-500,
+      body.dark .text-sm.text-gray-700 {
+        color: #a0a0a0;
+      }
+
+      body.dark .border {
+        border-color: #333;
+      }
+
+      body.dark #app-title {
+        color: #66aaff;
+      }
+
+      body.dark input,
+      body.dark textarea,
+      body.dark select {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        border-color: #333;
+      }
+
+      body.dark .bg-gray-200 {
+        background-color: #333;
+      }
+
+      body.dark .bg-gray-50 {
+        background-color: #1e1e1e;
+      }
+
+      body.dark .bg-blue-50 {
+        background-color: #1a365d;
+      }
+
+      body.dark .modal {
+        background-color: rgba(0, 0, 0, 0.8);
+      }
+
+      /* Theme toggle button */
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 2px 8px;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 40;
+        min-width: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+      
+      .theme-toggle:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+      }
+
+      .home-button {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        border-radius: 0.375rem;
+        background-color: #f3f4f6;
+        color: #374151;
+        transition: all 0.2s ease;
+        text-decoration: none;
+      }
+
+      .home-button:hover {
+        background-color: #e5e7eb;
+      }
+
+      body.dark .home-button {
+        background-color: #374151;
+        color: #e5e7eb;
+      }
+
+      body.dark .home-button:hover {
+        background-color: #4b5563;
+      }
+
+      /* Exercise-specific styles */
+      .word-item, 
+      .meaning-item {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .word-item:hover, 
+      .meaning-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+      
+      .word-item.matched, 
+      .meaning-item.matched {
+        opacity: 0.6;
+      }
+      
+      .word-item.selected, 
+      .meaning-item.selected {
+        border: 2px solid #3b82f6;
+      }
+      
+      .word-item.correct, 
+      .meaning-item.correct {
+        border: 2px solid #10b981;
+        background-color: rgba(16, 185, 129, 0.1);
+      }
+      
+      .word-item.incorrect, 
+      .meaning-item.incorrect {
+        border: 2px solid #ef4444;
+        background-color: rgba(239, 68, 68, 0.1);
+      }
+      
+      .drag-over {
+        border: 2px dashed #3b82f6;
+        background-color: rgba(59, 130, 246, 0.1);
+      }
+
+      /* Updated match indicator styles */
+      .match-indicator {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background-color: #3b82f6;
+        color: white;
+        text-align: center;
+        line-height: 24px;
+        margin-right: 8px;
+        font-weight: bold;
+      }
+      
+      .match-indicator.correct {
+        background-color: #10b981;
+      }
+      
+      .match-indicator.incorrect {
+        background-color: #ef4444;
+      }
+      
+      /* Matched items layout */
+      .word-item, .meaning-item {
+        display: flex;
+        align-items: center;
+      }
+      
+      .word-item.matched, .meaning-item.matched {
+        border-width: 2px;
+      }
+      
+      /* Matched pair container styles */
+      .matched-pair {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        border-radius: 0.375rem;
+        border: 2px solid #e5e7eb;
+        overflow: hidden;
+      }
+      
+      .matched-pair.correct {
+        border-color: #10b981;
+        background-color: rgba(16, 185, 129, 0.05);
+      }
+      
+      .matched-pair.incorrect {
+        border-color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.05);
+      }
+      
+      .matched-pair-word,
+      .matched-pair-meaning {
+        padding: 0.75rem;
+        display: flex;
+        align-items: center;
+      }
+      
+      .matched-pair-word {
+        width: 100%;
+        background-color: rgba(59, 130, 246, 0.1);
+        font-weight: 600;
+      }
+      
+      .matched-pair-meaning {
+        width: 100%;
+        border-top: 1px solid #e5e7eb;
+      }
+      
+      @media (min-width: 640px) {
+        .matched-pair-word,
+        .matched-pair-meaning {
+          width: 50%;
+        }
+        
+        .matched-pair-meaning {
+          border-top: none;
+          border-left: 1px solid #e5e7eb;
+        }
+      }
+      
+      body.dark .matched-pair {
+        border-color: #4b5563;
+      }
+      
+      body.dark .matched-pair-meaning {
+        border-color: #4b5563;
+      }
+      
+      /* Styles for tag buttons */
+      .tag-button {
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      
+      .tag-button.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      
+      body.dark .tag-button {
+        border-color: #4b5563;
+      }
+      
+      body.dark .tag-button.active {
+        background-color: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+      }
+      
+      body.dark .tag-button:not(.active):hover {
+        background-color: #374151;
+      }
+      
+      .tag-button:not(.active):hover {
+        background-color: #f3f4f6;
+      }
+
+      /* Mobile styles */
+      @media (max-width: 640px) {
+        #exercise-container {
+          margin: 0;
+          padding: 0.5rem;
+          border-width: 0;
+          border-radius: 0;
+          box-shadow: none;
+        }
+        
+        .matching-columns {
+          flex-direction: column;
+        }
+        
+        .matching-column {
+          width: 100% !important;
+          margin-bottom: 1rem;
+        }
+        
+        #exercise-container .flex.justify-between {
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+        
+        #exercise-container button {
+          padding: 0.5rem 0.75rem;
+          font-size: 0.875rem;
+          flex-grow: 1;
+        }
+      }
+
+      .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6">
+      <div class="header-section">
+        <h1 id="app-title" class="text-3xl font-bold">Matching Exercise</h1>
+        <div class="flex items-center gap-4">
+          <a href="../flashcards.html" class="home-button">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+            </svg>
+            Back to Flashcards
+          </a>
+          <button id="settings-button" class="p-2 rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">⚙️</button>
+          <button id="theme-toggle" class="theme-toggle">☀️</button>
+        </div>
+      </div>
+
+      <!-- Exercise Config Section (Inline) -->
+      <section id="exercise-config-section" class="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow">
+        <h3 class="text-xl font-bold mb-4">Exercise Configuration</h3>
+        
+        <div class="mb-4">
+          <label for="exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
+          <select id="exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
+            <option value="gemini-2.0-flash">Gemini Flash</option>
+            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label for="exercise-cards-count" class="block text-sm font-medium mb-1">Number of Words</label>
+          <input type="number" id="exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Content Style</label>
+          <div id="exercise-tags-container" class="flex flex-wrap gap-2">
+            <button class="tag-button px-2 py-1 text-xs rounded border active" data-tag="concise">concise</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="easy-to-read">easy-to-read</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="advanced">advanced</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="simplified">simplified</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="detailed">detailed</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="example-based">example-based</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="synonym">synonym</button>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label for="custom-words" class="block text-sm font-medium mb-1">Custom Words (comma separated)</label>
+          <textarea id="custom-words" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="3" placeholder="endeavor, persist, integrate, collaborate, thrive"></textarea>
+        </div>
+        
+        <button id="confirm-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
+          Start Exercise
+        </button>
+      </section>
+
+      <!-- Exercise Container -->
+      <section id="exercise-container" class="hidden mb-6 sm:border sm:p-4 p-1 sm:rounded sm:shadow bg-white">
+        <div class="flex justify-between items-center mb-2 sm:mb-4">
+          <h2 class="text-lg sm:text-xl font-semibold">Matching Exercise</h2>
+          <button id="exit-exercise-btn" class="text-xs bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
+            Exit
+          </button>
+        </div>
+        
+        <p class="mb-4 text-gray-700 dark:text-gray-300">Match each word with its correct meaning. Click a word, then click its meaning, or drag words to their meanings.</p>
+        
+        <!-- New matched items section -->
+        <div id="matched-items-section" class="mb-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
+          <h3 class="text-lg font-semibold mb-2">Matched Pairs</h3>
+          <div id="matched-items-container" class="space-y-2">
+            <!-- Matched pairs will appear here -->
+            <p id="no-matches-message" class="text-center text-gray-500 p-2">No matches yet. Match words with their meanings to see them here.</p>
+          </div>
+        </div>
+        
+        <div class="matching-columns flex flex-col md:flex-row mb-4">
+          <div class="matching-column w-full md:w-1/2 p-2">
+            <h3 class="text-lg font-semibold mb-2">Words</h3>
+            <div id="words-container" class="space-y-2">
+              <!-- Words will be added here dynamically -->
+            </div>
+          </div>
+          <div class="matching-column w-full md:w-1/2 p-2">
+            <h3 class="text-lg font-semibold mb-2">Meanings</h3>
+            <div id="meanings-container" class="space-y-2">
+              <!-- Meanings will be added here dynamically -->
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex justify-between items-center flex-wrap gap-2">
+          <button id="check-answers-btn" class="bg-green-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-green-600">
+            Check Answers
+          </button>
+          <button id="help-btn" class="bg-yellow-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-yellow-600">
+            Help
+          </button>
+          <button id="reset-exercise-btn" class="bg-gray-300 text-gray-800 py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-gray-400">
+            Reset
+          </button>
+          <button id="show-answers-btn" class="bg-blue-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-blue-600">
+            Show Answers
+          </button>
+        </div>
+      </section>
+
+      <!-- API Settings Modal (similar to index.html) -->
+      <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
+          <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 text-xl font-bold">&times;</button>
+          <h3 class="text-xl font-bold mb-4">Gemini API Settings</h3>
+          <!-- Section to show saved settings -->
+          <div id="saved-api-section" class="hidden">
+            <p>Saved API Key: <span id="masked-api-key"></span></p>
+            <p>Preferred Model: <span id="saved-model"></span></p>
+            <div class="flex gap-2 mt-4">
+              <button id="remove-api-key-button" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Remove API Key</button>
+              <button id="change-api-key-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Change API Key</button>
+            </div>
+          </div>
+          <!-- Form section to enter a new API key and select a model -->
+          <div id="api-form-section">
+            <form id="settings-form">
+              <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4" />
+              <select id="geminiModelSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4">
+                <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
+                <option value="gemini-2.0-flash">Gemini Flash</option>
+                <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
+                <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
+              </select>
+              <div class="flex justify-end gap-2">
+                <button type="button" id="cancel-settings-button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
+                  Cancel
+                </button>
+                <button type="submit" id="save-settings-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+          <div id="settings-message" class="mt-4 text-sm"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize Supabase client (using the same configuration as in index.html)
+      const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
+      const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+      // Global variables
+      let userId = null;
+      let exerciseData = null;
+      let userApiKey = null;
+      let userModel = null;
+      let selectedTags = ['concise']; // Default tag
+      let matchedPairs = []; // To store matched word-meaning pairs
+      let selectedItem = null; // Currently selected item for matching
+
+      // Gemini API helper functions (inspired by index.html)
+      const getApiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`;
+      const geminiRequest = async (apiKey, message, model) => {
+        const res = await fetch(`${getApiUrl(model)}${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: message }]
+            }]
+          })
+        });
+        return res.json();
+      };
+
+      // Check authentication on page load
+      async function checkAuth() {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          // Redirect back to index.html if no session
+          window.location.href = 'index.html';
+          return;
+        }
+        userId = session.user.id;
+        // After auth, load the user settings
+        await loadUserSettings();
+      }
+
+      // Load the current user's Gemini API settings from Supabase
+      async function loadUserSettings() {
+        if (!userId) return;
+        
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+          
+        if (data) {
+          userApiKey = data.api_key;
+          userModel = data.model;
+          showSavedSettings(data);
+        } else {
+          showSettingsForm();
+        }
+      }
+
+      function showSavedSettings(data) {
+        // Display a masked version of the API key (first 4 characters + "******")
+        const maskedKey = data.api_key.substring(0, 4) + "******";
+        document.getElementById("masked-api-key").textContent = maskedKey;
+        document.getElementById("saved-model").textContent = data.model;
+        document.getElementById("saved-api-section").classList.remove("hidden");
+        document.getElementById("api-form-section").classList.add("hidden");
+      }
+
+      function showSettingsForm() {
+        document.getElementById("saved-api-section").classList.add("hidden");
+        document.getElementById("api-form-section").classList.remove("hidden");
+      }
+
+      // Initialize theme and event listeners
+      document.addEventListener('DOMContentLoaded', () => {
+        // Theme handling
+        const theme = localStorage.getItem('theme') || 'dark';
+        document.body.classList.add(theme);
+        
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+        
+        themeToggle.addEventListener('click', () => {
+          if (document.body.classList.contains('dark')) {
+            document.body.classList.remove('dark');
+            document.body.classList.add('light');
+            localStorage.setItem('theme', 'light');
+            themeToggle.textContent = '🌙';
+          } else {
+            document.body.classList.remove('light');
+            document.body.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+            themeToggle.textContent = '☀️';
+          }
+        });
+
+        // Add tag button event listeners
+        document.querySelectorAll('.tag-button').forEach(button => {
+          button.addEventListener('click', function() {
+            const tag = this.getAttribute('data-tag');
+            if (this.classList.contains('active')) {
+              // Don't allow deselecting if it's the only active tag
+              const activeTags = document.querySelectorAll('.tag-button.active').length;
+              if (activeTags > 1) {
+                this.classList.remove('active');
+                selectedTags = selectedTags.filter(t => t !== tag);
+              }
+            } else {
+              this.classList.add('active');
+              selectedTags.push(tag);
+            }
+          });
+        });
+        
+        // Check authentication
+        checkAuth();
+      });
+
+      // Event listener for settings button (gear icon)
+      document.getElementById('settings-button').addEventListener("click", async () => {
+        document.getElementById('settings-modal').classList.remove("hidden");
+        await loadUserSettings();
+      });
+      
+      // Hide settings modal when clicking close button
+      document.getElementById('close-modal').addEventListener("click", () => {
+        document.getElementById('settings-modal').classList.add("hidden");
+      });
+      
+      // Hide settings modal when clicking cancel
+      document.getElementById('cancel-settings-button').addEventListener("click", () => {
+        document.getElementById('settings-modal').classList.add("hidden");
+      });
+      
+      // Function to get overdue cards from Supabase
+      async function getOverdueCards(count = 5) {
+        if (!userId) return [];
+        
+        try {
+          // Get current date
+          const now = new Date().toISOString();
+          
+          // Fetch cards that are due or overdue
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('word')
+            .eq('user_id', userId)
+            .lt('due', now)  // Cards with due date less than now (overdue)
+            .order('due')    // Order by due date (oldest first)
+            .limit(count);   // Limit to requested count
+            
+          if (error) {
+            console.error("Error fetching overdue cards:", error);
+            return [];
+          }
+          
+          // Extract just the words from the cards
+          const overdueWords = data.map(card => card.word);
+          console.log("Fetched overdue words:", overdueWords);
+          
+          return overdueWords;
+        } catch (err) {
+          console.error("Error getting overdue cards:", err);
+          return [];
+        }
+      }
+      
+      // Direct start exercise button event listener (for the inline config)
+      document.getElementById('confirm-exercise-btn').addEventListener('click', async () => {
+        if (!userApiKey) {
+          // Show API settings modal if API key not set
+          document.getElementById('settings-modal').classList.remove('hidden');
+          
+          // Set message to inform user they need to set up API key
+          const settingsMessage = document.getElementById('settings-message');
+          settingsMessage.textContent = "Please set up your Gemini API key to use this feature.";
+          settingsMessage.className = "mt-4 text-sm text-blue-500";
+          return;
+        }
+        
+        try {
+          const exerciseBtn = document.getElementById('confirm-exercise-btn');
+          const originalText = exerciseBtn.textContent;
+          exerciseBtn.textContent = "Preparing...";
+          exerciseBtn.disabled = true;
+          
+          // Try to get overdue cards if no custom words
+          const customWordsText = document.getElementById('custom-words').value.trim();
+          let wordList = [];
+          
+          if (customWordsText) {
+            // Split by commas, trim whitespace, and filter empty entries
+            wordList = customWordsText.split(',')
+              .map(word => word.trim())
+              .filter(word => word.length > 0);
+          } else {
+            // If no custom words provided, try to get overdue words
+            const overdueWords = await getOverdueCards(10);
+            
+            if (overdueWords.length > 0) {
+              wordList = overdueWords;
+            } else {
+              // Use default sample words
+              wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
+            }
+          }
+          
+          // Get the number of words to use
+          const requestedWordCount = parseInt(document.getElementById('exercise-cards-count').value) || 5;
+          
+          // Limit to the requested number of words
+          wordList = wordList.slice(0, requestedWordCount);
+          
+          // Create the LLM prompt
+          const prompt = `Generate short explanations for the following words: ${wordList.join(', ')}. 
+          
+          IMPORTANT INSTRUCTIONS:
+          1. For each word, provide a short, clear explanation or definition (1-2 sentences maximum)
+          2. Do not include the word itself in the explanation
+          3. Make the explanations distinct enough that they can be matched to the correct word
+          
+          Style: ${selectedTags.join(', ')}
+          
+          Format your response as a JSON object with these fields:
+          1. "words": An array containing the exact words provided
+          2. "explanations": An array containing the explanation for each word in the same order
+          
+          For example:
+          {
+            "words": ["endeavor", "persist", "collaborate"],
+            "explanations": [
+              "To try hard to achieve a goal or complete a task.",
+              "To continue doing something despite difficulties or opposition.",
+              "To work together with others to achieve a shared goal."
+            ]
+          }`;
+          
+          // Get the selected model from the dropdown 
+          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-pro-exp-02-05';
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
+          
+          // Call the Gemini API
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{ text: prompt }]
+              }]
+            })
+          });
+          
+          const responseData = await response.json();
+          const llmResponse = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
+          
+          if (!llmResponse) {
+            throw new Error("Invalid response from LLM API");
+          }
+          
+          // Extract the JSON portion from the response
+          let jsonMatch = llmResponse.match(/```json\n([\s\S]*?)\n```/) ||
+                          llmResponse.match(/```\n([\s\S]*?)\n```/) ||
+                          llmResponse.match(/{[\s\S]*?}/);
+          let jsonStr;
+          if (jsonMatch) {
+            jsonStr = jsonMatch[0].replace(/```json\n|```\n|```/g, '');
+          } else {
+            jsonStr = llmResponse;
+          }
+          exerciseData = JSON.parse(jsonStr);
+          
+          // Display the exercise
+          displayExercise(exerciseData);
+          document.getElementById('exercise-container').classList.remove('hidden');
+          document.getElementById('exercise-config-section').classList.add('hidden');
+          
+          // Reset the button state
+          exerciseBtn.textContent = originalText;
+          exerciseBtn.disabled = false;
+          
+        } catch (err) {
+          console.error("Error generating exercise:", err);
+          alert("Error generating exercise. Please try again or check your API key.");
+          
+          // Reset button state
+          document.getElementById('confirm-exercise-btn').textContent = "Start Exercise";
+          document.getElementById('confirm-exercise-btn').disabled = false;
+        }
+      });
+
+      // Function to speak a word using the speech synthesis API
+      function speakWord(word) {
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(word);
+          window.speechSynthesis.speak(utterance);
+        }
+      }
+
+      // Display the exercise with the data from the API
+      function displayExercise(data) {
+        // Clear existing data
+        resetExercise();
+        
+        // Get containers
+        const wordsContainer = document.getElementById('words-container');
+        const meaningsContainer = document.getElementById('meanings-container');
+        
+        // Create a shuffled copy of indices for the explanations
+        const indices = Array.from({ length: data.explanations.length }, (_, i) => i);
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        
+        // Add words to the words container (in original order)
+        data.words.forEach((word, index) => {
+          const wordDiv = document.createElement('div');
+          wordDiv.className = 'word-item p-3 rounded border bg-blue-50 dark:bg-blue-900 mb-2';
+          wordDiv.setAttribute('data-index', index);
+          wordDiv.setAttribute('data-word', word);
+          
+          // Create a text span for the word
+          const textSpan = document.createElement('span');
+          textSpan.textContent = word;
+          wordDiv.appendChild(textSpan);
+          wordDiv.draggable = true;
+          
+          // Add event listeners for dragging
+          wordDiv.addEventListener('dragstart', handleDragStart);
+          wordDiv.addEventListener('dragend', handleDragEnd);
+          
+          // Add event listener for clicking
+          wordDiv.addEventListener('click', () => {
+            handleItemClick(wordDiv, 'word');
+            // Speak the word when clicked
+            speakWord(word);
+          });
+          
+          wordsContainer.appendChild(wordDiv);
+        });
+        
+        // Add explanations to the meanings container (in shuffled order)
+        indices.forEach(originalIndex => {
+          const explanation = data.explanations[originalIndex];
+          const meaningDiv = document.createElement('div');
+          meaningDiv.className = 'meaning-item p-3 rounded border bg-green-50 dark:bg-green-900 mb-2';
+          meaningDiv.setAttribute('data-index', originalIndex);
+          
+          // Create a text span for the meaning
+          const textSpan = document.createElement('span');
+          textSpan.textContent = explanation;
+          meaningDiv.appendChild(textSpan);
+          
+          // Add event listeners for dropping
+          meaningDiv.addEventListener('dragover', handleDragOver);
+          meaningDiv.addEventListener('dragleave', handleDragLeave);
+          meaningDiv.addEventListener('drop', handleDrop);
+          
+          // Add event listener for clicking
+          meaningDiv.addEventListener('click', () => {
+            handleItemClick(meaningDiv, 'meaning');
+          });
+          
+          meaningsContainer.appendChild(meaningDiv);
+        });
+      }
+      
+      // Event handler for starting drag
+      function handleDragStart(e) {
+        // Set data for dragging
+        e.dataTransfer.setData('text/plain', e.target.getAttribute('data-index'));
+        e.dataTransfer.setData('itemType', 'word');
+        
+        // Add dragging class
+        e.target.classList.add('opacity-50');
+        
+        // Speak the word when dragged
+        speakWord(e.target.getAttribute('data-word'));
+      }
+      
+      // Event handler for ending drag
+      function handleDragEnd(e) {
+        e.target.classList.remove('opacity-50');
+      }
+      
+      // Event handler for dragging over a meaning
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.currentTarget.classList.add('drag-over');
+      }
+      
+      // Event handler for leaving drag area
+      function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+      }
+      
+      // Event handler for dropping on a meaning
+      function handleDrop(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        const wordIndex = e.dataTransfer.getData('text/plain');
+        const meaningIndex = e.currentTarget.getAttribute('data-index');
+        
+        // Match the word with the meaning
+        matchItems(wordIndex, meaningIndex);
+      }
+      
+      // Click-based matching
+      function handleItemClick(item, type) {
+        // Clear any previous selection highlighting
+        document.querySelectorAll('.word-item.selected, .meaning-item.selected').forEach(el => {
+          el.classList.remove('selected');
+        });
+        
+        if (selectedItem === null) {
+          // First selection
+          selectedItem = {
+            element: item,
+            type: type,
+            index: item.getAttribute('data-index')
+          };
+          
+          // Highlight the selected item
+          item.classList.add('selected');
+        } else {
+          // Second selection - check if it's the complementary type
+          if (selectedItem.type !== type) {
+            // If different types, try to match
+            const wordIndex = type === 'word' ? item.getAttribute('data-index') : selectedItem.index;
+            const meaningIndex = type === 'meaning' ? item.getAttribute('data-index') : selectedItem.index;
+            
+            // Match the items
+            matchItems(wordIndex, meaningIndex);
+            
+            // Reset selection
+            selectedItem = null;
+          } else {
+            // Same type selected twice, update the selection
+            selectedItem = {
+              element: item,
+              type: type,
+              index: item.getAttribute('data-index')
+            };
+            
+            // Highlight the new selection
+            item.classList.add('selected');
+          }
+        }
+      }
+      
+      // Function to match a word and meaning
+      function matchItems(wordIndex, meaningIndex) {
+        // Find the elements
+        const wordItem = document.querySelector(`.word-item[data-index="${wordIndex}"]`);
+        const meaningItem = document.querySelector(`.meaning-item[data-index="${meaningIndex}"]`);
+        
+        if (!wordItem || !meaningItem) return;
+        
+        // Generate a match ID (for visual pairing)
+        const matchId = matchedPairs.length + 1;
+        
+        // Check if either is already matched
+        let existingPair = null;
+        matchedPairs.forEach(pair => {
+          if (pair.wordIndex == wordIndex || pair.meaningIndex == meaningIndex) {
+            existingPair = pair;
+            // Remove the matched pair from the UI
+            const existingPairElement = document.getElementById(`matched-pair-${pair.matchId}`);
+            if (existingPairElement) {
+              existingPairElement.remove();
+            }
+          }
+        });
+        
+        if (existingPair) {
+          // Remove existing match from the array
+          matchedPairs = matchedPairs.filter(pair => pair !== existingPair);
+        }
+        
+        // Get the word and meaning text
+        const word = wordItem.getAttribute('data-word');
+        const meaning = meaningItem.textContent.trim();
+        
+        // Create the matched pair element
+        const matchedPairElement = document.createElement('div');
+        matchedPairElement.className = 'matched-pair mb-3';
+        matchedPairElement.id = `matched-pair-${matchId}`;
+        
+        // Create the word part
+        const wordPart = document.createElement('div');
+        wordPart.className = 'matched-pair-word';
+        wordPart.innerHTML = `<span class="match-indicator">${matchId}</span> ${word}`;
+        matchedPairElement.appendChild(wordPart);
+        
+        // Create the meaning part
+        const meaningPart = document.createElement('div');
+        meaningPart.className = 'matched-pair-meaning';
+        meaningPart.innerHTML = `<span class="match-indicator">${matchId}</span> ${meaning}`;
+        matchedPairElement.appendChild(meaningPart);
+        
+        // Add to the matched items container
+        const matchedItemsContainer = document.getElementById('matched-items-container');
+        const noMatchesMessage = document.getElementById('no-matches-message');
+        
+        if (noMatchesMessage) {
+          noMatchesMessage.remove();
+        }
+        
+        matchedItemsContainer.appendChild(matchedPairElement);
+        
+        // Add to matched pairs array
+        matchedPairs.push({
+          wordIndex: wordIndex,
+          meaningIndex: meaningIndex,
+          wordElement: wordItem,
+          meaningElement: meaningItem,
+          matchId: matchId,
+          pairElement: matchedPairElement
+        });
+        
+        // Hide the original items from their respective containers
+        wordItem.classList.add('hidden');
+        meaningItem.classList.add('hidden');
+      }
+      
+      // Reset the exercise to initial state
+      function resetExercise() {
+        // Clear words and meanings containers
+        document.getElementById('words-container').innerHTML = '';
+        document.getElementById('meanings-container').innerHTML = '';
+        
+        // Clear matched items container and add the "no matches" message
+        const matchedItemsContainer = document.getElementById('matched-items-container');
+        matchedItemsContainer.innerHTML = '';
+        
+        const noMatchesMessage = document.createElement('p');
+        noMatchesMessage.id = 'no-matches-message';
+        noMatchesMessage.className = 'text-center text-gray-500 p-2';
+        noMatchesMessage.textContent = 'No matches yet. Match words with their meanings to see them here.';
+        matchedItemsContainer.appendChild(noMatchesMessage);
+        
+        // Reset matched pairs
+        matchedPairs = [];
+        
+        // Reset selected item
+        selectedItem = null;
+        
+        // Remove any feedback message
+        const feedbackEl = document.getElementById('exercise-feedback');
+        if (feedbackEl) {
+          feedbackEl.remove();
+        }
+      }
+      
+      // Event handler: Check answers
+      document.getElementById('check-answers-btn').addEventListener('click', () => {
+        if (!exerciseData || matchedPairs.length === 0) return;
+        
+        let allCorrect = true;
+        
+        // Check each matched pair
+        matchedPairs.forEach(pair => {
+          const isCorrect = pair.wordIndex === pair.meaningIndex;
+          
+          // Update the visual feedback
+          if (isCorrect) {
+            pair.pairElement.classList.add('correct');
+            
+            // Update indicators color
+            const indicators = pair.pairElement.querySelectorAll('.match-indicator');
+            indicators.forEach(indicator => {
+              indicator.classList.add('correct');
+            });
+            
+          } else {
+            pair.pairElement.classList.add('incorrect');
+            allCorrect = false;
+            
+            // Update indicators color
+            const indicators = pair.pairElement.querySelectorAll('.match-indicator');
+            indicators.forEach(indicator => {
+              indicator.classList.add('incorrect');
+            });
+          }
+        });
+        
+        // Check if all words have been matched
+        const allMatched = matchedPairs.length === exerciseData.words.length;
+        
+        // If all correct and all matched, show success message
+        if (allCorrect && allMatched) {
+          // Create or get feedback element
+          let feedbackEl = document.getElementById('exercise-feedback');
+          if (!feedbackEl) {
+            feedbackEl = document.createElement('div');
+            feedbackEl.id = 'exercise-feedback';
+            document.getElementById('exercise-container').appendChild(feedbackEl);
+          }
+          
+          // Show success message with "Mark as Learned" button
+          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
+          feedbackEl.innerHTML = `
+            <p class="mb-3">Great job! All matches are correct!</p>
+            <button id="mark-as-learned-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-3">
+              Mark as Learned
+            </button>
+          `;
+          
+          // Add event listener to the Mark as Learned button
+          document.getElementById('mark-as-learned-btn').addEventListener('click', () => {
+            // Save the learned words to localStorage
+            saveLearnedWords(exerciseData.words);
+            
+            // Navigate back to flashcards.html
+            window.location.href = '../flashcards.html';
+          });
+        } else if (!allMatched) {
+          // Create or get feedback element
+          let feedbackEl = document.getElementById('exercise-feedback');
+          if (!feedbackEl) {
+            feedbackEl = document.createElement('div');
+            feedbackEl.id = 'exercise-feedback';
+            document.getElementById('exercise-container').appendChild(feedbackEl);
+          }
+          
+          // Show message about unmatched items
+          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
+          feedbackEl.textContent = `You have matched ${matchedPairs.length} out of ${exerciseData.words.length} items. Match all items to complete the exercise.`;
+        } else if (!allCorrect) {
+          // Create or get feedback element
+          let feedbackEl = document.getElementById('exercise-feedback');
+          if (!feedbackEl) {
+            feedbackEl = document.createElement('div');
+            feedbackEl.id = 'exercise-feedback';
+            document.getElementById('exercise-container').appendChild(feedbackEl);
+          }
+          
+          // Show message about incorrect matches
+          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 transition-all';
+          feedbackEl.textContent = `Some matches are incorrect. Try again!`;
+        }
+      });
+      
+      // Event handler: Reset exercise
+      document.getElementById('reset-exercise-btn').addEventListener('click', () => {
+        if (!exerciseData) return;
+        
+        // Clear everything and redisplay the exercise
+        resetExercise();
+        displayExercise(exerciseData);
+      });
+      
+      // Event handler: Show answers
+      document.getElementById('show-answers-btn').addEventListener('click', () => {
+        if (!exerciseData) return;
+        
+        // Clear existing matches
+        resetExercise();
+        
+        // Display the exercise data again
+        displayExercise(exerciseData);
+        
+        // Hide the no matches message
+        const noMatchesMessage = document.getElementById('no-matches-message');
+        if (noMatchesMessage) {
+          noMatchesMessage.remove();
+        }
+        
+        // Create correct matches
+        exerciseData.words.forEach((word, index) => {
+          const explanation = exerciseData.explanations[index];
+          
+          // Create the matched pair element
+          const matchedPairElement = document.createElement('div');
+          matchedPairElement.className = 'matched-pair mb-3 correct';
+          matchedPairElement.id = `matched-pair-${index + 1}`;
+          
+          // Create the word part
+          const wordPart = document.createElement('div');
+          wordPart.className = 'matched-pair-word';
+          wordPart.innerHTML = `<span class="match-indicator correct">${index + 1}</span> ${word}`;
+          matchedPairElement.appendChild(wordPart);
+          
+          // Create the meaning part
+          const meaningPart = document.createElement('div');
+          meaningPart.className = 'matched-pair-meaning';
+          meaningPart.innerHTML = `<span class="match-indicator correct">${index + 1}</span> ${explanation}`;
+          matchedPairElement.appendChild(meaningPart);
+          
+          // Add to the matched items container
+          document.getElementById('matched-items-container').appendChild(matchedPairElement);
+          
+          // Hide the original items from their respective containers
+          const wordItem = document.querySelector(`.word-item[data-index="${index}"]`);
+          const meaningItem = document.querySelector(`.meaning-item[data-index="${index}"]`);
+          
+          if (wordItem) wordItem.classList.add('hidden');
+          if (meaningItem) meaningItem.classList.add('hidden');
+          
+          // Add to the matched pairs array
+          matchedPairs.push({
+            wordIndex: index,
+            meaningIndex: index,
+            matchId: index + 1,
+            pairElement: matchedPairElement
+          });
+        });
+        
+        // Add feedback message
+        let feedbackEl = document.getElementById('exercise-feedback');
+        if (!feedbackEl) {
+          feedbackEl = document.createElement('div');
+          feedbackEl.id = 'exercise-feedback';
+          document.getElementById('exercise-container').appendChild(feedbackEl);
+        }
+        
+        feedbackEl.className = 'mt-4 p-3 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 transition-all';
+        feedbackEl.textContent = "Here are the correct matches.";
+      });
+      
+      // Event handler: Help button
+      document.getElementById('help-btn').addEventListener('click', () => {
+        if (!exerciseData) return;
+        
+        // Create or get help panel element
+        let helpPanelEl = document.getElementById('exercise-help');
+        if (!helpPanelEl) {
+          helpPanelEl = document.createElement('div');
+          helpPanelEl.id = 'exercise-help';
+          document.getElementById('exercise-container').appendChild(helpPanelEl);
+        }
+        
+        // Toggle visibility of help panel
+        if (helpPanelEl.innerHTML === '') {
+          // Create a hint panel
+          helpPanelEl.className = 'mt-4 p-3 rounded bg-yellow-50 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
+          helpPanelEl.innerHTML = `
+            <h3 class="font-semibold mb-2">Tips:</h3>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Click a word, then click its matching meaning.</li>
+              <li>Or drag words to their matching meanings.</li>
+              <li>Words will be spoken when clicked or dragged.</li>
+              <li>You can redo matches by selecting items again.</li>
+            </ul>
+          `;
+        } else {
+          // Hide the help panel
+          helpPanelEl.innerHTML = '';
+          helpPanelEl.className = '';
+        }
+      });
+      
+      // Event handler: Exit exercise
+      document.getElementById('exit-exercise-btn').addEventListener('click', () => {
+        // Hide the exercise container
+        document.getElementById('exercise-container').classList.add('hidden');
+        
+        // Show the main section
+        document.getElementById('exercise-config-section').classList.remove('hidden');
+        
+        // Reset the exercise data
+        exerciseData = null;
+        
+        // Reset the UI state
+        resetExercise();
+      });
+      
+      // Function to save learned words to localStorage
+      function saveLearnedWords(words) {
+        // First, get any existing learned words from localStorage
+        let learnedWords = JSON.parse(localStorage.getItem('learnedWords') || '[]');
+        
+        // Add the current words to the learned words list
+        // Make sure we don't add duplicates
+        words.forEach(word => {
+          if (!learnedWords.includes(word)) {
+            learnedWords.push(word);
+          }
+        });
+        
+        // Save the updated list back to localStorage
+        localStorage.setItem('learnedWords', JSON.stringify(learnedWords));
+        
+        // Also save the practice timestamp
+        localStorage.setItem('lastPractice', new Date().toISOString());
+        
+        // Save the current session's practice data
+        const practiceSession = {
+          date: new Date().toISOString(),
+          words: words,
+          type: 'matching-exercise'
+        };
+        
+        // Get existing practice history
+        let practiceHistory = JSON.parse(localStorage.getItem('practiceHistory') || '[]');
+        practiceHistory.push(practiceSession);
+        localStorage.setItem('practiceHistory', JSON.stringify(practiceHistory));
+      }
+
+      // Handle clicking outside the modals to close them
+      window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+          document.getElementById('settings-modal').classList.add("hidden");
+        }
+      });
+      
+      // Also close modals with Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document.getElementById('settings-modal').classList.add("hidden");
+        }
+      });
+      
+      // No need for window resize handler since we no longer use connection lines
+    </script>
+  </body>
+</html>
