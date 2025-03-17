@@ -282,12 +282,11 @@
         }
         
         .matching-columns {
-          flex-direction: column;
+          flex-direction: row;
         }
         
         .matching-column {
-          width: 100% !important;
-          margin-bottom: 1rem;
+          margin-bottom: 0;
         }
         
         #exercise-container .flex.justify-between {
@@ -382,13 +381,13 @@
         <div class="matching-columns flex flex-row mb-4">
           <div class="matching-column w-[30%] p-2">
             <h3 class="text-lg font-semibold mb-2">Words</h3>
-            <div id="words-container" class="space-y-2">
+            <div id="words-container">
               <!-- Words will be added here dynamically -->
             </div>
           </div>
           <div class="matching-column w-[70%] p-2">
             <h3 class="text-lg font-semibold mb-2">Meanings</h3>
-            <div id="meanings-container" class="space-y-2">
+            <div id="meanings-container">
               <!-- Meanings will be added here dynamically -->
             </div>
           </div>
@@ -769,7 +768,7 @@
         // Add words to the words container (in original order)
         data.words.forEach((word, index) => {
           const wordDiv = document.createElement('div');
-          wordDiv.className = 'word-item p-3 rounded border bg-blue-50 dark:bg-blue-900 mb-2';
+          wordDiv.className = 'word-item p-3 rounded border bg-blue-50 dark:bg-blue-900';
           wordDiv.setAttribute('data-index', index);
           wordDiv.setAttribute('data-word', word);
           
@@ -797,7 +796,7 @@
         indices.forEach(originalIndex => {
           const explanation = data.explanations[originalIndex];
           const meaningDiv = document.createElement('div');
-          meaningDiv.className = 'meaning-item p-3 rounded border bg-green-50 dark:bg-green-900 mb-2';
+          meaningDiv.className = 'meaning-item p-3 rounded border bg-green-50 dark:bg-green-900';
           meaningDiv.setAttribute('data-index', originalIndex);
           
           // Create a text span for the meaning
