@@ -274,15 +274,61 @@
         </div>
       </div>
 
-      <!-- Exercise Section -->
-      <section id="exercise-section" class="mb-6">
-        <button id="start-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
-          Create New Exercise
+      <!-- Exercise Config Section (Inline, not modal) -->
+      <section id="exercise-config-section" class="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow">
+        <h3 class="text-xl font-bold mb-4">Exercise Configuration</h3>
+        
+        <div class="mb-4">
+          <label for="exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
+          <select id="exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
+            <option value="gemini-2.0-flash">Gemini Flash</option>
+            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
+          </select>
+        </div>
+        
+        <div class="mb-4">
+          <label for="exercise-cards-count" class="block text-sm font-medium mb-1">Number of Words</label>
+          <input type="number" id="exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-2">Content Style</label>
+          <div id="exercise-tags-container" class="flex flex-wrap gap-2">
+            <button class="tag-button px-2 py-1 text-xs rounded border active" data-tag="easy-to-read">easy-to-read</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="extremely-short">extremely-short</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="advanced">advanced</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="knowledge">knowledge</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fact">fact</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="story">story</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="humor">humor</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="love-advice">love-advice</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="life">life</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="inspirational">inspirational</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="business">business</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="travel">travel</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="food">food</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="technology">technology</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fantasy">fantasy</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="cultural">cultural</button>
+            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="slang">slang</button>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <label for="custom-words" class="block text-sm font-medium mb-1">Custom Words (comma separated)</label>
+          <textarea id="custom-words" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="3" placeholder="endeavor, persist, integrate, collaborate, thrive"></textarea>
+        </div>
+        
+        <button id="generate-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
+          Generate Exercise
         </button>
+        <div id="exercise-status" class="mt-2 text-sm text-gray-600 dark:text-gray-400"></div>
       </section>
 
-      <!-- Exercise Container -->
-      <section id="exercise-container" class="hidden mb-6 sm:border sm:p-4 p-1 sm:rounded sm:shadow bg-white">
+      <!-- Exercise Container (now with hidden class as in original) -->
+      <section id="exercise-container" class="mb-6 sm:border sm:p-4 p-1 sm:rounded sm:shadow bg-white hidden">
         <div class="flex justify-between items-center mb-2 sm:mb-4">
           <h2 class="text-lg sm:text-xl font-semibold">Fill-in-the-Blank Exercise</h2>
           <button id="exit-exercise-btn" class="text-xs bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
@@ -314,97 +360,45 @@
         </div>
       </section>
 
-      <!-- Exercise Configuration Modal -->
-      <div id="exercise-config-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
-          <h3 class="text-xl font-bold mb-4">Configure Exercise</h3>
-          <div class="mb-4">
-            <label for="modal-exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
-            <select id="modal-exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+      <!-- Exercise Configuration Modal - Removing it since we now have inline config -->
+      <!-- API Settings - Keep this but make it non-modal -->
+      <div id="settings-panel" class="hidden mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold">Gemini API Settings</h3>
+          <button id="close-settings" class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 text-xl font-bold">&times;</button>
+        </div>
+        
+        <!-- Section to show saved settings -->
+        <div id="saved-api-section" class="hidden">
+          <p>Saved API Key: <span id="masked-api-key"></span></p>
+          <p>Preferred Model: <span id="saved-model"></span></p>
+          <div class="flex gap-2 mt-4">
+            <button id="remove-api-key-button" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Remove API Key</button>
+            <button id="change-api-key-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Change API Key</button>
+          </div>
+        </div>
+        
+        <!-- Form section to enter a new API key and select a model -->
+        <div id="api-form-section">
+          <form id="settings-form">
+            <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4" />
+            <select id="geminiModelSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4">
               <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
               <option value="gemini-2.0-flash">Gemini Flash</option>
               <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
               <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
             </select>
-          </div>
-          <div class="mb-4">
-            <label for="modal-exercise-cards-count" class="block text-sm font-medium mb-1">Number of Words</label>
-            <input type="number" id="modal-exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-          </div>
-          <!-- Content style tags -->
-          <div class="mb-6">
-            <label class="block text-sm font-medium mb-2">Content Style</label>
-            <div id="exercise-tags-container" class="flex flex-wrap gap-2">
-              <button class="tag-button px-2 py-1 text-xs rounded border active" data-tag="easy-to-read">easy-to-read</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="extremely-short">extremely-short</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="advanced">advanced</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="knowledge">knowledge</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fact">fact</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="story">story</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="humor">humor</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="love-advice">love-advice</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="life">life</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="inspirational">inspirational</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="business">business</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="travel">travel</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="food">food</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="technology">technology</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fantasy">fantasy</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="cultural">cultural</button>
-              <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="slang">slang</button>
+            <div class="flex justify-end gap-2">
+              <button type="button" id="cancel-settings-button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
+                Cancel
+              </button>
+              <button type="submit" id="save-settings-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                Save
+              </button>
             </div>
-          </div>
-          <div class="mb-4">
-            <label for="custom-words" class="block text-sm font-medium mb-1">Custom Words (comma separated)</label>
-            <textarea id="custom-words" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600" rows="3" placeholder="endeavor, persist, integrate, collaborate, thrive"></textarea>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button id="cancel-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
-              Cancel
-            </button>
-            <button id="confirm-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
-              Start Exercise
-            </button>
-          </div>
+          </form>
         </div>
-      </div>
-
-      <!-- API Settings Modal (similar to index.html) -->
-      <div id="settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
-          <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-100 text-xl font-bold">&times;</button>
-          <h3 class="text-xl font-bold mb-4">Gemini API Settings</h3>
-          <!-- Section to show saved settings -->
-          <div id="saved-api-section" class="hidden">
-            <p>Saved API Key: <span id="masked-api-key"></span></p>
-            <p>Preferred Model: <span id="saved-model"></span></p>
-            <div class="flex gap-2 mt-4">
-              <button id="remove-api-key-button" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Remove API Key</button>
-              <button id="change-api-key-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Change API Key</button>
-            </div>
-          </div>
-          <!-- Form section to enter a new API key and select a model -->
-          <div id="api-form-section">
-            <form id="settings-form">
-              <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4" />
-              <select id="geminiModelSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4">
-                <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
-                <option value="gemini-2.0-flash">Gemini Flash</option>
-                <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
-                <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
-              </select>
-              <div class="flex justify-end gap-2">
-                <button type="button" id="cancel-settings-button" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
-                  Cancel
-                </button>
-                <button type="submit" id="save-settings-button" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                  Save
-                </button>
-              </div>
-            </form>
-          </div>
-          <div id="settings-message" class="mt-4 text-sm"></div>
-        </div>
+        <div id="settings-message" class="mt-4 text-sm"></div>
       </div>
     </div>
 
@@ -529,91 +523,32 @@
 
       // Event listener for settings button (gear icon)
       document.getElementById('settings-button').addEventListener("click", async () => {
-        document.getElementById('settings-modal').classList.add("active");
+        document.getElementById('settings-panel').classList.toggle("hidden");
         await loadUserSettings();
       });
       
-      // Hide settings modal when clicking close button
-      document.getElementById('close-modal').addEventListener("click", () => {
-        document.getElementById('settings-modal').classList.remove("active");
+      // Hide settings panel when clicking close button
+      document.getElementById('close-settings').addEventListener("click", () => {
+        document.getElementById('settings-panel').classList.add("hidden");
       });
       
-      // Hide settings modal when clicking cancel
+      // Hide settings panel when clicking cancel
       document.getElementById('cancel-settings-button').addEventListener("click", () => {
-        document.getElementById('settings-modal').classList.remove("active");
+        document.getElementById('settings-panel').classList.add("hidden");
       });
       
-      // Event listener for the start exercise button
-      document.getElementById('start-exercise-btn').addEventListener('click', async () => {
+      // Modified event listener for the generate exercise button
+      document.getElementById('generate-exercise-btn').addEventListener('click', async () => {
         if (!userApiKey) {
-          // Show API settings modal if API key not set
-          document.getElementById('settings-modal').classList.add('active');
+          // Show API settings panel if API key not set
+          document.getElementById('settings-panel').classList.remove('hidden');
           
           // Set message to inform user they need to set up API key
           const settingsMessage = document.getElementById('settings-message');
           settingsMessage.textContent = "Please set up your Gemini API key to use this feature.";
           settingsMessage.className = "mt-4 text-sm text-blue-500";
         } else {
-          // Try to get overdue cards before showing the exercise config modal
-          const overdueWords = await getOverdueCards(10);  // Get up to 10 overdue words
-          
-          // If we have overdue words, pre-fill the custom words textarea
-          if (overdueWords.length > 0) {
-            document.getElementById('custom-words').value = overdueWords.join(', ');
-          }
-          
-          // Show the exercise config modal
-          document.getElementById('exercise-config-modal').classList.remove('hidden');
-        }
-      });
-      
-      // Handle settings form submission for API key
-      document.getElementById("settings-form").addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const apiKey = document.getElementById("geminiApiKeyInput").value;
-        const model = document.getElementById("geminiModelSelect").value;
-        const settingsMessage = document.getElementById("settings-message");
-        settingsMessage.textContent = "Verifying API Key...";
-        settingsMessage.className = "mt-4 text-sm text-blue-500";
-        
-        try {
-          const data = await geminiRequest(apiKey, "ping, answer `pong` without additional text", model);
-          const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          
-          if (responseText && responseText.includes("pong")) {
-            settingsMessage.textContent = "✅ API Key is valid";
-            settingsMessage.className = "mt-4 text-sm text-green-500";
-            
-            // Update global variables
-            userApiKey = apiKey;
-            userModel = model;
-            
-            // Save to Supabase
-            const { error } = await supabase
-              .from('user_settings')
-              .upsert({ user_id: userId, api_key: apiKey, model });
-              
-            if (error) {
-              settingsMessage.textContent = "Error saving settings: " + error.message;
-              settingsMessage.className = "mt-4 text-sm text-red-500";
-            } else {
-              showSavedSettings({ api_key: apiKey, model });
-              
-              // Close the modal after a short delay
-              setTimeout(() => {
-                document.getElementById('settings-modal').classList.remove("active");
-                // Show the exercise config modal
-                document.getElementById('exercise-config-modal').classList.remove('hidden');
-              }, 1000);
-            }
-          } else {
-            settingsMessage.textContent = "❌ Invalid response from API";
-            settingsMessage.className = "mt-4 text-sm text-red-500";
-          }
-        } catch (err) {
-          settingsMessage.textContent = "❌ Invalid API key or connection error";
-          settingsMessage.className = "mt-4 text-sm text-red-500";
-          console.error(err);
+          generateExercise();
         }
       });
       
@@ -650,41 +585,15 @@
         }
       }
       
-      // Handle removal of API key
-      document.getElementById("remove-api-key-button").addEventListener("click", async () => {
-        if (!userId) return;
-        
-        const settingsMessage = document.getElementById("settings-message");
-        const { error } = await supabase.from('user_settings').delete().eq('user_id', userId);
-        
-        if (error) {
-          settingsMessage.textContent = "Error removing API key: " + error.message;
-          settingsMessage.className = "mt-4 text-sm text-red-500";
-        } else {
-          settingsMessage.textContent = "API key removed successfully.";
-          settingsMessage.className = "mt-4 text-sm text-green-500";
-          userApiKey = null;
-          userModel = null;
-          showSettingsForm();
-        }
-      });
-      
-      // When user wants to change API key
-      document.getElementById("change-api-key-button").addEventListener("click", () => {
-        showSettingsForm();
-      });
-
-      // Event listeners for cancel and confirm exercise buttons
-      document.getElementById('cancel-exercise-btn').addEventListener('click', () => {
-        document.getElementById('exercise-config-modal').classList.add('hidden');
-      });
-
-      document.getElementById('confirm-exercise-btn').addEventListener('click', async () => {
+      // Modified function to generate an exercise
+      async function generateExercise() {
         try {
-          const exerciseBtn = document.getElementById('confirm-exercise-btn');
-          const originalText = exerciseBtn.textContent;
-          exerciseBtn.textContent = "Preparing...";
-          exerciseBtn.disabled = true;
+          const generateBtn = document.getElementById('generate-exercise-btn');
+          const statusEl = document.getElementById('exercise-status');
+          
+          generateBtn.textContent = "Generating...";
+          generateBtn.disabled = true;
+          statusEl.textContent = "Preparing your exercise...";
           
           // Get custom words from textarea
           const customWordsText = document.getElementById('custom-words').value.trim();
@@ -696,18 +605,22 @@
               .map(word => word.trim())
               .filter(word => word.length > 0);
           } else {
-            // If no custom words provided, use sample words
-            wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
+            // If no custom words provided, fetch overdue words or use defaults
+            const overdueWords = await getOverdueCards(10);
+            
+            if (overdueWords.length > 0) {
+              wordList = overdueWords;
+            } else {
+              // Use default sample words
+              wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
+            }
           }
           
           // Get the number of words to use
-          const requestedWordCount = parseInt(document.getElementById('modal-exercise-cards-count').value) || 5;
+          const requestedWordCount = parseInt(document.getElementById('exercise-cards-count').value) || 5;
           
           // Limit to the requested number of words
           wordList = wordList.slice(0, requestedWordCount);
-          
-          // Hide the modal
-          document.getElementById('exercise-config-modal').classList.add('hidden');
           
           // Create the LLM prompt
           const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordList.join(', ')}. 
@@ -734,12 +647,10 @@
           DO NOT use formats like "[WORD]" or "[OTHER_FORMAT]" - only use "[BLANK]".`;
           
           // Get the selected model from the dropdown 
-          const selectedModel = document.getElementById('modal-exercise-model-select').value || userModel || 'gemini-2.0-pro-exp-02-05';
+          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-pro-exp-02-05';
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
           
-          // Update UI to show generating message
-          document.getElementById('start-exercise-btn').textContent = "Generating exercise...";
-          document.getElementById('start-exercise-btn').disabled = true;
+          statusEl.textContent = "Generating content with Gemini API...";
           
           // Call the Gemini API
           const response = await fetch(apiUrl, {
@@ -774,23 +685,47 @@
           // Display the exercise
           displayExercise(exerciseData);
           document.getElementById('exercise-container').classList.remove('hidden');
-          document.getElementById('exercise-section').classList.add('hidden');
+          document.getElementById('exercise-config-section').classList.add('hidden');
           
-          // Reset the start exercise button state
-          document.getElementById('start-exercise-btn').textContent = "Create New Exercise";
-          document.getElementById('start-exercise-btn').disabled = false;
+          // Reset the generate exercise button state
+          generateBtn.textContent = "Generate Exercise";
+          generateBtn.disabled = false;
+          statusEl.textContent = "";
           
         } catch (err) {
           console.error("Error generating exercise:", err);
-          alert("Error generating exercise. Please try again or check your API key.");
-          
-          // Hide the modal if still open
-          document.getElementById('exercise-config-modal').classList.add('hidden');
+          const statusEl = document.getElementById('exercise-status');
+          statusEl.textContent = "Error: " + err.message;
+          statusEl.className = "mt-2 text-sm text-red-500";
           
           // Reset button state
-          document.getElementById('start-exercise-btn').textContent = "Create New Exercise";
-          document.getElementById('start-exercise-btn').disabled = false;
+          document.getElementById('generate-exercise-btn').textContent = "Generate Exercise";
+          document.getElementById('generate-exercise-btn').disabled = false;
         }
+      }
+      
+      // Handle removal of API key
+      document.getElementById("remove-api-key-button").addEventListener("click", async () => {
+        if (!userId) return;
+        
+        const settingsMessage = document.getElementById("settings-message");
+        const { error } = await supabase.from('user_settings').delete().eq('user_id', userId);
+        
+        if (error) {
+          settingsMessage.textContent = "Error removing API key: " + error.message;
+          settingsMessage.className = "mt-4 text-sm text-red-500";
+        } else {
+          settingsMessage.textContent = "API key removed successfully.";
+          settingsMessage.className = "mt-4 text-sm text-green-500";
+          userApiKey = null;
+          userModel = null;
+          showSettingsForm();
+        }
+      });
+      
+      // When user wants to change API key
+      document.getElementById("change-api-key-button").addEventListener("click", () => {
+        showSettingsForm();
       });
 
       // Display the exercise with the data from the API
@@ -1068,23 +1003,11 @@
         // Hide the exercise container
         document.getElementById('exercise-container').classList.add('hidden');
         
-        // Show the main section
-        document.getElementById('exercise-section').classList.remove('hidden');
+        // Show the config section
+        document.getElementById('exercise-config-section').classList.remove('hidden');
         
         // Reset the exercise data
         exerciseData = null;
-        
-        // Reset the start exercise button state
-        const exerciseBtn = document.getElementById('start-exercise-btn');
-        exerciseBtn.textContent = "Create New Exercise";
-        exerciseBtn.disabled = false;
-        
-        // Clear any help panel
-        const helpPanelEl = document.getElementById('exercise-help');
-        if (helpPanelEl) {
-          helpPanelEl.innerHTML = '';
-          helpPanelEl.className = '';
-        }
       });
       
       // Reset button
@@ -1121,16 +1044,14 @@
       // Handle clicking outside the modals to close them
       window.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
-          document.getElementById('settings-modal').classList.remove("active");
-          document.getElementById('exercise-config-modal').classList.add('hidden');
+          document.getElementById('settings-panel').classList.add("hidden");
         }
       });
       
       // Also close modals with Escape key
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
-          document.getElementById('settings-modal').classList.remove("active");
-          document.getElementById('exercise-config-modal').classList.add('hidden');
+          document.getElementById('settings-panel').classList.add("hidden");
         }
       });
 
