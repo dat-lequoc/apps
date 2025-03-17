@@ -276,7 +276,7 @@
       </section>
 
       <!-- Add this section somewhere appropriate in the body of the document, likely near other exercise options -->
-      <div class="mb-4">
+      <div id="fill-in-blank-exercise-button" class="mb-4">
         <a href="flashcards/fill-in-the-blank.html" class="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all">
           <div class="flex items-center">
             <div class="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
@@ -1578,29 +1578,65 @@
       function updateUIForPracticeMode(isPracticing) {
         // ... existing code ...
         
-        // Hide matching exercise button during practice
+        // Hide exercise buttons during practice
         const matchingExerciseButton = document.getElementById('matching-exercise-button');
+        const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
+        
         if (matchingExerciseButton) {
           matchingExerciseButton.style.display = isPracticing ? 'none' : 'block';
+        }
+        
+        if (fillInBlankExerciseButton) {
+          fillInBlankExerciseButton.style.display = isPracticing ? 'none' : 'block';
         }
         
         // ... existing code ...
       }
 
-      // Find the existing event listeners that toggle practice mode and make sure they call updateUIForPracticeMode
-      // For example, if there's a startPractice function, add this near the beginning:
-      function startPractice() {
+      // Find where the Start Review button is initialized
+      document.addEventListener('DOMContentLoaded', function() {
         // ... existing code ...
-        updateUIForPracticeMode(true); // Hide non-practice UI elements
+        
+        // Find the start review button and add event listener
+        const startReviewBtn = document.getElementById('start-review-btn');
+        if (startReviewBtn) {
+          const originalClickHandler = startReviewBtn.onclick;
+          startReviewBtn.onclick = function(e) {
+            // Hide exercise buttons immediately
+            const matchingExerciseButton = document.getElementById('matching-exercise-button');
+            const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
+            
+            if (matchingExerciseButton) matchingExerciseButton.style.display = 'none';
+            if (fillInBlankExerciseButton) fillInBlankExerciseButton.style.display = 'none';
+            
+            // Call the original handler if it exists
+            if (typeof originalClickHandler === 'function') {
+              originalClickHandler.call(this, e);
+            }
+          };
+        }
+        
+        // Also handle the Exit Review button to show the exercise buttons again
+        const exitReviewBtn = document.getElementById('exit-review-btn');
+        if (exitReviewBtn) {
+          const originalExitHandler = exitReviewBtn.onclick;
+          exitReviewBtn.onclick = function(e) {
+            // Show exercise buttons again
+            const matchingExerciseButton = document.getElementById('matching-exercise-button');
+            const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
+            
+            if (matchingExerciseButton) matchingExerciseButton.style.display = 'block';
+            if (fillInBlankExerciseButton) fillInBlankExerciseButton.style.display = 'block';
+            
+            // Call the original handler if it exists
+            if (typeof originalExitHandler === 'function') {
+              originalExitHandler.call(this, e);
+            }
+          };
+        }
+        
         // ... existing code ...
-      }
-
-      // And in the endPractice function, add:
-      function endPractice() {
-        // ... existing code ...
-        updateUIForPracticeMode(false); // Show all UI elements again
-        // ... existing code ...
-      }
+      });
     </script>
   </body>
 </html>
