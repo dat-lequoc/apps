@@ -158,136 +158,6 @@
         max-height: 70vh;
         overflow-y: auto;
       }
-      
-      /* Add these styles for the drag and drop functionality */
-      .word-item {
-        display: inline-block;
-        margin: 0.25rem;
-        transition: all 0.2s ease;
-      }
-      
-      .word-item:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-      }
-      
-      .word-item.used {
-        opacity: 0.5;
-        text-decoration: line-through;
-      }
-      
-      .blank-input.drag-over {
-        border-color: #3b82f6;
-        background-color: #eff6ff;
-      }
-      
-      body.dark .blank-input.drag-over {
-        border-color: #3b82f6;
-        background-color: #1e3a8a;
-      }
-      
-      /* Improve word list appearance */
-      #word-list {
-        padding: 0.5rem;
-        min-height: 3rem;
-        border-radius: 0.375rem;
-      }
-      
-      /* Make the exercise text larger and more readable */
-      #exercise-text {
-        font-size: 1.1rem;
-        line-height: 1.7;
-        padding: 1rem;
-        background-color: #f9fafb;
-        border-radius: 0.375rem;
-      }
-      
-      body.dark #exercise-text {
-        background-color: #1f2937;
-      }
-
-      /* Add these styles to your existing <style> block */
-      @media (max-width: 640px) {
-        #exercise-container {
-          margin: 0;
-          padding: 0.5rem;
-          border-width: 0;
-          border-radius: 0;
-          box-shadow: none;
-        }
-        
-        #exercise-words {
-          padding: 0.5rem;
-          margin-bottom: 0.5rem;
-        }
-        
-        #exercise-text {
-          padding: 0.5rem;
-          margin-bottom: 0.5rem;
-          font-size: 1rem;
-          line-height: 1.5;
-        }
-        
-        #word-list {
-          padding: 0.25rem;
-          min-height: 2.5rem;
-        }
-        
-        .word-item {
-          margin: 0.15rem;
-          padding: 0.15rem 0.5rem;
-        }
-        
-        #exercise-container .flex.justify-between {
-          gap: 0.25rem;
-        }
-        
-        #exercise-container button {
-          padding: 0.5rem 0.75rem;
-          font-size: 0.875rem;
-        }
-        
-        #exercise-container h2, 
-        #exercise-container h3 {
-          font-size: 0.875rem;
-          margin-bottom: 0.25rem;
-        }
-        
-        #exercise-feedback {
-          margin-top: 0.5rem;
-          padding: 0.5rem;
-        }
-      }
-      
-      /* Add styles for tag buttons */
-      .tag-button {
-        transition: all 0.2s ease;
-        cursor: pointer;
-      }
-      
-      .tag-button.active {
-        background-color: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-      }
-      
-      body.dark .tag-button {
-        border-color: #4b5563;
-      }
-      
-      body.dark .tag-button.active {
-        background-color: #3b82f6;
-        color: white;
-        border-color: #3b82f6;
-      }
-      
-      body.dark .tag-button:not(.active):hover {
-        background-color: #374151;
-      }
-      
-      .tag-button:not(.active):hover {
-        background-color: #f3f4f6;
-      }
     </style>
   </head>
   <body class="bg-gray-50">
@@ -323,47 +193,6 @@
         <button id="browse-cards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
           Browse Cards
         </button>
-      </section>
-
-      <!-- Update the exercise section to add configuration options -->
-      <section id="exercise-section" class="mb-6">
-        <button id="start-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
-          Fill-in-the-Blank Exercise
-        </button>
-      </section>
-
-      <!-- Update the exercise container section to use responsive classes -->
-      <section id="exercise-container" class="hidden mb-6 sm:border sm:p-4 p-1 sm:rounded sm:shadow bg-white">
-        <div class="flex justify-between items-center mb-2 sm:mb-4">
-          <h2 class="text-lg sm:text-xl font-semibold">Fill-in-the-Blank Exercise</h2>
-          <button id="exit-exercise-btn" class="text-xs bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
-            Exit
-          </button>
-        </div>
-        
-        <div id="exercise-words" class="mb-2 sm:mb-4 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded">
-          <div id="word-list" class="flex flex-wrap gap-1 sm:gap-2">
-            <!-- Other word items will be added here dynamically -->
-          </div>
-        </div>
-        
-        <div id="exercise-text" class="mb-2 sm:mb-4 p-2 sm:p-3"></div>
-        
-        <!-- Update the exercise control buttons to add a help button -->
-        <div class="flex justify-between items-center gap-1 sm:gap-0">
-          <button id="check-answers-btn" class="bg-green-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-green-600">
-            Check Answers
-          </button>
-          <button id="help-btn" class="bg-yellow-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-yellow-600">
-            Help
-          </button>
-          <button id="reset-exercise-btn" class="bg-gray-300 text-gray-800 py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-gray-400">
-            Reset
-          </button>
-          <button id="show-answers-btn" class="bg-blue-500 text-white py-1 sm:py-2 px-2 sm:px-4 text-sm sm:text-base rounded hover:bg-blue-600">
-            Show Answers
-          </button>
-        </div>
       </section>
 
       <!-- Add a new section for browsing cards between "review-section" and "progress-container" -->
@@ -445,6 +274,23 @@
           </div>
         </div>
       </section>
+
+      <!-- Add this section somewhere appropriate in the body of the document, likely near other exercise options -->
+      <div class="mb-4">
+        <a href="flashcards/fill-in-the-blank.html" class="block p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all">
+          <div class="flex items-center">
+            <div class="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Fill-in-the-Blank Exercise</h3>
+              <p class="text-sm text-gray-600 dark:text-gray-300">Practice with fill-in-the-blank sentences to test your vocabulary</p>
+            </div>
+          </div>
+        </a>
+      </div>
     </div>
 
     <!-- Edit Card Modal -->
@@ -491,57 +337,6 @@
           </button>
           <button id="confirm-delete-btn" class="bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">
             Delete
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add the Exercise Configuration Modal -->
-    <div id="exercise-config-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 modal">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full max-w-md">
-        <h3 class="text-xl font-bold mb-4">Configure Exercise</h3>
-        <div class="mb-4">
-          <label for="modal-exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
-          <select id="modal-exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
-            <option value="gemini-2.0-flash">Gemini Flash</option>
-            <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
-            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
-          </select>
-        </div>
-        <div class="mb-4">
-          <label for="modal-exercise-cards-count" class="block text-sm font-medium mb-1">Number of Cards</label>
-          <input type="number" id="modal-exercise-cards-count" min="5" max="15" value="5" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-        </div>
-        <!-- Add the new section for content style tags -->
-        <div class="mb-6">
-          <label class="block text-sm font-medium mb-2">Content Style</label>
-          <div id="exercise-tags-container" class="flex flex-wrap gap-2">
-            <button class="tag-button px-2 py-1 text-xs rounded border active" data-tag="easy-to-read">easy-to-read</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="extremely-short">extremely-short</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="advanced">advanced</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="knowledge">knowledge</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fact">fact</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="story">story</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="humor">humor</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="love-advice">love-advice</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="life">life</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="inspirational">inspirational</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="business">business</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="travel">travel</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="food">food</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="technology">technology</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="fantasy">fantasy</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="cultural">cultural</button>
-            <button class="tag-button px-2 py-1 text-xs rounded border" data-tag="slang">slang</button>
-          </div>
-        </div>
-        <div class="flex justify-end gap-2">
-          <button id="cancel-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
-            Cancel
-          </button>
-          <button id="confirm-exercise-btn" class="bg-purple-500 text-white py-2 px-4 rounded hover:bg-purple-600">
-            Start Exercise
           </button>
         </div>
       </div>
@@ -771,9 +566,6 @@
           lapses: card.lapses || 0,
         }));
         updateStats();
-        
-        // Update the exercise card count based on available due cards
-        updateExerciseCardCount();
       }
 
       // Update the statistics display based on flashcards loaded
@@ -1598,412 +1390,70 @@
         document.getElementById('progress-bar').style.width = `${progressPercentage}%`;
       }
 
-      // Add these variables to your global variables section
-      let selectedWords = [];
-      let exerciseData = null;
-      let selectedTags = ['easy-to-read']; // Default to easy-to-read
-
-      // Add this event listener after the DOM content loaded event
-      document.addEventListener('DOMContentLoaded', function() {
-        // Add tag button event listeners
-        document.querySelectorAll('.tag-button').forEach(button => {
-          button.addEventListener('click', function() {
-            const tag = this.getAttribute('data-tag');
-            if (this.classList.contains('active')) {
-              // Don't allow deselecting if it's the only active tag
-              const activeTags = document.querySelectorAll('.tag-button.active').length;
-              if (activeTags > 1) {
-                this.classList.remove('active');
-                selectedTags = selectedTags.filter(t => t !== tag);
-              }
-            } else {
-              this.classList.add('active');
-              selectedTags.push(tag);
-            }
-          });
-        });
-      });
-
-      // Updated event listener for the start exercise button
-      document.getElementById('start-exercise-btn').addEventListener('click', () => {
-        // Get the current values from the model selection and card count
-        const exerciseModelSelect = document.getElementById('modal-exercise-model-select');
-        const exerciseCardsCount = document.getElementById('modal-exercise-cards-count');
+      document.addEventListener('DOMContentLoaded', async function() {
+        // Check if there are any learned words from fill-in-the-blank exercise
+        checkAndSyncLearnedWords();
         
-        // Update the modal with due card count information
-        updateExerciseCardCount();
+        // Existing initialization code continues...
+      });
+
+      // Function to check for learned words in localStorage and sync with Supabase
+      async function checkAndSyncLearnedWords() {
+        // Get learned words from localStorage
+        const learnedWords = JSON.parse(localStorage.getItem('learnedWords') || '[]');
+        const lastPractice = localStorage.getItem('lastPractice');
         
-        // Show the modal
-        document.getElementById('exercise-config-modal').classList.remove('hidden');
-      });
-
-      // Event listener for cancel button
-      document.getElementById('cancel-exercise-btn').addEventListener('click', () => {
-        document.getElementById('exercise-config-modal').classList.add('hidden');
-      });
-
-      // Event listener for confirm/start exercise button
-      document.getElementById('confirm-exercise-btn').addEventListener('click', async () => {
-        try {
-          const exerciseBtn = document.getElementById('confirm-exercise-btn');
-          const originalText = exerciseBtn.textContent;
-          exerciseBtn.textContent = "Preparing...";
-          exerciseBtn.disabled = true;
-          
-          // Load flashcards to filter for due ones
-          await loadFlashcards();
-          const now = new Date();
-          const dueCards = flashcards.filter(card => new Date(card.due) <= now);
-          const requestedCardCount = parseInt(document.getElementById('modal-exercise-cards-count').value) || 10;
-          
-          if (dueCards.length < 1) {
-            alert(`You need at least 1 card due for review to create an exercise. You currently have ${dueCards.length} cards due.`);
-            exerciseBtn.textContent = originalText;
-            exerciseBtn.disabled = false;
-            return;
-          }
-          
-          // Hide the modal
-          document.getElementById('exercise-config-modal').classList.add('hidden');
-          
-          // Shuffle cards and select the requested number
-          const shuffledDueCards = [...dueCards];
-          for (let i = shuffledDueCards.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledDueCards[i], shuffledDueCards[j]] = [shuffledDueCards[j], shuffledDueCards[i]];
-          }
-          // Removed use of Math.min(...); now simply use the number provided by the user.
-          const selectedCards = shuffledDueCards.slice(0, requestedCardCount);
-          const wordList = selectedCards.map(card => card.word);
-          
-          // Create the LLM prompt
-          const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordList.join(', ')}. 
-          Write an interesting short paragraph.
-          
-          IMPORTANT INSTRUCTIONS:
-          1. Use each word EXACTLY as provided - do not change the form, tense, plurality, etc.
-          2. Mark EACH blank space as "[BLANK]" (not with brackets around the word or any other format)
-          3. Make sure the number of [BLANK] tokens matches exactly the number of words provided
-          4. Do not number the blanks - use the exact same token "[BLANK]" for each one
-          
-          Style: ${selectedTags.join(', ')}
-          
-          Format your response as a JSON object with these fields:
-          1. "text": The complete text with blanks marked as "[BLANK]" (not with different formatting)
-          2. "answers": An array containing each missing word in the EXACT order they appear in the text
-          
-          For example:
-          {
-            "text": "Yesterday, I [BLANK] to the store to [BLANK] some groceries. I was [BLANK] by how crowded it was.",
-            "answers": ["went", "buy", "surprised"]
-          }
-          
-          DO NOT use formats like "[WORD]" or "[OTHER_FORMAT]" - only use "[BLANK]".`;
-          
-          // Get Gemini API credentials from user settings
+        // If there are learned words, we need to update Supabase
+        if (learnedWords.length > 0 && lastPractice) {
+          // Make sure user is authenticated
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) {
-            alert("Your session has expired. Please sign in again.");
-            window.location.href = "index.html";
-            return;
-          }
-          const { data: userSettings, error: settingsError } = await supabase
-            .from('user_settings')
-            .select('api_key, model')
-            .eq('user_id', session.user.id)
-            .single();
-          
-          if (settingsError || !userSettings) {
-            alert("Please configure your Gemini API key in Settings first.");
+            console.log("User not authenticated, can't sync learned words");
             return;
           }
           
-          const apiKey = userSettings.api_key;
-          const selectedModel = document.getElementById('modal-exercise-model-select').value || userSettings.model;
-          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
+          const userId = session.user.id;
           
-          // Update UI to show generating message on main button
-          document.getElementById('start-exercise-btn').textContent = "Generating exercise...";
-          document.getElementById('start-exercise-btn').disabled = true;
-          
-          // Call the Gemini API and wait for the response
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{
-                parts: [{ text: prompt }]
-              }]
-            })
-          });
-          
-          const responseData = await response.json();
-          const llmResponse = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-          console.log(llmResponse);
-          
-          if (!llmResponse) {
-            throw new Error("Invalid response from LLM API");
-          }
-          
-          // Extract the JSON portion from the response
-          let jsonMatch = llmResponse.match(/```json\n([\s\S]*?)\n```/) ||
-                          llmResponse.match(/```\n([\s\S]*?)\n```/) ||
-                          llmResponse.match(/{[\s\S]*?}/);
-          let jsonStr;
-          if (jsonMatch) {
-            jsonStr = jsonMatch[0].replace(/```json\n|```\n|```/g, '');
-          } else {
-            jsonStr = llmResponse;
-          }
-          exerciseData = JSON.parse(jsonStr);
-          
-          // Hide main sections after receiving the model response
-          document.getElementById('app-title').classList.add('hidden');
-          document.getElementById('upload-section').classList.add('hidden');
-          document.getElementById('stats-section').classList.add('hidden');
-          document.getElementById('review-section').classList.add('hidden');
-          document.getElementById('exercise-section').classList.add('hidden');
-          
-          // Display the fill-in-the-blank exercise
-          displayExercise(exerciseData);
-          document.getElementById('exercise-container').classList.remove('hidden');
-          
-          // Reset the start exercise button state
-          document.getElementById('start-exercise-btn').textContent = "Fill-in-the-Blank with these words";
-          document.getElementById('start-exercise-btn').disabled = false;
-          
-        } catch (err) {
-          console.error("Error generating exercise:", err);
-          alert("Error generating exercise. Please try again after a minute or Reload the page and change model to Gemini Flash.");
-          
-          // Hide the modal if still open
-          document.getElementById('exercise-config-modal').classList.add('hidden');
-          
-          // Reset button state
-          document.getElementById('start-exercise-btn').textContent = "Fill-in-the-Blank Exercise";
-          document.getElementById('start-exercise-btn').disabled = false;
-        }
-      });
-
-      // Function to update the cards count input based on available due cards
-      // Logic removed – the default value set in the HTML (value="5") is now used.
-      function updateExerciseCardCount() {
-        // Removed dynamic default value logic.
-      }
-
-      // Display the exercise (updated to use answers array instead of words field)
-      function displayExercise(data) {
-        // Display the shuffled words
-        const wordListContainer = document.getElementById('word-list');
-        wordListContainer.innerHTML = '';
-        
-        // Make a copy and shuffle the answers array for display
-        const shuffledWords = [...data.answers];
-        for (let i = shuffledWords.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffledWords[i], shuffledWords[j]] = [shuffledWords[j], shuffledWords[i]];
-        }
-        
-        // Display the shuffled words - updated to make words draggable
-        shuffledWords.forEach(word => {
-          const wordSpan = document.createElement('span');
-          wordSpan.className = 'px-2 py-1 bg-blue-100 dark:bg-blue-900 rounded cursor-pointer select-none word-item';
-          wordSpan.textContent = word;
-          wordSpan.draggable = true; // Make the word draggable
-          
-          // Update: Removed text-to-speech from the dragstart event
-          wordSpan.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', word);
-            wordSpan.classList.add('opacity-50');
-            // Speak the word when it's dragged
-            const utterance = new SpeechSynthesisUtterance(word);
-            window.speechSynthesis.speak(utterance);
-          });
-          
-          wordSpan.addEventListener('dragend', () => {
-            wordSpan.classList.remove('opacity-50');
-          });
-          
-          // Modify click-to-fill functionality:
-          // Now clicking on the word both fills the blank and speaks the word out loud.
-          wordSpan.addEventListener('click', () => {
-            // Find the first empty input field
-            const emptyInputs = Array.from(document.querySelectorAll('.blank-input')).filter(input => !input.value.trim());
-    
-            if (emptyInputs.length > 0) {
-              emptyInputs[0].value = word;
-    
-              // Optional: Visually mark the word as used
-              if (!wordSpan.classList.contains('used')) {
-                wordSpan.classList.add('used');
-              }
+          try {
+            // Show a notification that syncing is in progress
+            showNotification("Syncing learned words...", "info");
+            
+            let updatedCardsCount = 0;
+            const now = new Date();
+            
+            // Get all user's flashcards in one go to search through
+            const { data: allCards, error: fetchAllError } = await supabase
+              .from('flashcards')
+              .select('id, word, translation_answer, reps, lapses, stability, difficulty, due, state, last_reviewed, scheduled_days, elapsed_days')
+              .eq('user_id', userId);
+              
+            if (fetchAllError) {
+              console.error("Error fetching cards:", fetchAllError);
+              return;
             }
             
-            // Speak the word when it is clicked (selected)
-            const utterance = new SpeechSynthesisUtterance(word);
-            window.speechSynthesis.speak(utterance);
-          });
-          
-          wordListContainer.appendChild(wordSpan);
-        });
-        
-        // Create the exercise text with input fields
-        const exerciseTextContainer = document.getElementById('exercise-text');
-        
-        // Split by [BLANK] tokens and create input fields between segments
-        const segments = data.text.split('[BLANK]');
-        let htmlText = '';
-        
-        segments.forEach((segment, i) => {
-          htmlText += segment;
-          if (i < segments.length - 1) { // Don't add input after the last segment
-            htmlText += `<input type="text" class="blank-input w-24 px-2 py-1 border rounded mx-1 dark:bg-gray-700" data-index="${i}">`;
-          }
-        });
-        
-        exerciseTextContainer.innerHTML = htmlText;
-        
-        // Add drop events to all input fields
-        document.querySelectorAll('.blank-input').forEach(input => {
-          // Prevent default to allow drop
-          input.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            input.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
-          });
-          
-          input.addEventListener('dragleave', () => {
-            input.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
-          });
-          
-          input.addEventListener('drop', (e) => {
-            e.preventDefault();
-            input.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
-            const word = e.dataTransfer.getData('text/plain');
-            input.value = word;
-          });
-        });
-      }
-      
-      // Check answers (updated with Mark as Learned option)
-      document.getElementById('check-answers-btn').addEventListener('click', () => {
-        if (!exerciseData) return;
-        
-        const inputs = document.querySelectorAll('.blank-input');
-        let allCorrect = true;
-        
-        inputs.forEach((input, index) => {
-          const userAnswer = input.value.trim();
-          const correctAnswer = exerciseData.answers[index];
-          
-          // First, remove all state classes to start fresh
-          input.classList.remove(
-            'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
-            'dark:bg-green-900', 'dark:bg-red-900', 'border-gray-300'
-          );
-          
-          // Check if the answer is empty or incorrect
-          if (userAnswer === '') {
-            // Empty answer - mark as red with stronger styling
-            input.classList.add('border-2', 'border-red-500');
-            input.style.backgroundColor = 'rgba(254, 202, 202, 0.3)'; // Light red bg
-            input.placeholder = "Empty";
-            allCorrect = false;
-          } else if (userAnswer === correctAnswer) {
-            // Correct answer - mark as green with stronger styling
-            input.classList.add('border-2', 'border-green-500');
-            input.style.backgroundColor = 'rgba(187, 247, 208, 0.3)'; // Light green bg
-            input.placeholder = "";
-          } else {
-            // Wrong answer - mark as red with stronger styling
-            input.classList.add('border-2', 'border-red-500');
-            input.style.backgroundColor = 'rgba(254, 202, 202, 0.3)'; // Light red bg
-            input.placeholder = "";
-            allCorrect = false;
-          }
-        });
-        
-        // Only show feedback if all answers are correct
-        let feedbackEl = document.getElementById('exercise-feedback');
-        
-        if (allCorrect) {
-          // Create the feedback element if it doesn't exist
-          if (!feedbackEl) {
-            feedbackEl = document.createElement('div');
-            feedbackEl.id = 'exercise-feedback';
-            document.getElementById('exercise-text').after(feedbackEl);
-          }
-          
-          // Find the word meanings from flashcards array
-          const wordMeanings = exerciseData.answers.map(word => {
-            const card = flashcards.find(c => c.word.toLowerCase() === word.toLowerCase());
-            if (card) {
-              // Extract the first line of translation_answer as the meaning
-              const meaning = card.translation_answer.split('\n')[0];
-              return { word: word, meaning: meaning, ipa: card.ipa };
-            }
-            return { word: word, meaning: "No definition available", ipa: null };
-          });
-          
-          // Create the word meanings HTML
-          let wordMeaningsHTML = '<div class="mt-4 p-3 border rounded bg-blue-50 dark:bg-blue-900 dark:border-blue-800">';
-          wordMeaningsHTML += '<h3 class="font-semibold mb-2">Word Meanings:</h3>';
-          wordMeaningsHTML += '<ul class="space-y-2">';
-          
-          wordMeanings.forEach(item => {
-            // Format each word with its meaning
-            wordMeaningsHTML += `
-              <li class="pb-2 border-b border-blue-200 dark:border-blue-800 last:border-0">
-                <div class="font-medium">${item.word} ${item.ipa ? `<span class="text-sm text-gray-500">[${item.ipa}]</span>` : ''}</div>
-                <div class="text-sm text-gray-700 dark:text-gray-300">${item.meaning}</div>
-              </li>
-            `;
-          });
-          
-          wordMeaningsHTML += '</ul></div>';
-          
-          // Add success message with Mark as Learned button and word meanings
-          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
-          feedbackEl.innerHTML = `
-            <p class="mb-3">Great job! All answers are correct!</p>
-            <button id="mark-learned-btn" class="bg-purple-500 text-white py-1 px-3 rounded hover:bg-purple-600 transition-all mb-4">
-              Mark as Learned
-            </button>
-            ${wordMeaningsHTML}
-          `;
-          
-          // Make the feedback message visible with a subtle animation
-          feedbackEl.style.opacity = '0';
-          setTimeout(() => {
-            feedbackEl.style.opacity = '1';
-          }, 10);
-          
-          // Add event listener to the Mark as Learned button
-          document.getElementById('mark-learned-btn').addEventListener('click', async () => {
-            try {
-              // Get all words used in the exercise
-              const exerciseWords = exerciseData.answers;
+            console.log(`Found ${allCards.length} total cards to search through`);
+            
+            // For each learned word, find and update the matching cards
+            for (const word of learnedWords) {
+              console.log(`Looking for cards with word: ${word}`);
               
-              // Find the card objects for each word and prepare updates
-              const cardsToUpdate = [];
-              for (const word of exerciseWords) {
-                const card = flashcards.find(c => c.word.toLowerCase() === word.toLowerCase());
-                if (card) {
-                  cardsToUpdate.push(card);
-                }
-              }
+              // Find cards that contain this word (exact match or within translation)
+              const matchingCards = allCards.filter(card => 
+                card.word.toLowerCase() === word.toLowerCase() || 
+                card.translation_answer.toLowerCase().includes(word.toLowerCase())
+              );
               
-              if (cardsToUpdate.length === 0) {
-                alert("No matching flashcards found to update.");
-                return;
-              }
+              console.log(`Found ${matchingCards.length} matching cards for word "${word}"`);
               
-              // Update each card with FSRS
-              const now = new Date();
-              const updates = [];
-              for (const card of cardsToUpdate) {
-                const fsrsCard = {
+              // Update each matching card
+              for (const card of matchingCards) {
+                console.log(`Updating card: ${card.id} (${card.word})`);
+                
+                // Prepare the card data for FSRS update
+                const cardData = {
                   state: card.state || "new",
-                  due: card.due,
+                  due: card.due || now.toISOString(),
                   stability: card.stability || s0(Grade.Good),
                   difficulty: card.difficulty || d0(Grade.Good),
                   elapsed_days: card.elapsed_days || 0,
@@ -2012,258 +1462,99 @@
                   lapses: card.lapses || 0,
                 };
                 
-                // Update the card using FSRS with Grade.Good
-                const result = fsrs.repeat(fsrsCard, Grade.Good, now);
+                // Calculate new card state using the FSRS algorithm with "Good" grade
+                const updatedCard = fsrs.repeat(cardData, Grade.Good, now);
                 
-                // Update local copy
-                Object.assign(card, result);
-                card.last_reviewed = now.toISOString();
-                
-                updates.push({
-                  id: card.id,
-                  state: result.state,
-                  due: result.due,
-                  stability: result.stability,
-                  difficulty: result.difficulty,
-                  elapsed_days: result.elapsed_days,
-                  scheduled_days: result.scheduled_days,
-                  reps: result.reps,
-                  lapses: result.lapses,
-                  last_reviewed: now.toISOString()
-                });
-              }
-              
-              // Update the button to show progress
-              const markLearnedBtn = document.getElementById('mark-learned-btn');
-              markLearnedBtn.textContent = "Updating...";
-              markLearnedBtn.disabled = true;
-              
-              // Update database records (one by one to avoid batch limitations)
-              for (const update of updates) {
-                const { error } = await supabase
+                // Increment practice count and set last practiced time
+                const { error: updateError } = await supabase
                   .from('flashcards')
-                  .update({
-                    state: update.state,
-                    due: update.due,
-                    stability: update.stability,
-                    difficulty: update.difficulty,
-                    elapsed_days: update.elapsed_days,
-                    scheduled_days: update.scheduled_days,
-                    reps: update.reps,
-                    lapses: update.lapses,
-                    last_reviewed: update.last_reviewed
+                  .update({ 
+                    state: updatedCard.state,
+                    due: updatedCard.due,
+                    stability: updatedCard.stability,
+                    difficulty: updatedCard.difficulty,
+                    elapsed_days: updatedCard.elapsed_days,
+                    scheduled_days: updatedCard.scheduled_days,
+                    reps: updatedCard.reps,
+                    lapses: updatedCard.lapses,
+                    last_reviewed: now.toISOString()
                   })
-                  .eq('id', update.id);
+                  .eq('id', card.id)
+                  .eq('user_id', userId);
                   
-                if (error) {
-                  console.error("Error updating flashcard:", error);
+                if (updateError) {
+                  console.error("Error updating card:", updateError);
+                } else {
+                  updatedCardsCount++;
+                  console.log(`Successfully updated card ${card.id} - New due date: ${updatedCard.due}`);
                 }
               }
-              
-              // Update the UI
-              markLearnedBtn.textContent = "✓ Marked as Learned";
-              markLearnedBtn.className = "bg-green-600 text-white py-1 px-3 rounded cursor-default";
-              
-              // Update stats
-              updateStats();
-              
-              // Automatically reload after a short delay (1.5 seconds)
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
-              
-            } catch (err) {
-              console.error("Error marking cards as learned:", err);
-              alert("An error occurred while updating cards. Please try again.");
             }
-          });
-        } else {
-          // Remove the feedback element if it exists
-          if (feedbackEl) {
-            feedbackEl.remove();
+            
+            // Show success notification with actual updated count
+            showNotification(`${updatedCardsCount} cards reviewed and rescheduled!`, "success");
+            
+            // Clear the localStorage data after successful sync
+            localStorage.removeItem('learnedWords');
+            localStorage.removeItem('lastPractice');
+            localStorage.removeItem('practiceHistory');
+            
+            // Reload flashcards to reflect changes
+            await loadFlashcards();
+            
+          } catch (error) {
+            console.error("Error syncing learned words:", error);
+            showNotification("Error syncing learned words. Please try again.", "error");
           }
         }
-      });
-      
-      // Show answers (updated for the new format)
-      document.getElementById('show-answers-btn').addEventListener('click', () => {
-        if (!exerciseData) return;
-        
-        const inputs = document.querySelectorAll('.blank-input');
-        
-        inputs.forEach((input, index) => {
-          const correctAnswer = exerciseData.answers[index];
-          input.value = correctAnswer;
-          
-          // Apply the same styling as in the check answers function
-          input.classList.remove(
-            'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
-            'dark:bg-green-900', 'dark:bg-red-900', 'border-gray-300'
-          );
-          input.classList.add('border-2', 'border-green-500');
-          input.style.backgroundColor = 'rgba(187, 247, 208, 0.3)';
-        });
-        
-        // Show a feedback message that answers are revealed
-        let feedbackEl = document.getElementById('exercise-feedback');
-        if (!feedbackEl) {
-          feedbackEl = document.createElement('div');
-          feedbackEl.id = 'exercise-feedback';
-          document.getElementById('exercise-text').after(feedbackEl);
+      }
+
+      // Helper function to show notifications
+      function showNotification(message, type = "info") {
+        // Check if notification container exists, if not create it
+        let notificationContainer = document.getElementById('notification-container');
+        if (!notificationContainer) {
+          notificationContainer = document.createElement('div');
+          notificationContainer.id = 'notification-container';
+          notificationContainer.className = 'fixed top-4 right-4 z-50 flex flex-col items-end gap-2';
+          document.body.appendChild(notificationContainer);
         }
         
-        feedbackEl.className = 'mt-4 p-3 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 transition-all duration-300';
-        feedbackEl.textContent = "Here are the correct answers.";
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `px-4 py-2 rounded shadow-lg text-white transform transition-all duration-300 opacity-0 translate-x-4 max-w-sm`;
         
-        // Make the feedback message visible with a subtle animation
-        feedbackEl.style.opacity = '0';
+        // Set color based on type
+        switch (type) {
+          case "success":
+            notification.classList.add('bg-green-500');
+            break;
+          case "error":
+            notification.classList.add('bg-red-500');
+            break;
+          case "warning":
+            notification.classList.add('bg-yellow-500');
+            break;
+          default:
+            notification.classList.add('bg-blue-500');
+        }
+        
+        notification.textContent = message;
+        notificationContainer.appendChild(notification);
+        
+        // Animate in
         setTimeout(() => {
-          feedbackEl.style.opacity = '1';
+          notification.classList.remove('opacity-0', 'translate-x-4');
         }, 10);
-      });
-      
-      // Add event listener for exiting exercise
-      document.getElementById('exit-exercise-btn').addEventListener('click', () => {
-        // Hide the exercise container.
-        document.getElementById('exercise-container').classList.add('hidden');
         
-        // Show the main sections again.
-        document.getElementById('app-title').classList.remove('hidden');
-        document.getElementById('upload-section').classList.remove('hidden');
-        document.getElementById('stats-section').classList.remove('hidden');
-        document.getElementById('review-section').classList.remove('hidden');
-        document.getElementById('exercise-section').classList.remove('hidden');
-        
-        // Reset the exercise data.
-        exerciseData = null;
-        
-        // --- New: Reset the start exercise button state ---
-        const exerciseBtn = document.getElementById('start-exercise-btn');
-        exerciseBtn.textContent = "Fill-in-the-Blank Exercise";
-        exerciseBtn.disabled = false;
-      });
-
-      // Add Reset button to exercise UI
-      document.querySelector('.flex.justify-between.items-center').innerHTML += `
-        <button id="reset-exercise-btn" class="bg-gray-300 text-gray-800 py-2 px-4 rounded hover:bg-gray-400">
-          Reset
-        </button>
-      `;
-      
-      // Add event listener for reset button
-      document.getElementById('reset-exercise-btn').addEventListener('click', () => {
-        // Clear all input fields
-        document.querySelectorAll('.blank-input').forEach(input => {
-          input.value = '';
-          input.classList.remove(
-            'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
-            'dark:bg-green-900', 'dark:bg-red-900', 'border-2'
-          );
-          input.style.backgroundColor = '';
-        });
-        
-        // Reset all word items (remove 'used' class)
-        document.querySelectorAll('.word-item').forEach(word => {
-          word.classList.remove('used');
-        });
-        
-        // Remove any feedback message
-        const feedbackEl = document.getElementById('exercise-feedback');
-        if (feedbackEl) {
-          feedbackEl.remove();
-        }
-      });
-
-      // DOM Elements
-      const countInput = document.getElementById('modal-exercise-cards-count');
-      // Mark the exercise count input as user-modified once changed
-      countInput.addEventListener('input', function () {
-        this.setAttribute('data-user-changed', 'true');
-      });
-
-      // Add event listener for the help button
-      document.getElementById('help-btn').addEventListener('click', () => {
-        if (!exerciseData) return;
-        
-        // Find the word meanings from flashcards array
-        const wordMeanings = exerciseData.answers.map(word => {
-          const card = flashcards.find(c => c.word.toLowerCase() === word.toLowerCase());
-          if (card) {
-            // Extract the first line of translation_answer as the meaning
-            const meaning = card.translation_answer.split('\n')[0];
-            return { word: word, meaning: meaning, ipa: card.ipa };
-          }
-          return { word: word, meaning: "No definition available", ipa: null };
-        });
-        
-        // Create a more compact word meanings HTML
-        let wordMeaningsHTML = '<div class="mt-4 p-3 border rounded bg-blue-50 dark:bg-blue-900 dark:border-blue-800">';
-        wordMeaningsHTML += '<h3 class="font-semibold mb-2">Word Meanings:</h3>';
-        wordMeaningsHTML += '<ul class="space-y-1">';
-        
-        wordMeanings.forEach(item => {
-          // Format each word with its meaning on a single line
-          wordMeaningsHTML += `
-            <li class="py-1 border-b border-blue-200 dark:border-blue-800 last:border-0">
-              <span class="font-medium">${item.word}</span>
-              ${item.ipa ? `<span class="text-xs text-gray-500 ml-1">[${item.ipa}]</span>` : ''}
-              <span class="mx-1">:</span>
-              <span class="text-gray-700 dark:text-gray-300">${item.meaning}</span>
-            </li>
-          `;
-        });
-        
-        wordMeaningsHTML += '</ul></div>';
-        
-        // Get or create the help panel element
-        let helpPanelEl = document.getElementById('exercise-help');
-        if (!helpPanelEl) {
-          helpPanelEl = document.createElement('div');
-          helpPanelEl.id = 'exercise-help';
-          document.getElementById('exercise-text').after(helpPanelEl);
-        }
-        
-        // Toggle visibility of help panel
-        if (helpPanelEl.innerHTML === '') {
-          // Show the help panel
-          helpPanelEl.className = 'mt-4 p-3 rounded bg-yellow-50 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
-          helpPanelEl.innerHTML = wordMeaningsHTML;
-          // Make the help panel visible with a subtle animation
-          helpPanelEl.style.opacity = '0';
+        // Remove after 3 seconds
+        setTimeout(() => {
+          notification.classList.add('opacity-0', 'translate-x-4');
           setTimeout(() => {
-            helpPanelEl.style.opacity = '1';
-          }, 10);
-        } else {
-          // Hide the help panel
-          helpPanelEl.innerHTML = '';
-          helpPanelEl.className = '';
-        }
-      });
-
-      // Update reset button handler to also clear the help panel
-      document.getElementById('reset-exercise-btn').addEventListener('click', () => {
-        // ... existing reset code ...
-        
-        // Also clear any help panel
-        const helpPanelEl = document.getElementById('exercise-help');
-        if (helpPanelEl) {
-          helpPanelEl.innerHTML = '';
-          helpPanelEl.className = '';
-        }
-      });
-
-      // Update exit exercise handler to also clear the help panel
-      document.getElementById('exit-exercise-btn').addEventListener('click', () => {
-        // ... existing exit code ...
-        
-        // Also clear any help panel
-        const helpPanelEl = document.getElementById('exercise-help');
-        if (helpPanelEl) {
-          helpPanelEl.innerHTML = '';
-          helpPanelEl.className = '';
-        }
-      });
+            notification.remove();
+          }, 300);
+        }, 3000);
+      }
     </script>
   </body>
-</html> 
-</rewritten_file>
+</html>
