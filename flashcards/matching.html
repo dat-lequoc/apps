@@ -151,16 +151,18 @@
 
       /* Updated match indicator styles */
       .match-indicator {
-        display: inline-block;
-        width: 24px;
+        display: inline-flex;
+        align-items: center;
+        min-width: 24px;
         height: 24px;
-        border-radius: 50%;
+        border-radius: 12px;
         background-color: #3b82f6;
         color: white;
         text-align: center;
-        line-height: 24px;
+        padding: 0 8px;
         margin-right: 8px;
         font-weight: bold;
+        white-space: nowrap;
       }
       
       .match-indicator.correct {
@@ -368,15 +370,6 @@
 
       <!-- Exercise Container -->
       <section id="exercise-container" class="hidden mb-6 sm:border sm:p-4 p-1 sm:rounded sm:shadow bg-white">
-        <div class="flex justify-between items-center mb-2 sm:mb-4">
-          <h2 class="text-lg sm:text-xl font-semibold">Matching Exercise</h2>
-          <button id="exit-exercise-btn" class="text-xs bg-gray-200 text-black py-1 px-2 rounded hover:bg-gray-300">
-            Exit
-          </button>
-        </div>
-        
-        <p class="mb-4 text-gray-700 dark:text-gray-300">Match each word with its correct meaning. Click a word, then click its meaning, or drag words to their meanings.</p>
-        
         <!-- New matched items section -->
         <div id="matched-items-section" class="mb-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
           <h3 class="text-lg font-semibold mb-2">Matched Pairs</h3>
@@ -386,14 +379,14 @@
           </div>
         </div>
         
-        <div class="matching-columns flex flex-col md:flex-row mb-4">
-          <div class="matching-column w-full md:w-1/2 p-2">
+        <div class="matching-columns flex flex-row mb-4">
+          <div class="matching-column w-[30%] p-2">
             <h3 class="text-lg font-semibold mb-2">Words</h3>
             <div id="words-container" class="space-y-2">
               <!-- Words will be added here dynamically -->
             </div>
           </div>
-          <div class="matching-column w-full md:w-1/2 p-2">
+          <div class="matching-column w-[70%] p-2">
             <h3 class="text-lg font-semibold mb-2">Meanings</h3>
             <div id="meanings-container" class="space-y-2">
               <!-- Meanings will be added here dynamically -->
@@ -1032,6 +1025,8 @@
             const indicators = pair.pairElement.querySelectorAll('.match-indicator');
             indicators.forEach(indicator => {
               indicator.classList.add('correct');
+              // Add text for accessibility (✓ symbol and "Correct" text)
+              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span>`;
             });
             
           } else {
@@ -1042,7 +1037,18 @@
             const indicators = pair.pairElement.querySelectorAll('.match-indicator');
             indicators.forEach(indicator => {
               indicator.classList.add('incorrect');
+              // Add text for accessibility (✗ symbol and "Incorrect" text)
+              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✗</span> <span class="text-xs">Incorrect</span>`;
             });
+            
+            // Add an unmatch button for incorrect pairs
+            const unmatchBtn = document.createElement('button');
+            unmatchBtn.className = 'unmatch-btn ml-2 bg-red-500 text-white text-xs py-1 px-2 rounded hover:bg-red-600';
+            unmatchBtn.textContent = 'Unmatch';
+            unmatchBtn.addEventListener('click', () => unmatchPair(pair));
+            
+            // Add the button to the first indicator's parent (the word part)
+            indicators[0].parentElement.appendChild(unmatchBtn);
           }
         });
         
@@ -1140,13 +1146,13 @@
           // Create the word part
           const wordPart = document.createElement('div');
           wordPart.className = 'matched-pair-word';
-          wordPart.innerHTML = `<span class="match-indicator correct">${index + 1}</span> ${word}`;
+          wordPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span></span> ${word}`;
           matchedPairElement.appendChild(wordPart);
           
           // Create the meaning part
           const meaningPart = document.createElement('div');
           meaningPart.className = 'matched-pair-meaning';
-          meaningPart.innerHTML = `<span class="match-indicator correct">${index + 1}</span> ${explanation}`;
+          meaningPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span></span> ${explanation}`;
           matchedPairElement.appendChild(meaningPart);
           
           // Add to the matched items container
@@ -1274,6 +1280,53 @@
       });
       
       // No need for window resize handler since we no longer use connection lines
+
+      // Function to unmatch a pair and return items to their original lists
+      function unmatchPair(pair) {
+        // Remove the pair element from the UI
+        pair.pairElement.remove();
+        
+        // Get the original word and meaning elements
+        const wordItem = document.querySelector(`.word-item[data-index="${pair.wordIndex}"]`);
+        const meaningItem = document.querySelector(`.meaning-item[data-index="${pair.meaningIndex}"]`);
+        
+        if (wordItem && meaningItem) {
+          // Unhide the original elements to return them to their lists
+          wordItem.classList.remove('hidden');
+          meaningItem.classList.remove('hidden');
+        }
+        
+        // Remove this pair from the matchedPairs array
+        matchedPairs = matchedPairs.filter(p => p !== pair);
+        
+        // If no matches are left, show the "no matches" message
+        if (matchedPairs.length === 0) {
+          const matchedItemsContainer = document.getElementById('matched-items-container');
+          const noMatchesMessage = document.createElement('p');
+          noMatchesMessage.id = 'no-matches-message';
+          noMatchesMessage.className = 'text-center text-gray-500 p-2';
+          noMatchesMessage.textContent = 'No matches yet. Match words with their meanings to see them here.';
+          matchedItemsContainer.appendChild(noMatchesMessage);
+        }
+        
+        // Update the feedback message if needed
+        updateFeedbackAfterUnmatch();
+      }
+      
+      // Update feedback message after unmatching
+      function updateFeedbackAfterUnmatch() {
+        const feedbackEl = document.getElementById('exercise-feedback');
+        if (!feedbackEl) return;
+        
+        if (matchedPairs.length === 0) {
+          // Remove feedback if no matches left
+          feedbackEl.remove();
+        } else {
+          // Update the feedback message based on the current state
+          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
+          feedbackEl.textContent = `You have matched ${matchedPairs.length} out of ${exerciseData.words.length} items. Continue matching to complete the exercise.`;
+        }
+      }
     </script>
   </body>
 </html>
