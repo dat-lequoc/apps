@@ -590,23 +590,18 @@
         if (!userId) return [];
         
         try {
-          // Get current date
           const now = new Date().toISOString();
-          
-          // Fetch cards that are due or overdue
           const { data, error } = await supabase
             .from('flashcards')
-            .select('id, word')
+            .select('id, word, translation_answer, phrase')
             .eq('user_id', userId)
-            .lt('due', now)  // Cards with due date less than now (overdue)
-            .order('due')    // Order by due date (oldest first)
-            .limit(count);   // Limit to requested count
-            
+            .lt('due', now)
+            .order('due')
+            .limit(count);
           if (error) {
             console.error("Error fetching overdue cards:", error);
             return [];
           }
-          
           console.log("Fetched overdue cards:", data);
           return data;
         } catch (err) {
@@ -638,6 +633,7 @@
           const customWordsText = document.getElementById('custom-words').value.trim();
           let wordList = [];
           let cardIds = [];
+          let translations = [];
           
           if (customWordsText) {
             // Split by commas, trim whitespace, and filter empty entries
@@ -649,9 +645,9 @@
             const overdueCards = await getOverdueCards(10);
             
             if (overdueCards.length > 0) {
-              // Store both words and their IDs
               wordList = overdueCards.map(card => card.word);
               cardIds = overdueCards.map(card => card.id);
+              translations = overdueCards.map(card => card.translation_answer);
             } else {
               // Use default sample words
               wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
@@ -667,7 +663,8 @@
           
           // Store card IDs in the exercise data
           exerciseData = {
-            cardIds: cardIds
+            cardIds: cardIds,
+            translations: translations
           };
           
           // Create the LLM prompt
@@ -731,7 +728,8 @@
           // Merge LLM data with our card IDs
           exerciseData = {
             ...llmData,
-            cardIds: cardIds
+            cardIds: cardIds,
+            translations: translations
           };
           
           // Display the exercise
@@ -1036,10 +1034,33 @@
             const indicators = pair.pairElement.querySelectorAll('.match-indicator');
             indicators.forEach(indicator => {
               indicator.classList.add('correct');
-              // Add text for accessibility (✓ symbol and "Correct" text)
-              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span>`;
+              // Only show the match number and check symbol, no "Correct" text
+              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✓</span>`;
             });
             
+            // Get the word element where we'll display the translation
+            const wordElement = pair.pairElement.querySelector('.matched-pair-word');
+            if (wordElement) {
+              if (exerciseData.translations && exerciseData.translations[pair.wordIndex]) {
+                const translationFull = exerciseData.translations[pair.wordIndex];
+                const parts = translationFull.split('\n');
+                const translation = parts[0]; // Get first part (Vietnamese translation)
+                const translationEl = document.createElement('span');
+                translationEl.className = 'ml-2 text-sm italic text-green-700 dark:text-green-300 font-medium word-translation-info';
+                translationEl.innerHTML = `(${translation})`;
+                wordElement.appendChild(translationEl);
+              } else {
+                // Fallback to using the LLM-generated explanation
+                const word = exerciseData.words[pair.wordIndex];
+                const meaning = exerciseData.explanations[pair.wordIndex];
+                const meaningInfo = document.createElement('span');
+                meaningInfo.className = 'ml-2 text-sm italic text-green-700 dark:text-green-300 word-translation-info';
+                meaningInfo.innerHTML = `(${meaning})`;
+                if (!wordElement.querySelector('.word-translation-info')) {
+                  wordElement.appendChild(meaningInfo);
+                }
+              }
+            }
           } else {
             pair.pairElement.classList.add('incorrect');
             allCorrect = false;
@@ -1048,8 +1069,8 @@
             const indicators = pair.pairElement.querySelectorAll('.match-indicator');
             indicators.forEach(indicator => {
               indicator.classList.add('incorrect');
-              // Add text for accessibility (✗ symbol and "Incorrect" text)
-              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✗</span> <span class="text-xs">Incorrect</span>`;
+              // Only show the match number and X symbol, no "Incorrect" text
+              indicator.innerHTML = `${pair.matchId} <span class="ml-1 font-bold">✗</span>`;
             });
             
             // Add an unmatch button for incorrect pairs
@@ -1166,13 +1187,13 @@
           // Create the word part
           const wordPart = document.createElement('div');
           wordPart.className = 'matched-pair-word';
-          wordPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span></span> ${word}`;
+          wordPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span></span> ${word}`;
           matchedPairElement.appendChild(wordPart);
           
           // Create the meaning part
           const meaningPart = document.createElement('div');
           meaningPart.className = 'matched-pair-meaning';
-          meaningPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span> <span class="text-xs">Correct</span></span> ${explanation}`;
+          meaningPart.innerHTML = `<span class="match-indicator correct">${index + 1} <span class="ml-1 font-bold">✓</span></span> ${explanation}`;
           matchedPairElement.appendChild(meaningPart);
           
           // Add to the matched items container
