@@ -1540,103 +1540,171 @@
         
         // Create notification element
         const notification = document.createElement('div');
-        notification.className = `px-4 py-2 rounded shadow-lg text-white transform transition-all duration-300 opacity-0 translate-x-4 max-w-sm`;
-        
-        // Set color based on type
-        switch (type) {
-          case "success":
-            notification.classList.add('bg-green-500');
-            break;
-          case "error":
-            notification.classList.add('bg-red-500');
-            break;
-          case "warning":
-            notification.classList.add('bg-yellow-500');
-            break;
-          default:
-            notification.classList.add('bg-blue-500');
-        }
-        
+        notification.className = `max-w-xs p-3 rounded shadow-lg transition-all transform translate-x-0 opacity-100 ${
+          type === 'success' ? 'bg-green-500 text-white' : 
+          type === 'error' ? 'bg-red-500 text-white' : 
+          'bg-blue-500 text-white'
+        }`;
         notification.textContent = message;
-        notificationContainer.appendChild(notification);
         
-        // Animate in
-        setTimeout(() => {
-          notification.classList.remove('opacity-0', 'translate-x-4');
-        }, 10);
+        // Add to container
+        notificationContainer.appendChild(notification);
         
         // Remove after 3 seconds
         setTimeout(() => {
-          notification.classList.add('opacity-0', 'translate-x-4');
+          notification.classList.add('opacity-0', 'translate-x-full');
           setTimeout(() => {
             notification.remove();
           }, 300);
         }, 3000);
       }
 
-      // Add this to the section that handles showing/hiding UI elements during practice
-      function updateUIForPracticeMode(isPracticing) {
-        // ... existing code ...
-        
-        // Hide exercise buttons during practice
-        const matchingExerciseButton = document.getElementById('matching-exercise-button');
-        const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
-        
-        if (matchingExerciseButton) {
-          matchingExerciseButton.style.display = isPracticing ? 'none' : 'block';
+      // Main function to handle completed cards from exercises
+      function handleCompletedCards(cardIds) {
+        if (!cardIds || !Array.isArray(cardIds) || cardIds.length === 0) {
+          console.log("No valid card IDs received from exercise");
+          return;
         }
         
-        if (fillInBlankExerciseButton) {
-          fillInBlankExerciseButton.style.display = isPracticing ? 'none' : 'block';
-        }
+        console.log("Received completed card IDs from exercise:", cardIds);
         
-        // ... existing code ...
+        // Update each card in the database (mark as reviewed)
+        updateCardsAfterReview(cardIds);
+        
+        // Show a success notification
+        showNotification("Exercise completed! Cards have been updated.", "success");
       }
-
-      // Find where the Start Review button is initialized
+      
+      // Function to update cards after successful review in an exercise
+      async function updateCardsAfterReview(cardIds) {
+        if (!userId || !cardIds || cardIds.length === 0) return;
+        
+        try {
+          // Calculate new due date (using the same algorithm as with regular reviews)
+          const now = new Date();
+          
+          // Update each card with a new due date
+          for (const cardId of cardIds) {
+            // Get the current card to check its interval
+            const { data: cardData, error: cardError } = await supabase
+              .from('flashcards')
+              .select('*')
+              .eq('id', cardId)
+              .single();
+              
+            if (cardError) {
+              console.error("Error fetching card:", cardError);
+              continue;
+            }
+            
+            // Calculate new interval (similar to "Good" response in standard review)
+            let newInterval = cardData.interval || 1;
+            newInterval = Math.round(newInterval * 2.5); // Similar to "Good" response
+            
+            // Calculate new due date
+            const dueDate = new Date(now);
+            dueDate.setDate(dueDate.getDate() + newInterval);
+            
+            // Update the card
+            const { error: updateError } = await supabase
+              .from('flashcards')
+              .update({
+                last_reviewed: now.toISOString(),
+                due: dueDate.toISOString(),
+                interval: newInterval,
+                review_count: (cardData.review_count || 0) + 1
+              })
+              .eq('id', cardId);
+              
+            if (updateError) {
+              console.error("Error updating card after exercise:", updateError);
+            }
+          }
+          
+          // Refresh the cards list if we're on the main page
+          if (typeof loadFlashcards === 'function') {
+            await loadFlashcards();
+          }
+          
+        } catch (err) {
+          console.error("Error updating cards after exercise:", err);
+        }
+      }
+      
+      // Check for completed cards from exercises when the page loads
       document.addEventListener('DOMContentLoaded', function() {
         // ... existing code ...
         
-        // Find the start review button and add event listener
-        const startReviewBtn = document.getElementById('start-review-btn');
-        if (startReviewBtn) {
-          const originalClickHandler = startReviewBtn.onclick;
-          startReviewBtn.onclick = function(e) {
-            // Hide exercise buttons immediately
-            const matchingExerciseButton = document.getElementById('matching-exercise-button');
-            const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
-            
-            if (matchingExerciseButton) matchingExerciseButton.style.display = 'none';
-            if (fillInBlankExerciseButton) fillInBlankExerciseButton.style.display = 'none';
-            
-            // Call the original handler if it exists
-            if (typeof originalClickHandler === 'function') {
-              originalClickHandler.call(this, e);
-            }
-          };
+        // Check for completed card IDs in sessionStorage
+        const completedCardIds = sessionStorage.getItem('completedCardIds');
+        if (completedCardIds) {
+          try {
+            const cardIds = JSON.parse(completedCardIds);
+            // Process the completed cards
+            handleCompletedCards(cardIds);
+            // Clear from session storage to prevent double-processing
+            sessionStorage.removeItem('completedCardIds');
+          } catch (e) {
+            console.error("Error parsing completed card IDs:", e);
+          }
         }
-        
-        // Also handle the Exit Review button to show the exercise buttons again
-        const exitReviewBtn = document.getElementById('exit-review-btn');
-        if (exitReviewBtn) {
-          const originalExitHandler = exitReviewBtn.onclick;
-          exitReviewBtn.onclick = function(e) {
-            // Show exercise buttons again
-            const matchingExerciseButton = document.getElementById('matching-exercise-button');
-            const fillInBlankExerciseButton = document.getElementById('fill-in-blank-exercise-button');
-            
-            if (matchingExerciseButton) matchingExerciseButton.style.display = 'block';
-            if (fillInBlankExerciseButton) fillInBlankExerciseButton.style.display = 'block';
-            
-            // Call the original handler if it exists
-            if (typeof originalExitHandler === 'function') {
-              originalExitHandler.call(this, e);
-            }
-          };
-        }
-        
-        // ... existing code ...
       });
+      
+      // Function to open matching exercise with selected cards
+      function openMatchingExercise(cardIds) {
+        if (!cardIds || cardIds.length === 0) {
+          // If no cards specified, open the general matching exercise
+          window.open('flashcards/matching.html', '_blank');
+          return;
+        }
+        
+        // Open the matching exercise with specific card IDs
+        const encodedCardIds = encodeURIComponent(JSON.stringify(cardIds));
+        window.open(`flashcards/matching.html?cardIds=${encodedCardIds}`, '_blank');
+      }
+      
+      // Add event listener for matching exercise button
+      document.addEventListener('DOMContentLoaded', function() {
+        const matchingExerciseButton = document.getElementById('matching-exercise-button');
+        if (matchingExerciseButton) {
+          matchingExerciseButton.addEventListener('click', function() {
+            // Get overdue cards for exercise
+            getOverdueCardsForExercise(5).then(cardIds => {
+              openMatchingExercise(cardIds);
+            });
+          });
+        }
+      });
+      
+      // Function to get overdue cards for exercises
+      async function getOverdueCardsForExercise(count = 5) {
+        if (!userId) return [];
+        
+        try {
+          // Get current date
+          const now = new Date().toISOString();
+          
+          // Fetch cards that are due or overdue
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('id')
+            .eq('user_id', userId)
+            .lt('due', now)  // Cards with due date less than now (overdue)
+            .order('due')    // Order by due date (oldest first)
+            .limit(count);   // Limit to requested count
+            
+          if (error) {
+            console.error("Error fetching overdue cards for exercise:", error);
+            return [];
+          }
+          
+          // Extract just the IDs from the cards
+          return data.map(card => card.id);
+        } catch (err) {
+          console.error("Error getting overdue cards for exercise:", err);
+          return [];
+        }
+      }
     </script>
   </body>
 </html>

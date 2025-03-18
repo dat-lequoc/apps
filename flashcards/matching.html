@@ -596,7 +596,7 @@
           // Fetch cards that are due or overdue
           const { data, error } = await supabase
             .from('flashcards')
-            .select('word')
+            .select('id, word')
             .eq('user_id', userId)
             .lt('due', now)  // Cards with due date less than now (overdue)
             .order('due')    // Order by due date (oldest first)
@@ -607,11 +607,8 @@
             return [];
           }
           
-          // Extract just the words from the cards
-          const overdueWords = data.map(card => card.word);
-          console.log("Fetched overdue words:", overdueWords);
-          
-          return overdueWords;
+          console.log("Fetched overdue cards:", data);
+          return data;
         } catch (err) {
           console.error("Error getting overdue cards:", err);
           return [];
@@ -640,6 +637,7 @@
           // Try to get overdue cards if no custom words
           const customWordsText = document.getElementById('custom-words').value.trim();
           let wordList = [];
+          let cardIds = [];
           
           if (customWordsText) {
             // Split by commas, trim whitespace, and filter empty entries
@@ -648,10 +646,12 @@
               .filter(word => word.length > 0);
           } else {
             // If no custom words provided, try to get overdue words
-            const overdueWords = await getOverdueCards(10);
+            const overdueCards = await getOverdueCards(10);
             
-            if (overdueWords.length > 0) {
-              wordList = overdueWords;
+            if (overdueCards.length > 0) {
+              // Store both words and their IDs
+              wordList = overdueCards.map(card => card.word);
+              cardIds = overdueCards.map(card => card.id);
             } else {
               // Use default sample words
               wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
@@ -663,6 +663,12 @@
           
           // Limit to the requested number of words
           wordList = wordList.slice(0, requestedWordCount);
+          cardIds = cardIds.slice(0, requestedWordCount);
+          
+          // Store card IDs in the exercise data
+          exerciseData = {
+            cardIds: cardIds
+          };
           
           // Create the LLM prompt
           const prompt = `Generate short explanations for the following words: ${wordList.join(', ')}. 
@@ -720,7 +726,13 @@
           } else {
             jsonStr = llmResponse;
           }
-          exerciseData = JSON.parse(jsonStr);
+          const llmData = JSON.parse(jsonStr);
+          
+          // Merge LLM data with our card IDs
+          exerciseData = {
+            ...llmData,
+            cardIds: cardIds
+          };
           
           // Display the exercise
           displayExercise(exerciseData);
@@ -1071,6 +1083,9 @@
             <button id="mark-as-learned-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-3">
               Mark as Learned
             </button>
+            <button id="back-to-flashcards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 mb-3 ml-2">
+              Back to Flashcards
+            </button>
           `;
           
           // Add event listener to the Mark as Learned button
@@ -1079,6 +1094,12 @@
             saveLearnedWords(exerciseData.words);
             
             // Navigate back to flashcards.html
+            window.location.href = '../flashcards.html';
+          });
+          
+          // Add event listener to the Back to Flashcards button
+          document.getElementById('back-to-flashcards-btn').addEventListener('click', () => {
+            // Navigate back without marking as learned
             window.location.href = '../flashcards.html';
           });
         } else if (!allMatched) {
@@ -1262,6 +1283,21 @@
         let practiceHistory = JSON.parse(localStorage.getItem('practiceHistory') || '[]');
         practiceHistory.push(practiceSession);
         localStorage.setItem('practiceHistory', JSON.stringify(practiceHistory));
+        
+        // If we have card IDs, pass them back to the parent page
+        if (exerciseData && exerciseData.cardIds && exerciseData.cardIds.length > 0) {
+          // Save to session storage to pass to the parent page
+          sessionStorage.setItem('completedCardIds', JSON.stringify(exerciseData.cardIds));
+          
+          // If we came from flashcards.html and the opener window is available, pass directly
+          if (window.opener && !window.opener.closed) {
+            try {
+              window.opener.handleCompletedCards(exerciseData.cardIds);
+            } catch (e) {
+              console.log("Could not directly call opener window method:", e);
+            }
+          }
+        }
       }
 
       // Handle clicking outside the modals to close them
@@ -1324,6 +1360,63 @@
           // Update the feedback message based on the current state
           feedbackEl.className = 'mt-4 p-3 rounded text-center bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 transition-all';
           feedbackEl.textContent = `You have matched ${matchedPairs.length} out of ${exerciseData.words.length} items. Continue matching to complete the exercise.`;
+        }
+      }
+
+      // Add event listener for window load to check for any passed parameters
+      window.addEventListener('load', function() {
+        // Check if we've been passed card IDs from the parent window
+        const urlParams = new URLSearchParams(window.location.search);
+        const cardIdsParam = urlParams.get('cardIds');
+        
+        if (cardIdsParam) {
+          try {
+            const passedCardIds = JSON.parse(decodeURIComponent(cardIdsParam));
+            if (Array.isArray(passedCardIds) && passedCardIds.length > 0) {
+              // Store these IDs to be used when fetching cards
+              exerciseData = { cardIds: passedCardIds };
+              
+              // Auto-start the exercise with these card IDs
+              // We'll need to get the words for these IDs from the database
+              fetchCardsByIds(passedCardIds);
+            }
+          } catch (e) {
+            console.error("Error parsing passed card IDs:", e);
+          }
+        }
+      });
+      
+      // Function to fetch cards by their IDs
+      async function fetchCardsByIds(cardIds) {
+        if (!userId || !cardIds || cardIds.length === 0) return;
+        
+        try {
+          const { data, error } = await supabase
+            .from('flashcards')
+            .select('id, word')
+            .in('id', cardIds)
+            .eq('user_id', userId);
+            
+          if (error) {
+            console.error("Error fetching cards by IDs:", error);
+            return;
+          }
+          
+          if (data && data.length > 0) {
+            // Set custom words field with the fetched words
+            const words = data.map(card => card.word).join(', ');
+            document.getElementById('custom-words').value = words;
+            
+            // Store the IDs in the exercise data
+            exerciseData = {
+              cardIds: data.map(card => card.id)
+            };
+            
+            // Auto-start the exercise
+            document.getElementById('confirm-exercise-btn').click();
+          }
+        } catch (err) {
+          console.error("Error in fetchCardsByIds:", err);
         }
       }
     </script>
