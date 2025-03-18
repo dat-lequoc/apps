@@ -634,6 +634,7 @@
           let wordList = [];
           let cardIds = [];
           let translations = [];
+          let phrases = [];
           
           if (customWordsText) {
             // Split by commas, trim whitespace, and filter empty entries
@@ -648,6 +649,7 @@
               wordList = overdueCards.map(card => card.word);
               cardIds = overdueCards.map(card => card.id);
               translations = overdueCards.map(card => card.translation_answer);
+              phrases = overdueCards.map(card => card.phrase);
             } else {
               // Use default sample words
               wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
@@ -660,6 +662,8 @@
           // Limit to the requested number of words
           wordList = wordList.slice(0, requestedWordCount);
           cardIds = cardIds.slice(0, requestedWordCount);
+          translations = translations.slice(0, requestedWordCount);
+          phrases = phrases.slice(0, requestedWordCount);
           
           // Store card IDs in the exercise data
           exerciseData = {
@@ -671,7 +675,7 @@
           const prompt = `Generate short explanations for the following words: ${wordList.join(', ')}. 
           
           IMPORTANT INSTRUCTIONS:
-          1. For each word, provide a short, clear explanation or definition (1-2 sentences maximum)
+          1. For each word, provide a short, very concise, clear explanation or definition (1 sentence maximum)
           2. Do not include the word itself in the explanation
           3. Make the explanations distinct enough that they can be matched to the correct word
           
@@ -725,11 +729,12 @@
           }
           const llmData = JSON.parse(jsonStr);
           
-          // Merge LLM data with our card IDs
+          // Merge LLM data with our card IDs and phrases
           exerciseData = {
             ...llmData,
             cardIds: cardIds,
-            translations: translations
+            translations: translations,
+            phrases: phrases
           };
           
           // Display the exercise
@@ -1087,42 +1092,50 @@
         // Check if all words have been matched
         const allMatched = matchedPairs.length === exerciseData.words.length;
         
-        // If all correct and all matched, show success message
         if (allCorrect && allMatched) {
-          // Create or get feedback element
           let feedbackEl = document.getElementById('exercise-feedback');
           if (!feedbackEl) {
             feedbackEl = document.createElement('div');
             feedbackEl.id = 'exercise-feedback';
             document.getElementById('exercise-container').appendChild(feedbackEl);
           }
-          
-          // Show success message with "Mark as Learned" button
-          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
-          feedbackEl.innerHTML = `
-            <p class="mb-3">Great job! All matches are correct!</p>
-            <button id="mark-as-learned-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-3">
-              Mark as Learned
-            </button>
-            <button id="back-to-flashcards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 mb-3 ml-2">
-              Back to Flashcards
-            </button>
-          `;
-          
-          // Add event listener to the Mark as Learned button
-          document.getElementById('mark-as-learned-btn').addEventListener('click', () => {
-            // Save the learned words to localStorage
-            saveLearnedWords(exerciseData.words);
-            
-            // Navigate back to flashcards.html
-            window.location.href = '../flashcards.html';
-          });
-          
-          // Add event listener to the Back to Flashcards button
-          document.getElementById('back-to-flashcards-btn').addEventListener('click', () => {
-            // Navigate back without marking as learned
-            window.location.href = '../flashcards.html';
-          });
+          if (!exerciseData.maskedRound) {
+            feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
+            feedbackEl.innerHTML = `
+              <p class="mb-3">Great job! All matches are correct! Now, proceed to match the words with their masked phrases (the phrases will have the word removed).</p>
+              <button id="start-masked-round-btn" class="bg-indigo-500 text-white py-2 px-4 rounded hover:bg-indigo-600 mb-3">
+                Start Masked Round
+              </button>
+              <button id="back-to-flashcards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 mb-3 ml-2">
+                Back to Flashcards
+              </button>
+            `;
+            document.getElementById('start-masked-round-btn').addEventListener('click', () => {
+              exerciseData.maskedRound = true;
+              displayMaskedRound();
+            });
+            document.getElementById('back-to-flashcards-btn').addEventListener('click', () => {
+              window.location.href = '../flashcards.html';
+            });
+          } else {
+            feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
+            feedbackEl.innerHTML = `
+              <p class="mb-3">Great job! All masked matches are correct!</p>
+              <button id="mark-as-learned-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-3">
+                Mark as Learned
+              </button>
+              <button id="back-to-flashcards-btn" class="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 mb-3 ml-2">
+                Back to Flashcards
+              </button>
+            `;
+            document.getElementById('mark-as-learned-btn').addEventListener('click', () => {
+              saveLearnedWords(exerciseData.words);
+              window.location.href = '../flashcards.html';
+            });
+            document.getElementById('back-to-flashcards-btn').addEventListener('click', () => {
+              window.location.href = '../flashcards.html';
+            });
+          }
         } else if (!allMatched) {
           // Create or get feedback element
           let feedbackEl = document.getElementById('exercise-feedback');
@@ -1439,6 +1452,70 @@
         } catch (err) {
           console.error("Error in fetchCardsByIds:", err);
         }
+      }
+
+      // New function for masked round matching
+      function displayMaskedRound() {
+        const wordsContainer = document.getElementById('words-container');
+        const meaningsContainer = document.getElementById('meanings-container');
+        // Clear the matching containers (do not clear matched items container)
+        wordsContainer.innerHTML = '';
+        meaningsContainer.innerHTML = '';
+        
+        // Reset matching state for this round
+        matchedPairs = [];
+        selectedItem = null;
+        
+        // Populate words container with each word
+        exerciseData.words.forEach((word, index) => {
+          const wordDiv = document.createElement('div');
+          wordDiv.className = 'word-item p-3 rounded border bg-blue-50 dark:bg-blue-900';
+          wordDiv.setAttribute('data-index', index);
+          wordDiv.setAttribute('data-word', word);
+          const textSpan = document.createElement('span');
+          textSpan.textContent = word;
+          wordDiv.appendChild(textSpan);
+          wordDiv.draggable = true;
+          wordDiv.addEventListener('dragstart', handleDragStart);
+          wordDiv.addEventListener('dragend', handleDragEnd);
+          wordDiv.addEventListener('click', () => {
+            handleItemClick(wordDiv, 'word');
+            speakWord(word);
+          });
+          wordsContainer.appendChild(wordDiv);
+        });
+        
+        // Create masked phrases by removing the word from its phrase using regex
+        const maskedPhrases = exerciseData.phrases.map((phrase, index) => {
+          const word = exerciseData.words[index];
+          const regex = new RegExp('\\b' + word + '\\b', 'gi');
+          return phrase.replace(regex, '_____');
+        });
+        
+        // Shuffle the indices for displaying masked phrases in arbitrary order
+        const indices = Array.from({ length: maskedPhrases.length }, (_, i) => i);
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        
+        // Populate meanings container with masked phrases in shuffled order
+        indices.forEach(originalIndex => {
+          const maskedPhrase = maskedPhrases[originalIndex];
+          const meaningDiv = document.createElement('div');
+          meaningDiv.className = 'meaning-item p-3 rounded border bg-green-50 dark:bg-green-900';
+          meaningDiv.setAttribute('data-index', originalIndex);
+          const textSpan = document.createElement('span');
+          textSpan.textContent = maskedPhrase;
+          meaningDiv.appendChild(textSpan);
+          meaningDiv.addEventListener('dragover', handleDragOver);
+          meaningDiv.addEventListener('dragleave', handleDragLeave);
+          meaningDiv.addEventListener('drop', handleDrop);
+          meaningDiv.addEventListener('click', () => {
+            handleItemClick(meaningDiv, 'meaning');
+          });
+          meaningsContainer.appendChild(meaningDiv);
+        });
       }
     </script>
   </body>
