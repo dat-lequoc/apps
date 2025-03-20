@@ -1015,6 +1015,13 @@
                     <label for="auto-speak-toggle">Auto Speak Flashcard Words</label>
                     <input type="checkbox" id="auto-speak-toggle" checked>
                 </div>
+                <div class="settings-row">
+                    <label for="speech-language">Speech Language</label>
+                    <select id="speech-language">
+                        <option value="en-US">English</option>
+                        <option value="fr-FR">French</option>
+                    </select>
+                </div>
                 <button id="summarize-chapter-btn" class="button" style="display: none; margin-top: 0.75rem;">Summarize Chapter</button>
                 <div id="ai-response-area" style="display: none;"></div>
             </div>
@@ -1094,6 +1101,7 @@
                 aiSettingsContent: document.getElementById('ai-settings-content'),
                 translationToggle: document.getElementById('translation-toggle'),
                 autoSpeakToggle: document.getElementById('auto-speak-toggle'),
+                speechLanguage: document.getElementById('speech-language'),
                 aiResponseArea: document.getElementById('ai-response-area'),
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
@@ -1206,6 +1214,11 @@
                 });
                 DOM.autoSpeakToggle.addEventListener('change', function() {
                     localStorage.setItem('auto-speak-enabled', this.checked);
+                    saveUserPreferences();
+                });
+                
+                DOM.speechLanguage.addEventListener('change', function() {
+                    localStorage.setItem('speech-language', this.value);
                     saveUserPreferences();
                 });
                 
@@ -3063,17 +3076,18 @@
                     // Create a new speech synthesis utterance
                     const utterance = new SpeechSynthesisUtterance(text);
                     
-                    // Set language to English
-                    utterance.lang = 'en-US';
+                    // Get language from settings
+                    const language = localStorage.getItem('speech-language') || 'en-US';
+                    utterance.lang = language;
                     
                     // Try to find a good voice
                     const voices = window.speechSynthesis.getVoices();
-                    const englishVoices = voices.filter(voice => voice.lang.startsWith('en-'));
+                    const languageVoices = voices.filter(voice => voice.lang.startsWith(language.split('-')[0] + '-'));
                     
-                    if (englishVoices.length > 0) {
+                    if (languageVoices.length > 0) {
                         // Prefer female voices if available (generally clearer for language learning)
-                        const femaleVoice = englishVoices.find(voice => voice.name.includes('female') || voice.name.includes('Female'));
-                        utterance.voice = femaleVoice || englishVoices[0];
+                        const femaleVoice = languageVoices.find(voice => voice.name.includes('female') || voice.name.includes('Female'));
+                        utterance.voice = femaleVoice || languageVoices[0];
                     }
                     
                     // Adjust settings for clarity
@@ -3141,7 +3155,8 @@
                     lineHeight: state.settings.lineHeight,
                     theme: state.settings.theme,
                     translationEnabled: DOM.translationToggle.checked,
-                    autoSpeakEnabled: DOM.autoSpeakToggle.checked
+                    autoSpeakEnabled: DOM.autoSpeakToggle.checked,
+                    speechLanguage: DOM.speechLanguage.value
                 };
                 
                 // Always save to localStorage as fallback
@@ -3150,6 +3165,7 @@
                 localStorage.setItem('ebook-theme', preferences.theme);
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
+                localStorage.setItem('speech-language', preferences.speechLanguage);
                 
                 // If user is logged in, save to Supabase
                 const { data: { session } } = await supabase.auth.getSession();
@@ -3217,6 +3233,10 @@
                     DOM.autoSpeakToggle.checked = true;
                 }
                 
+                // Load speech language setting
+                const speechLanguage = localStorage.getItem('speech-language') || 'en-US';
+                DOM.speechLanguage.value = speechLanguage;
+                
                 // Check if user is logged in to load server settings
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
@@ -3260,6 +3280,12 @@
                     if (prefs.autoSpeakEnabled !== undefined) {
                         DOM.autoSpeakToggle.checked = prefs.autoSpeakEnabled;
                         localStorage.setItem('auto-speak-enabled', prefs.autoSpeakEnabled);
+                    }
+                    
+                    // Apply speech language
+                    if (prefs.speechLanguage) {
+                        DOM.speechLanguage.value = prefs.speechLanguage;
+                        localStorage.setItem('speech-language', prefs.speechLanguage);
                     }
                 } catch (error) {
                     console.error('Error loading user preferences:', error);
