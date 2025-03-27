@@ -2132,6 +2132,7 @@
 
                 DOM.bookTitle.textContent = `Reading: ${url}`; // Temporary title
                 state.bookData.title = url; // Use URL as initial title
+                state.bookData.currentListId = null; // Reset list ID for direct URL reading
 
                 try {
                     const response = await firecrawlScrapeRequest(state.userApiSettings.firecrawl_api_key, url);
