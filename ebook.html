@@ -1251,7 +1251,7 @@
                             <button type="button" id="create-list-btn" class="button">+</button>
                         </div>
                     </div>
-                    <h2 id="current-list-name">All</h2> <!-- Changed default text and removed "Current List:" -->
+                    <!-- Removed h2#current-list-name -->
                     <div id="library-list">
                         <!-- Library items will be populated here -->
                     </div>
@@ -1451,8 +1451,8 @@
                 sourceUrlLink: document.getElementById('source-url-link'),      // Added source URL link
                 listFilter: document.getElementById('list-filter'),             // Added list filter dropdown
                 createListBtn: document.getElementById('create-list-btn'),       // Added create list button
-                newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
-                currentListName: document.getElementById('current-list-name')   // Added current list name display
+                newListNameInput: document.getElementById('new-list-name')     // Added new list name input
+                // Removed currentListName as the element is deleted
             };
 
             // App state
@@ -2736,7 +2736,7 @@
                     } else {
                         // Ensure filter is reset if logged out
                         renderListFilter();
-                        DOM.currentListName.textContent = 'All'; // Updated default text
+                        // Removed update to DOM.currentListName
                     }
                 });
             }
@@ -3242,10 +3242,7 @@
                         throw error;
                     }
 
-                    // Update current list name display
-                    const selectedListName = state.bookLists.find(list => list.id == state.selectedListId)?.name;
-                    DOM.currentListName.textContent = state.selectedListId === 'all' ? 'All' : (selectedListName || 'Unlisted'); // Simplified names
-
+                    // Removed update to DOM.currentListName as the element is deleted
 
                     if (!books || books.length === 0) {
                         libraryList.innerHTML = `<div style="text-align: center; padding: 20px;">This list is empty</div>`;
