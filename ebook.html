@@ -3598,13 +3598,13 @@
                         .maybeSingle();
                     
                     if (existingBooks && existingBooks.id) {
-                        // Update existing book
+                        // Update existing book - only update progress-related fields
                         const { error } = await supabase
                             .from('ebooks')
                             .update({
-                                title: state.bookData.title,
-                                content: bookContent,
-                                file_type: fileType,
+                                // title: state.bookData.title, // Don't update title on progress save
+                                // content: bookContent,       // Don't update content
+                                // file_type: fileType,        // Don't update file type
                                 metadata: metadata,
                                 last_position: lastPosition,
                                 // list_id is updated via moveBookToList, not typically here
