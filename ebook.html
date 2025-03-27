@@ -1843,6 +1843,7 @@
 
             // Firecrawl API helper
             async function firecrawlScrapeRequest(apiKey, url) {
+                console.log('Attempting to scrape URL:', url); // Log the URL being sent
                 try {
                     const response = await fetch('https://api.firecrawl.dev/v0/scrape', {
                         method: 'POST',
@@ -1861,6 +1862,8 @@
                     return await response.json();
                 } catch (error) {
                     console.error('Error calling Firecrawl API:', error);
+                    // More detailed error logging
+                    console.error('Error details during Firecrawl API call:', error);
                     return { error: { message: error.message || 'Failed to connect to Firecrawl API' } };
                 }
             }
@@ -2431,16 +2434,16 @@
                         e.preventDefault(); // Stop the browser from following the link immediately
                         const url = link.href;
 
-                        // Ask the user what to do
-                        const shouldScrape = confirm(`Scrape & Save this link to your library?\n\nURL: ${url}\n\n(Cancel to open link directly in a new tab)`);
-
-                        if (shouldScrape) {
-                            // User chose to scrape and save
-                            showToast(`Starting scrape for: ${url}`, 2000);
-                            scrapeAndSaveLink(url); // Call the new function to handle scraping
+                        // Check if it's a scrapable URL (http/https)
+                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                            // Automatically scrape and save in the background
+                            scrapeAndSaveLink(url); // Call the function to handle scraping
                         } else {
-                            // User chose to open the link directly
-                            window.open(url, '_blank', 'noopener noreferrer');
+                            // For non-http links (e.g., mailto:, javascript:), open normally or ignore
+                            console.warn(`Link is not scrapable: ${url}`);
+                            // Optionally open non-http links in a new tab if desired
+                            // window.open(url, '_blank', 'noopener noreferrer');
+                            showToast(`Cannot scrape this type of link: ${url.substring(0, 30)}...`, 3000);
                         }
                         return; // We've handled this click, no need for further UI toggling logic
                     }
