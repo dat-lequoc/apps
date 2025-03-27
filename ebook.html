@@ -1122,7 +1122,7 @@
             <div class="settings-section">
                 <div class="settings-title">Display Mode</div>
                 <div class="settings-row">
-                    <label for="markdown-mode-toggle">Raw Markdown Mode</label>
+                    <label for="markdown-mode-toggle">Markdown Mode</label>
                     <input type="checkbox" id="markdown-mode-toggle">
                 </div>
             </div>
@@ -2030,10 +2030,19 @@
 
                 // Check if Markdown mode is enabled
                 if (state.settings.markdownModeEnabled) {
-                    // Render Markdown with basic formatting (links, bold) while preserving line breaks
+                    // Render Markdown with basic formatting (headings, links, bold) while preserving line breaks
                     let processedContent = chapter.content;
 
-                    // Apply [link text](url) markdown -> <a> tags FIRST
+                    // Apply heading markdown FIRST (important to do before paragraph/br logic)
+                    // Match headings at the beginning of a line
+                    processedContent = processedContent.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
+                    processedContent = processedContent.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
+                    processedContent = processedContent.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+                    processedContent = processedContent.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+                    processedContent = processedContent.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+                    processedContent = processedContent.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+                    // Apply [link text](url) markdown -> <a> tags
                     // Added rel="noopener noreferrer" for security
                     processedContent = processedContent.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
                         const safeUrl = url.trim().replace(/"/g, '&quot;'); // Escape quotes in URL
@@ -3737,7 +3746,8 @@ Follow these instructions precisely:
 3.  **Format for Readability:** Ensure paragraphs are well-separated (usually by a single blank line). Maintain the original Markdown formatting for elements like bold (**text**), italics (*text*), and inline code (\`code\`).
 4.  **Link Handling:** Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
 5.  **Structure:** Try to maintain the logical structure of the article using Markdown headings.
-6.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
+6.  **Remove Stray Random Characters:** Eliminate isolated backslash characters (\\) or sequences of them (\\\\), especially when they appear on their own lines or between paragraphs/images, automatically format properly the surrounding text.
+7.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
 
 Here is the raw Markdown content:
 ---
