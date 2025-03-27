@@ -496,6 +496,7 @@
       // Add a new global variable to track total cards in review session
       let initialReviewCount = 0;
       let cardsCompleted = 0;
+      let reviewedCardsInSession = new Map(); // Use a Map to store unique cards by ID
 
       // Add these globals for card browsing pagination
       let currentPage = 1;
@@ -705,7 +706,8 @@
         // Reset progress tracking counters
         cardsCompleted = 0;
         initialReviewCount = reviewQueue.length;
-        
+        reviewedCardsInSession.clear(); // Reset the map for the new session
+
         // Hide upload / stats sections during review
         document.getElementById('app-title').classList.add('hidden');
         document.getElementById('upload-section').classList.add('hidden');
@@ -725,34 +727,43 @@
       // Show the next card from the reviewQueue
       function showNextCard() {
         if (reviewQueue.length === 0) {
-          document.getElementById('card-question').innerHTML = "Review session completed!";
-          document.getElementById('answer-container').classList.add('hidden');
-          showAnswerBtn.classList.add('hidden');
-          feedbackButtons.classList.add('hidden');
-          editCardBtn.classList.add('hidden');
-          deleteCardBtn.classList.add('hidden');
-          
-          // Update progress bar to 100%
-          document.getElementById('progress-bar').style.width = "100%";
-          
-          // Return to main view after 3 seconds
-          setTimeout(() => {
-            // Show all main sections again
-            document.getElementById('app-title').classList.remove('hidden');
-            document.getElementById('upload-section').classList.remove('hidden');
-            document.getElementById('stats-section').classList.remove('hidden');
-            document.getElementById('review-section').classList.remove('hidden');
-            // Hide the review interface
-            activeReviewSection.classList.add('hidden');
-            // Reset button visibility
-            editCardBtn.classList.remove('hidden');
-            deleteCardBtn.classList.remove('hidden');
+            // Update progress bar to 100%
+            document.getElementById('progress-bar').style.width = "100%";
+        
+            // Check if there are cards reviewed in this session to pass to fill-in-the-blank
+            if (reviewedCardsInSession.size > 0) {
+                console.log(`Session complete. Passing ${reviewedCardsInSession.size} cards to fill-in-the-blank.`);
+                // Convert Map values to an array
+                const cardsToPass = Array.from(reviewedCardsInSession.values());
+                // Store in sessionStorage for the next page
+                sessionStorage.setItem('fillInTheBlankCards', JSON.stringify(cardsToPass));
+                // Redirect to the fill-in-the-blank exercise
+                window.location.href = 'flashcards/fill-in-the-blank.html';
+            } else {
+                // No cards reviewed or something went wrong, just go back to main view
+                document.getElementById('card-question').innerHTML = "Review session completed!";
+                document.getElementById('answer-container').classList.add('hidden');
+                showAnswerBtn.classList.add('hidden');
+                feedbackButtons.classList.add('hidden');
+                editCardBtn.classList.add('hidden');
+                deleteCardBtn.classList.add('hidden');
             
-            // Also hide progress container
-            document.getElementById('progress-container').classList.add('hidden');
-          }, 3000);
-          
-          return;
+                // Return to main view after a short delay
+                setTimeout(() => {
+                    document.getElementById('app-title').classList.remove('hidden');
+                    document.getElementById('upload-section').classList.remove('hidden');
+                    document.getElementById('stats-section').classList.remove('hidden');
+                    document.getElementById('review-section').classList.remove('hidden');
+                    activeReviewSection.classList.add('hidden');
+                    document.getElementById('progress-container').classList.add('hidden');
+                    editCardBtn.classList.remove('hidden'); // Ensure buttons are visible again
+                    deleteCardBtn.classList.remove('hidden');
+                }, 2000); // Keep a small delay
+            }
+        
+            // Clear the session map regardless
+            reviewedCardsInSession.clear();
+            return; // Exit function after handling completion
         }
 
         // Make sure edit/delete buttons are visible
@@ -762,7 +773,14 @@
         // We already filtered for due cards when building the queue, no need to filter again
         const card = reviewQueue.shift();
         currentCard = card;
-        
+        // Add card to session tracking map if not already present
+        if (!reviewedCardsInSession.has(currentCard.id)) {
+            reviewedCardsInSession.set(currentCard.id, { 
+                word: currentCard.word, 
+                translation: currentCard.translation_answer 
+            });
+        }
+
         // Display the prompt and handle HTML rendering
         document.getElementById('card-question').innerHTML = card.phrase;
         

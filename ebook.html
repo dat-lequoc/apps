@@ -1991,6 +1991,9 @@
                     showToast(`Error reading URL: ${error.message}`);
                     goToHome(); // Go back to welcome screen on error
                 } finally {
+                    // Reset button state regardless of success or failure
+                    DOM.processUrlBtn.classList.remove('loading');
+                    DOM.processUrlBtn.disabled = false;
                     hideLoading();
                 }
             }

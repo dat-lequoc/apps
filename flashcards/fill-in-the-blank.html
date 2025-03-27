@@ -281,8 +281,8 @@
         <div class="mb-4">
           <label for="exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
           <select id="exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
-            <option value="gemini-2.0-flash">Gemini Flash</option>
+            <option value="gemini-2.0-flash" selected>Gemini Flash (Default)</option>
+            <option value="gemini-2.0-pro-exp-02-05">Gemini Pro</option>
             <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
             <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
           </select>
@@ -383,8 +383,8 @@
           <form id="settings-form">
             <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4" />
             <select id="geminiModelSelect" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 mb-4">
-              <option value="gemini-2.0-pro-exp-02-05">Gemini Pro (Default)</option>
-              <option value="gemini-2.0-flash">Gemini Flash</option>
+              <option value="gemini-2.0-flash" selected>Gemini Flash (Default)</option>
+              <option value="gemini-2.0-pro-exp-02-05">Gemini Pro</option>
               <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
               <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
             </select>
@@ -411,9 +411,15 @@
       // Global variables
       let userId = null;
       let exerciseData = null;
+      let wordTranslationMap = {}; // To store translations for the current exercise words
       let userApiKey = null;
       let userModel = null;
       let selectedTags = ['easy-to-read']; // Default tag
+      let cardsForExercise = []; // Holds cards passed from flashcards.html
+      let currentBatch = [];
+      let remainingCards = [];
+      const BATCH_SIZE = 5;
+      let isAutoMode = false; // Flag to indicate automatic operation
 
       // Gemini API helper functions (inspired by index.html)
       const getApiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`;
@@ -476,8 +482,18 @@
         document.getElementById("api-form-section").classList.remove("hidden");
       }
 
+      // Helper function to check if exercise is complete and trigger answer check
+      function checkCompletionAndTriggerCheck() {
+        const allWordsUsed = Array.from(document.querySelectorAll('.word-item')).every(item => item.classList.contains('used'));
+        const allInputsFilled = Array.from(document.querySelectorAll('.blank-input')).every(input => input.value.trim() !== '');
+
+        if (allWordsUsed && allInputsFilled) {
+          checkAnswers();
+        }
+      }
+
       // Initialize theme and event listeners
-      document.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('DOMContentLoaded', async () => { // Add async here
         // Theme handling
         const theme = localStorage.getItem('theme') || 'dark';
         document.body.classList.add(theme);
@@ -516,9 +532,56 @@
             }
           });
         });
-        
-        // Check authentication
-        checkAuth();
+
+        // Check authentication AND wait for it to complete
+        await checkAuth(); // Add await here
+
+        // --> ADD THIS BLOCK START
+        // Check for cards passed from flashcards.html
+        const passedCardsJson = sessionStorage.getItem('fillInTheBlankCards');
+        if (passedCardsJson) {
+            try {
+                cardsForExercise = JSON.parse(passedCardsJson);
+                sessionStorage.removeItem('fillInTheBlankCards'); // Clear after reading
+
+                if (cardsForExercise && cardsForExercise.length > 0) {
+                    // --> ADD API KEY CHECK HERE <--
+                    if (!userApiKey) {
+                        console.error("Cannot start automatic exercise: Gemini API key not loaded or missing.");
+                        // Optionally display an error message to the user
+                        const statusEl = document.getElementById('exercise-status');
+                        statusEl.textContent = "Error: API Key not configured. Please set it via the settings (⚙️) icon and refresh.";
+                        statusEl.className = "mt-2 text-sm text-red-500";
+                        // Show config section so user can potentially fix it
+                        document.getElementById('exercise-config-section').classList.remove('hidden');
+                        return; // Stop execution if no API key
+                    }
+                    // --> END API KEY CHECK <--
+
+                    isAutoMode = true;
+                    remainingCards = [...cardsForExercise]; // Copy cards to remaining list
+
+                    // Hide manual config and status message area initially
+                    document.getElementById('exercise-config-section').classList.add('hidden');
+                    document.getElementById('exercise-status').textContent = ''; 
+                    
+                    console.log(`Starting automatic fill-in-the-blank with ${cardsForExercise.length} cards.`);
+                    // Start the first batch
+                    startNextBatch(); 
+                } else {
+                    console.log("No valid cards found in sessionStorage.");
+                }
+            } catch (e) {
+                console.error("Error parsing cards from sessionStorage:", e);
+                // Ensure config section is visible on error
+                document.getElementById('exercise-config-section').classList.remove('hidden');
+            }
+        } else {
+             console.log("No cards passed via sessionStorage. Running in manual mode.");
+             // Ensure config section is visible if not in auto mode
+             document.getElementById('exercise-config-section').classList.remove('hidden');
+        }
+        // --> ADD THIS BLOCK END
       });
 
       // Event listener for settings button (gear icon)
@@ -563,7 +626,7 @@
           // Fetch cards that are due or overdue
           const { data, error } = await supabase
             .from('flashcards')
-            .select('word')
+            .select('word, translation_answer') // Fetch translation too
             .eq('user_id', userId)
             .lt('due', now)  // Cards with due date less than now (overdue)
             .order('due')    // Order by due date (oldest first)
@@ -574,11 +637,14 @@
             return [];
           }
           
-          // Extract just the words from the cards
-          const overdueWords = data.map(card => card.word);
-          console.log("Fetched overdue words:", overdueWords);
+          // Return array of objects { word: '...', translation: '...' }
+          const overdueCards = data.map(card => ({ 
+            word: card.word, 
+            translation: card.translation_answer 
+          }));
+          console.log("Fetched overdue cards:", overdueCards);
           
-          return overdueWords;
+          return overdueCards;
         } catch (err) {
           console.error("Error getting overdue cards:", err);
           return [];
@@ -586,44 +652,91 @@
       }
       
       // Modified function to generate an exercise
-      async function generateExercise() {
+      async function generateExercise(batch = null) {
         try {
+            // --> ADD API KEY CHECK HERE <--
+            if (!userApiKey) {
+                console.error("generateExercise called but userApiKey is missing.");
+                const statusEl = document.getElementById('exercise-status');
+                statusEl.textContent = "Error: API Key not configured. Please set it via the settings (⚙️) icon.";
+                statusEl.className = "mt-2 text-sm text-red-500";
+                // Reset button if not in auto mode
+                if (!isAutoMode) {
+                    const generateBtn = document.getElementById('generate-exercise-btn');
+                    generateBtn.textContent = "Generate Exercise";
+                    generateBtn.disabled = false;
+                } else {
+                    // Stop auto mode if API key is missing during generation
+                    isAutoMode = false;
+                    document.getElementById('exercise-config-section').classList.remove('hidden'); // Show config
+                }
+                return; // Stop execution
+            }
+            // --> END API KEY CHECK <--
+
           const generateBtn = document.getElementById('generate-exercise-btn');
           const statusEl = document.getElementById('exercise-status');
-          
-          generateBtn.textContent = "Generating...";
-          generateBtn.disabled = true;
-          statusEl.textContent = "Preparing your exercise...";
-          
-          // Get custom words from textarea
-          const customWordsText = document.getElementById('custom-words').value.trim();
-          let wordList = [];
-          
-          if (customWordsText) {
-            // Split by commas, trim whitespace, and filter empty entries
-            wordList = customWordsText.split(',')
-              .map(word => word.trim())
-              .filter(word => word.length > 0);
+
+          // Only show generating state if not in auto mode (or handle differently)
+          if (!isAutoMode) {
+            generateBtn.textContent = "Generating...";
+            generateBtn.disabled = true;
+            statusEl.textContent = "Preparing your exercise...";
           } else {
-            // If no custom words provided, fetch overdue words or use defaults
-            const overdueWords = await getOverdueCards(10);
-            
-            if (overdueWords.length > 0) {
-              wordList = overdueWords;
-            } else {
-              // Use default sample words
-              wordList = ["endeavor", "collaborate", "implement", "analyze", "persistent"];
-            }
+            // In auto mode, status is handled by startNextBatch
           }
           
-          // Get the number of words to use
-          const requestedWordCount = parseInt(document.getElementById('exercise-cards-count').value) || 5;
+          // Reset translation map for the new exercise
+          wordTranslationMap = {};
+          let wordsForPrompt = [];
+
+          if (batch && batch.length > 0) {
+              // Use the provided batch (from automatic mode)
+              wordsForPrompt = batch.map(card => card.word);
+              batch.forEach(card => {
+                  wordTranslationMap[card.word] = card.translation;
+              });
+              console.log("Generating exercise for batch:", wordsForPrompt);
+          } else {
+              // Manual mode: Use config section settings
+              const customWordsText = document.getElementById('custom-words').value.trim();
+              if (customWordsText) {
+                  // Use custom words
+                  const customWordArray = customWordsText.split(',')
+                    .map(word => word.trim())
+                    .filter(word => word.length > 0);
+                  const requestedWordCount = parseInt(document.getElementById('exercise-cards-count').value) || 5;
+                  wordsForPrompt = customWordArray.slice(0, requestedWordCount);
+                  wordsForPrompt.forEach(word => { wordTranslationMap[word] = null; });
+              } else {
+                  // Fetch overdue cards (manual mode)
+                  const requestedWordCount = parseInt(document.getElementById('exercise-cards-count').value) || 5;
+                  const overdueCards = await getOverdueCards(requestedWordCount);
+                  if (overdueCards.length > 0) {
+                      wordsForPrompt = overdueCards.map(card => card.word);
+                      overdueCards.forEach(card => { wordTranslationMap[card.word] = card.translation; });
+                  } else {
+                      // Default sample words if no overdue cards
+                      wordsForPrompt = ["endeavor", "collaborate", "implement", "analyze", "persistent"].slice(0, requestedWordCount);
+                      wordsForPrompt.forEach(word => { wordTranslationMap[word] = null; });
+                  }
+              }
+          }
+
+          // Ensure we have words before proceeding
+          if (wordsForPrompt.length === 0) {
+              statusEl.textContent = "No words available for the exercise.";
+              // Only reset button if not in auto mode
+              if (!isAutoMode) {
+                generateBtn.textContent = "Generate Exercise";
+                generateBtn.disabled = false;
+              }
+              return; // Stop if no words
+          }
           
-          // Limit to the requested number of words
-          wordList = wordList.slice(0, requestedWordCount);
-          
-          // Create the LLM prompt
-          const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordList.join(', ')}. 
+          // --- The rest of the function (prompt creation, API call, etc.) remains the same ---
+          // Make sure the prompt uses the determined `wordsForPrompt`
+          const prompt = `Create a fill-in-the-blank exercise using these exact words: ${wordsForPrompt.join(', ')}. 
           Write an interesting short paragraph.
           
           IMPORTANT INSTRUCTIONS:
@@ -647,7 +760,7 @@
           DO NOT use formats like "[WORD]" or "[OTHER_FORMAT]" - only use "[BLANK]".`;
           
           // Get the selected model from the dropdown 
-          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-pro-exp-02-05';
+          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-flash';
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
           
           statusEl.textContent = "Generating content with Gemini API...";
@@ -701,9 +814,54 @@
           // Reset button state
           document.getElementById('generate-exercise-btn').textContent = "Generate Exercise";
           document.getElementById('generate-exercise-btn').disabled = false;
+
+          // If in auto mode, maybe stop or offer to skip? For now, just log and stop.
+          if (isAutoMode) {
+              console.error("Stopping automatic exercise generation due to error.");
+              isAutoMode = false; // Exit auto mode
+              // Optionally show the config section again
+              // document.getElementById('exercise-config-section').classList.remove('hidden');
+          }
         }
       }
       
+      // Implement Automatic Batching Logic:
+      async function startNextBatch() {
+          if (remainingCards.length === 0) {
+              // All batches completed
+              console.log("All fill-in-the-blank batches completed. Returning to flashcards.");
+              // Optionally show a completion message before redirecting
+              const statusEl = document.getElementById('exercise-status');
+              statusEl.textContent = "All exercises complete! Redirecting back...";
+              statusEl.className = "mt-2 text-sm text-green-500";
+              document.getElementById('exercise-container').classList.add('hidden'); // Hide exercise UI
+              
+              // Clear any potential learned words from this session before leaving
+              localStorage.removeItem('learnedWords');
+              localStorage.removeItem('lastPractice');
+              localStorage.removeItem('practiceHistory');
+
+              setTimeout(() => {
+                  window.location.href = '../flashcards.html';
+              }, 2000); // Wait 2 seconds before redirecting
+              return;
+          }
+
+          // Take the next batch
+          currentBatch = remainingCards.splice(0, BATCH_SIZE);
+          
+          // Update status indicator (optional)
+          const totalCards = cardsForExercise.length;
+          const cardsDone = totalCards - remainingCards.length - currentBatch.length;
+          const statusEl = document.getElementById('exercise-status');
+          statusEl.textContent = `Generating exercise for words ${cardsDone + 1}-${cardsDone + currentBatch.length} of ${totalCards}...`;
+          statusEl.className = "mt-2 text-sm text-gray-600 dark:text-gray-400";
+
+
+          // Generate exercise for the current batch
+          await generateExercise(currentBatch);
+      }
+
       // Handle removal of API key
       document.getElementById("remove-api-key-button").addEventListener("click", async () => {
         if (!userId) return;
@@ -771,6 +929,7 @@
               // Visually mark the word as used
               if (!wordSpan.classList.contains('used')) {
                 wordSpan.classList.add('used');
+                checkCompletionAndTriggerCheck(); // Check completion after click
               }
             }
             
@@ -815,12 +974,24 @@
             input.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
             const word = e.dataTransfer.getData('text/plain');
             input.value = word;
+
+            // Mark the corresponding word item as used
+            const wordItem = Array.from(document.querySelectorAll('.word-item')).find(item => item.textContent === word && !item.classList.contains('used'));
+            if (wordItem) {
+              wordItem.classList.add('used');
+            }
+            checkCompletionAndTriggerCheck(); // Check completion after drop
+          });
+
+          // Add input event listener to check completion on input change (e.g., typing)
+          input.addEventListener('input', () => {
+            checkCompletionAndTriggerCheck(); // Check completion after manual input
           });
         });
       }
       
-      // Check answers
-      document.getElementById('check-answers-btn').addEventListener('click', () => {
+      // Check answers function (extracted for reusability)
+      function checkAnswers() {
         if (!exerciseData) return;
         
         const inputs = document.querySelectorAll('.blank-input');
@@ -861,61 +1032,55 @@
         let feedbackEl = document.getElementById('exercise-feedback');
         
         if (allCorrect) {
-          // Create the feedback element if it doesn't exist
-          if (!feedbackEl) {
-            feedbackEl = document.createElement('div');
-            feedbackEl.id = 'exercise-feedback';
-            document.getElementById('exercise-text').after(feedbackEl);
-          }
-          
-          // Create word meanings display
-          let wordMeaningsHTML = '<div class="mt-4 p-3 border rounded bg-blue-50 dark:bg-blue-900 dark:border-blue-800">';
-          wordMeaningsHTML += '<h3 class="font-semibold mb-2">Word Meanings:</h3>';
-          wordMeaningsHTML += '<ul class="space-y-2">';
-          
-          exerciseData.answers.forEach(word => {
-            wordMeaningsHTML += `
-              <li class="pb-2 border-b border-blue-200 dark:border-blue-800 last:border-0">
-                <div class="font-medium">${word}</div>
-              </li>
-            `;
-          });
-          
-          wordMeaningsHTML += '</ul></div>';
-          
-          // Add success message with "Mark as Learned" button
-          feedbackEl.className = 'mt-4 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
-          feedbackEl.innerHTML = `
-            <p class="mb-3">Great job! All answers are correct!</p>
-            <button id="mark-as-learned-btn" class="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 mb-3">
-              Mark as Learned
-            </button>
-            ${wordMeaningsHTML}
-          `;
-          
-          // Add event listener to the Mark as Learned button
-          document.getElementById('mark-as-learned-btn').addEventListener('click', () => {
-            // Save the learned words to localStorage
-            saveLearnedWords(exerciseData.answers);
+            // Create the feedback element if it doesn't exist
+            if (!feedbackEl) {
+                feedbackEl = document.createElement('div');
+                feedbackEl.id = 'exercise-feedback';
+                // Insert feedback before the buttons, not after exercise text
+                const buttonContainer = document.querySelector('#exercise-container .flex.justify-between');
+                if (buttonContainer) {
+                    buttonContainer.before(feedbackEl);
+                } else {
+                    // Fallback if button container not found
+                    document.getElementById('exercise-text').after(feedbackEl);
+                }
+            }
             
-            // Navigate back to flashcards.html
-            window.location.href = '../flashcards.html';
-          });
-          
-          // Make the feedback message visible with a subtle animation
-          feedbackEl.style.opacity = '0';
-          setTimeout(() => {
-            feedbackEl.style.opacity = '1';
-          }, 10);
+            feedbackEl.className = 'my-3 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
+            feedbackEl.innerHTML = `<p>Great job! All answers are correct!</p>`;
+            
+            // Make the feedback message visible
+            feedbackEl.style.opacity = '0';
+            setTimeout(() => {
+                feedbackEl.style.opacity = '1';
+            }, 10);
+
+            // If in auto mode, automatically proceed to the next batch after a short delay
+            if (isAutoMode) {
+                feedbackEl.innerHTML += `<p class="mt-1 text-sm">Loading next batch...</p>`;
+                setTimeout(() => {
+                    // Remove feedback before starting next batch
+                    if (feedbackEl) feedbackEl.remove(); 
+                    startNextBatch();
+                }, 1500); // Wait 1.5 seconds
+            } else {
+                 // Manual mode: Maybe add a button to generate a new one or just show success
+                 feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise above.</p>`;
+                 // Do NOT save learned words here in auto mode, as they were just reviewed
+            }
+
         } else {
-          // Remove the feedback element if it exists
-          if (feedbackEl) {
-            feedbackEl.remove();
-          }
+            // Incorrect: Remove the feedback element if it exists
+            if (feedbackEl) {
+                feedbackEl.remove();
+            }
         }
-      });
+      }
+
+      // Attach checkAnswers function to the button click
+      document.getElementById('check-answers-btn').addEventListener('click', checkAnswers);
       
-      // Show answers
+      // Show answers button logic
       document.getElementById('show-answers-btn').addEventListener('click', () => {
         if (!exerciseData) return;
         
@@ -931,28 +1096,27 @@
             'dark:bg-green-900', 'dark:bg-red-900', 'border-gray-300'
           );
           input.classList.add('border-2', 'border-green-500');
-          input.style.backgroundColor = 'rgba(187, 247, 208, 0.3)';
+          input.style.backgroundColor = 'rgba(187, 247, 208, 0.3)'; // Light green background
+          input.placeholder = ""; // Clear placeholder if any
         });
         
-        // Show a feedback message that answers are revealed
-        let feedbackEl = document.getElementById('exercise-feedback');
-        if (!feedbackEl) {
-          feedbackEl = document.createElement('div');
-          feedbackEl.id = 'exercise-feedback';
-          document.getElementById('exercise-text').after(feedbackEl);
+        // Remove any existing feedback/help messages to avoid confusion
+        const feedbackEl = document.getElementById('exercise-feedback');
+        if (feedbackEl) {
+          feedbackEl.remove();
+        }
+        const helpPanelEl = document.getElementById('exercise-help');
+        if (helpPanelEl) {
+          helpPanelEl.innerHTML = '';
+          helpPanelEl.className = '';
         }
         
-        feedbackEl.className = 'mt-4 p-3 rounded text-center bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 transition-all duration-300';
-        feedbackEl.textContent = "Here are the correct answers.";
-        
-        // Make the feedback message visible with a subtle animation
-        feedbackEl.style.opacity = '0';
-        setTimeout(() => {
-          feedbackEl.style.opacity = '1';
-        }, 10);
+        // Optionally, disable check/help buttons after showing answers?
+        // document.getElementById('check-answers-btn').disabled = true;
+        // document.getElementById('help-btn').disabled = true;
       });
       
-      // Add event listener for the help button
+      // Add event listener for the help button 
       document.getElementById('help-btn').addEventListener('click', () => {
         if (!exerciseData) return;
         
@@ -971,11 +1135,15 @@
           wordMeaningsHTML += '<h3 class="font-semibold mb-2">Word List Hints:</h3>';
           wordMeaningsHTML += '<ul class="space-y-1">';
           
-          // Create simple definitions for the words
+          // Show words and their translations (if available)
           exerciseData.answers.forEach(word => {
+            const translation = wordTranslationMap[word];
+            const translationText = translation ? translation.replace(/\n/g, '<br>') : '<i>Translation not available</i>'; // Handle multiline translations and missing ones
+            
             wordMeaningsHTML += `
-              <li class="py-1 border-b border-yellow-200 dark:border-yellow-800 last:border-0">
-                <span class="font-medium">${word}</span>
+              <li class="py-2 border-b border-yellow-200 dark:border-yellow-800 last:border-0">
+                <span class="font-medium">${word}</span>: 
+                <span class="text-sm">${translationText}</span>
               </li>
             `;
           });
@@ -1000,16 +1168,23 @@
       
       // Exit exercise button
       document.getElementById('exit-exercise-btn').addEventListener('click', () => {
-        // Hide the exercise container
-        document.getElementById('exercise-container').classList.add('hidden');
-        
-        // Show the config section
-        document.getElementById('exercise-config-section').classList.remove('hidden');
-        
-        // Reset the exercise data
-        exerciseData = null;
+          // Always navigate back to flashcards.html when exiting
+          console.log("Exiting exercise, returning to flashcards.");
+          // Clear any potential learned words from this session before leaving
+          localStorage.removeItem('learnedWords');
+          localStorage.removeItem('lastPractice');
+          localStorage.removeItem('practiceHistory');
+          window.location.href = '../flashcards.html'; 
+          
+          // // Original code (commented out):
+          // // Hide the exercise container
+          // document.getElementById('exercise-container').classList.add('hidden');
+          // // Show the config section
+          // document.getElementById('exercise-config-section').classList.remove('hidden');
+          // // Reset the exercise data
+          // exerciseData = null;
       });
-      
+
       // Reset button
       document.getElementById('reset-exercise-btn').addEventListener('click', () => {
         // Clear all input fields
@@ -1055,37 +1230,7 @@
         }
       });
 
-      // Function to save learned words to localStorage
-      function saveLearnedWords(words) {
-        // First, get any existing learned words from localStorage
-        let learnedWords = JSON.parse(localStorage.getItem('learnedWords') || '[]');
-        
-        // Add the current words to the learned words list
-        // Make sure we don't add duplicates
-        words.forEach(word => {
-          if (!learnedWords.includes(word)) {
-            learnedWords.push(word);
-          }
-        });
-        
-        // Save the updated list back to localStorage
-        localStorage.setItem('learnedWords', JSON.stringify(learnedWords));
-        
-        // Also save the practice timestamp
-        localStorage.setItem('lastPractice', new Date().toISOString());
-        
-        // Save the current session's practice data
-        const practiceSession = {
-          date: new Date().toISOString(),
-          words: words,
-          type: 'fill-in-the-blank'
-        };
-        
-        // Get existing practice history
-        let practiceHistory = JSON.parse(localStorage.getItem('practiceHistory') || '[]');
-        practiceHistory.push(practiceSession);
-        localStorage.setItem('practiceHistory', JSON.stringify(practiceHistory));
-      }
+      // Removed saveLearnedWords function as it's not used in the automatic flow
     </script>
   </body>
 </html>
