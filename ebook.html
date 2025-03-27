@@ -2427,11 +2427,12 @@
 
                         // Check if it's a scrapable URL (http/https)
                         if (url.startsWith('http://') || url.startsWith('https://')) {
-                            // Automatically scrape and save in the background
-                            scrapeAndSaveLink(url); // Call the function to handle scraping
+                            // Show confirmation toast instead of automatically scraping
+                            const linkText = link.textContent || url; // Use link text or URL as display
+                            showLinkActionConfirmation(url, linkText);
                         } else {
-                            // For non-http links (e.g., mailto:, javascript:), open normally or ignore
-                            console.warn(`Link is not scrapable: ${url}`);
+                            // For non-http links (e.g., mailto:, javascript:, internal anchors #), open normally or ignore
+                            console.warn(`Link is not directly scrapable or is internal: ${url}`);
                             // Optionally open non-http links in a new tab if desired
                             // window.open(url, '_blank', 'noopener noreferrer');
                             showToast(`Cannot scrape this type of link: ${url.substring(0, 30)}...`, 3000);
