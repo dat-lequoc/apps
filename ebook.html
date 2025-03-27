@@ -195,6 +195,51 @@
             box-shadow: 0 2px 8px var(--panel-shadow);
         }
 
+        #list-management {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            gap: 1rem;
+            flex-wrap: wrap; /* Allow wrapping */
+        }
+
+        #list-filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #list-filter {
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 0.9rem;
+        }
+
+        #create-list-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #new-list-name {
+            padding: 0.4rem 0.6rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-size: 0.9rem;
+            flex: 1; /* Take available space */
+        }
+
+        #create-list-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.9rem;
+        }
+
+
         /* Input Group Styling */
         .input-group {
             width: 100%;
@@ -281,7 +326,22 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        
+
+        .library-item-move { /* Style for the move button */
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            margin-right: 0.5rem; /* Space before delete */
+            transition: background-color 0.2s;
+        }
+        .library-item-move:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
         .progress-bar-container {
             height: 4px;
             background-color: rgba(var(--text-color), 0.1);
@@ -1134,7 +1194,20 @@
                 
                 <!-- Library Section -->
                 <div id="library-section" style="display: none;">
-                    <h2>Your Library</h2>
+                    <div id="list-management">
+                        <div id="list-filter-group">
+                             <label for="list-filter" style="font-size: 0.9rem; color: var(--text-muted);">View List:</label>
+                             <select id="list-filter">
+                                 <option value="all">Your Library (All)</option>
+                                 <!-- List options populated by JS -->
+                             </select>
+                        </div>
+                        <div id="create-list-group">
+                            <input type="text" id="new-list-name" placeholder="New list name..." />
+                            <button type="button" id="create-list-btn" class="button">+</button>
+                        </div>
+                    </div>
+                    <h2>Current List: <span id="current-list-name">Your Library (All)</span></h2>
                     <div id="library-list">
                         <!-- Library items will be populated here -->
                     </div>
@@ -1331,7 +1404,11 @@
                 markdownModeToggle: document.getElementById('markdown-mode-toggle'), // Added Markdown toggle
                 cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
                 sourceUrlSection: document.getElementById('source-url-section'), // Added source URL section
-                sourceUrlLink: document.getElementById('source-url-link')      // Added source URL link
+                sourceUrlLink: document.getElementById('source-url-link'),      // Added source URL link
+                listFilter: document.getElementById('list-filter'),             // Added list filter dropdown
+                createListBtn: document.getElementById('create-list-btn'),       // Added create list button
+                newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
+                currentListName: document.getElementById('current-list-name')   // Added current list name display
             };
 
             // App state
@@ -1361,6 +1438,8 @@
                 translationTimer: null,
                 navbarHideTimer: null,
                 debounceTimers: {},
+                bookLists: [], // Added for custom lists
+                selectedListId: null, // null means 'Your Library (All)'
 
                 // Event handling
                 touchStartY: 0,
@@ -1465,6 +1544,10 @@
                 DOM.loginBtn.addEventListener('click', () => {
                     window.open('index.html', '_blank');
                 });
+
+                // List management listeners
+                DOM.listFilter.addEventListener('change', handleListFilterChange);
+                DOM.createListBtn.addEventListener('click', handleCreateList);
 
                 // Global document events
                 document.addEventListener('keydown', handleKeyPress);
@@ -2576,18 +2659,26 @@
                     currentPosition: 0,
                     sourceUrl: null // Reset sourceUrl
                 };
-    
+                state.selectedListId = null; // Reset selected list
+                state.bookLists = []; // Clear loaded lists
+
                 // Hide the source URL section
                 DOM.sourceUrlSection.style.display = 'none'; 
                 
-                // Refresh library if user is logged in
+                // Refresh library and lists if user is logged in
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     if (session) {
-                        loadUserLibrary();
+                        fetchBookLists().then(() => {
+                             loadUserLibrary();
+                        });
+                    } else {
+                        // Ensure filter is reset if logged out
+                        renderListFilter();
+                        DOM.currentListName.textContent = 'Your Library (All)';
                     }
                 });
             }
-            
+
             function handleContentClick(e) {
                 // --- START: Intercept Markdown Link Clicks ---
                 if (state.settings.markdownModeEnabled) {
@@ -2978,11 +3069,13 @@
                         <p>Signed in as ${session.user.email}</p>
                     `;
                     
-                    // Load user's library
+                    // Load user's library and lists
                     DOM.librarySection.style.display = 'block';
-                    loadUserLibrary();
+                    fetchBookLists().then(() => { // Fetch lists first
+                        loadUserLibrary(); // Then load library (which depends on lists)
+                    });
                 }
-                
+
                 // User is logged in, check if they have API settings
                 state.userApiSettings = await getUserApiSettings();
                 
@@ -3057,25 +3150,46 @@
                 if (!session) return;
                 
                 const libraryList = document.getElementById('library-list');
-                libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading your books...</div>';
-                
+                libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading books...</div>';
+
                 try {
-                    // Fetch user's books from Supabase
-                    const { data: books, error } = await supabase
+                    // Base query
+                    let query = supabase
                         .from('ebooks')
                         .select('*')
-                        .eq('user_id', session.user.id)
-                        .order('updated_at', { ascending: false });
-                    
+                        .eq('user_id', session.user.id);
+
+                    // Apply list filter
+                    if (state.selectedListId === 'all') {
+                        // 'all' includes books with list_id = null AND books in any list
+                        // No additional filter needed here if we want all books regardless of list
+                        // If 'all' should ONLY show books NOT in a list, use: .is('list_id', null)
+                    } else if (state.selectedListId) {
+                        query = query.eq('list_id', state.selectedListId);
+                    } else {
+                        // Default: Show books not in any list (list_id is null)
+                        query = query.is('list_id', null);
+                    }
+
+                    // Add ordering
+                    query = query.order('updated_at', { ascending: false });
+
+                    const { data: books, error } = await query;
+
                     if (error) {
                         throw error;
                     }
-                    
+
+                    // Update current list name display
+                    const selectedListName = state.bookLists.find(list => list.id == state.selectedListId)?.name;
+                    DOM.currentListName.textContent = state.selectedListId === 'all' ? 'Your Library (All)' : (selectedListName || 'Your Library (Unlisted)');
+
+
                     if (!books || books.length === 0) {
-                        libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Your library is empty</div>';
+                        libraryList.innerHTML = `<div style="text-align: center; padding: 20px;">This list is empty</div>`;
                         return;
                     }
-                    
+
                     // Display books
                     libraryList.innerHTML = '';
                     books.forEach(book => {
@@ -3095,6 +3209,8 @@
                                 </div>
                             </div>
                             <div class="library-item-actions">
+                                <!-- Move button/dropdown will be added dynamically if lists exist -->
+                                <button class="library-item-move" data-id="${book.id}" style="display: none;">Move</button> 
                                 <button class="library-item-delete" data-id="${book.id}">×</button>
                             </div>
                         `;
@@ -3109,14 +3225,24 @@
                         });
                         
                         libraryList.appendChild(item);
+
+                        // Add Move button functionality if lists exist
+                        const moveButton = item.querySelector('.library-item-move');
+                        if (moveButton && state.bookLists.length > 0) {
+                            moveButton.style.display = 'inline-block'; // Show the button
+                            moveButton.addEventListener('click', (event) => {
+                                event.stopPropagation(); // Prevent opening the book
+                                showMoveToListOptions(event.target, book.id, book.list_id);
+                            });
+                        }
                     });
-                    
+
                     // Add delete button event listeners
                     document.querySelectorAll('.library-item-delete').forEach(button => {
                         button.addEventListener('click', async (event) => {
                             event.stopPropagation();
                             const bookId = button.getAttribute('data-id');
-                            
+
                             if (confirm('Remove this book from your library?')) {
                                 await deleteBookFromLibrary(bookId);
                             }
@@ -3127,7 +3253,175 @@
                     libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Error loading library</div>';
                 }
             }
-            
+
+            // --- NEW: List Management Functions ---
+
+            // Fetch book lists from Supabase
+            async function fetchBookLists() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                try {
+                    const { data, error } = await supabase
+                        .from('book_lists')
+                        .select('id, name')
+                        .eq('user_id', session.user.id)
+                        .order('name', { ascending: true });
+
+                    if (error) throw error;
+
+                    state.bookLists = data || [];
+                    renderListFilter(); // Update the dropdown
+                } catch (error) {
+                    console.error('Error fetching book lists:', error);
+                    showToast('Could not load book lists');
+                    state.bookLists = [];
+                    renderListFilter(); // Render empty filter on error
+                }
+            }
+
+            // Render the list filter dropdown options
+            function renderListFilter() {
+                // Clear existing options except the default 'All'
+                DOM.listFilter.innerHTML = '<option value="all">Your Library (All)</option>';
+                // Add option for books not in any list
+                const unlistedOption = document.createElement('option');
+                unlistedOption.value = ""; // Represents null list_id
+                unlistedOption.textContent = "Your Library (Unlisted)";
+                DOM.listFilter.appendChild(unlistedOption);
+
+
+                // Add options for each list
+                state.bookLists.forEach(list => {
+                    const option = document.createElement('option');
+                    option.value = list.id;
+                    option.textContent = list.name;
+                    DOM.listFilter.appendChild(option);
+                });
+
+                // Set the selected value based on current state
+                DOM.listFilter.value = state.selectedListId === null ? "" : (state.selectedListId || "all");
+            }
+
+            // Handle list filter change
+            function handleListFilterChange() {
+                const selectedValue = DOM.listFilter.value;
+                state.selectedListId = selectedValue === "" ? null : selectedValue; // Store null for 'Unlisted', 'all' for 'All', or the ID
+                loadUserLibrary(); // Reload the library view
+            }
+
+            // Handle create new list button click
+            async function handleCreateList() {
+                const listName = DOM.newListNameInput.value.trim();
+                if (!listName) {
+                    showToast('Please enter a name for the new list.');
+                    return;
+                }
+
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) {
+                    showToast('Please sign in to create lists.');
+                    return;
+                }
+
+                // Disable button while creating
+                DOM.createListBtn.disabled = true;
+                DOM.createListBtn.classList.add('loading');
+
+                try {
+                    const { data, error } = await supabase
+                        .from('book_lists')
+                        .insert({ user_id: session.user.id, name: listName })
+                        .select() // Select the newly created list
+                        .single(); // Expecting a single result
+
+                    if (error) {
+                        if (error.code === '23505') { // Unique constraint violation
+                            throw new Error(`List "${listName}" already exists.`);
+                        } else {
+                            throw error;
+                        }
+                    }
+
+                    showToast(`List "${listName}" created.`);
+                    DOM.newListNameInput.value = ''; // Clear input
+                    await fetchBookLists(); // Refresh the list data and dropdown
+                    // Optionally switch to the new list
+                    // state.selectedListId = data.id;
+                    // loadUserLibrary();
+
+                } catch (error) {
+                    console.error('Error creating list:', error);
+                    showToast(`Error: ${error.message}`);
+                } finally {
+                    DOM.createListBtn.disabled = false;
+                    DOM.createListBtn.classList.remove('loading');
+                }
+            }
+
+            // Show options to move a book to a list
+            function showMoveToListOptions(buttonElement, bookId, currentListId) {
+                // Simple prompt-based approach for now
+                // TODO: Replace with a custom dropdown/modal for better UX
+
+                let optionsText = "Move book to:\n0: Your Library (Unlisted)\n";
+                state.bookLists.forEach((list, index) => {
+                    optionsText += `${list.id}: ${list.name}\n`;
+                });
+                optionsText += "\nEnter the number of the target list:";
+
+                const targetListIdInput = prompt(optionsText);
+
+                if (targetListIdInput === null) return; // User cancelled
+
+                let targetListId = targetListIdInput.trim();
+
+                // Validate input
+                if (targetListId === '0') {
+                    targetListId = null; // Move to unlisted
+                } else if (!state.bookLists.some(list => list.id == targetListId)) {
+                     showToast("Invalid list number entered.");
+                     return;
+                } else {
+                    // Ensure it's a number for comparison, but keep as string/null for DB
+                    targetListId = parseInt(targetListId, 10);
+                }
+
+
+                // Check if already in the target list
+                if (targetListId === currentListId || (targetListId === null && currentListId === null)) {
+                    showToast("Book is already in that list.");
+                    return;
+                }
+
+                moveBookToList(bookId, targetListId);
+            }
+
+            // Move a book to a different list
+            async function moveBookToList(bookId, targetListId) {
+                showLoading(); // Show loading indicator
+                try {
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .update({ list_id: targetListId, updated_at: new Date() }) // Update list_id and timestamp
+                        .eq('id', bookId);
+
+                    if (error) throw error;
+
+                    showToast("Book moved successfully.");
+                    loadUserLibrary(); // Refresh the current library view
+
+                } catch (error) {
+                    console.error('Error moving book:', error);
+                    showToast("Error moving book.");
+                } finally {
+                    hideLoading(); // Hide loading indicator
+                }
+            }
+
+            // --- End NEW List Management Functions ---
+
+
             // Escape HTML to prevent XSS
             function escapeHTML(str) {
                 return str
@@ -3219,6 +3513,7 @@
                                 file_type: fileType,
                                 metadata: metadata,
                                 last_position: lastPosition,
+                                // list_id is updated via moveBookToList, not typically here
                                 updated_at: new Date()
                             })
                             .eq('id', existingBooks.id);
@@ -3234,7 +3529,8 @@
                                 content: bookContent,
                                 file_type: fileType,
                                 metadata: metadata,
-                                last_position: lastPosition
+                                last_position: lastPosition,
+                                list_id: null // New books initially go to the main library (unlisted)
                             });
                         
                         if (error) throw error;
