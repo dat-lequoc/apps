@@ -1235,6 +1235,15 @@
                 <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled, display handled by JS -->
                 <div id="ai-response-area"></div> <!-- JS controlled -->
             </div>
+
+            <!-- Source URL Section (New) -->
+            <div class="settings-section" id="source-url-section" style="display: none;">
+                <div class="settings-title">Source URL</div>
+                <div class="settings-row">
+                    <a id="source-url-link" href="#" target="_blank" rel="noopener noreferrer" style="word-break: break-all; color: var(--primary-color);"></a>
+                </div>
+            </div>
+            <!-- End Source URL Section -->
         </div>
 
         <!-- Overlay for panels -->
@@ -1320,7 +1329,9 @@
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
                 markdownModeToggle: document.getElementById('markdown-mode-toggle'), // Added Markdown toggle
-                cleanUrlContentToggle: document.getElementById('clean-url-content-toggle') // Added URL cleaning toggle
+                cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
+                sourceUrlSection: document.getElementById('source-url-section'), // Added source URL section
+                sourceUrlLink: document.getElementById('source-url-link')      // Added source URL link
             };
 
             // App state
@@ -1330,7 +1341,8 @@
                     title: '',
                     content: '',
                     chapters: [],
-                    currentPosition: 0
+                    currentPosition: 0,
+                    sourceUrl: null // Added to store the original URL
                 },
                 
                 // User settings
@@ -2070,6 +2082,9 @@
                     DOM.markdownModeToggle.checked = true;
                     // --- End change ---
 
+                    // Store the original URL
+                    state.bookData.sourceUrl = url; 
+
                     showBook(); // This will now render with Markdown enabled
 
                 } catch (error) {
@@ -2304,7 +2319,7 @@
                 
                 // Update chapter title in navbar
                 DOM.bookTitle.textContent = `${state.bookData.title || 'Book'} - ${chapter.title}`;
-
+    
                 // Check if Markdown mode is enabled
                 if (state.settings.markdownModeEnabled) {
                     // Render Markdown with basic formatting (headings, links, bold) while preserving line breaks
@@ -2417,6 +2432,15 @@
                 // Make summarize button visible if API settings are available
                 if (state.userApiSettings) {
                     DOM.summarizeBtn.style.display = 'block';
+                }
+    
+                // Update Source URL link in settings panel
+                if (state.bookData.sourceUrl) {
+                    DOM.sourceUrlLink.href = state.bookData.sourceUrl;
+                    DOM.sourceUrlLink.textContent = state.bookData.sourceUrl;
+                    DOM.sourceUrlSection.style.display = 'block'; // Show the section
+                } else {
+                    DOM.sourceUrlSection.style.display = 'none'; // Hide the section
                 }
             }
             
@@ -2549,8 +2573,12 @@
                     title: '',
                     content: '',
                     chapters: [],
-                    currentPosition: 0
+                    currentPosition: 0,
+                    sourceUrl: null // Reset sourceUrl
                 };
+    
+                // Hide the source URL section
+                DOM.sourceUrlSection.style.display = 'none'; 
                 
                 // Refresh library if user is logged in
                 supabase.auth.getSession().then(({ data: { session } }) => {
@@ -3160,8 +3188,9 @@
                             };
                         }),
                         // --- Save Markdown mode preference ---
-                        markdownModeEnabled: state.settings.markdownModeEnabled
+                        markdownModeEnabled: state.settings.markdownModeEnabled,
                         // --- End change ---
+                        sourceUrl: state.bookData.sourceUrl // Save the source URL
                     };
                     
                     // Use enhanced position data if available, otherwise create basic position
@@ -3236,6 +3265,12 @@
                                 endLine: chapter.endLine
                             };
                         });
+                        // Load source URL from metadata
+                        if (book.metadata.sourceUrl) {
+                            state.bookData.sourceUrl = book.metadata.sourceUrl;
+                        } else {
+                            state.bookData.sourceUrl = null; // Reset if not present
+                        }
                     }
                     // Fallback to content if no chapters in metadata
                     else if (book.content) {
