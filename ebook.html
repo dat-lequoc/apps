@@ -1955,7 +1955,13 @@
                     }
 
                     state.bookData.chapters = chapters;
-                    showBook();
+
+                    // --- Auto-enable Markdown mode for URL content ---
+                    state.settings.markdownModeEnabled = true;
+                    DOM.markdownModeToggle.checked = true;
+                    // --- End change ---
+
+                    showBook(); // This will now render with Markdown enabled
 
                 } catch (error) {
                     console.error('Error processing URL:', error);
@@ -2816,7 +2822,10 @@
                                 endLine: chapter.endLine,
                                 content: chapter.content // Include content for better offline experience
                             };
-                        })
+                        }),
+                        // --- Save Markdown mode preference ---
+                        markdownModeEnabled: state.settings.markdownModeEnabled
+                        // --- End change ---
                     };
                     
                     // Use enhanced position data if available, otherwise create basic position
@@ -2908,10 +2917,20 @@
                     else {
                         throw new Error('Book content not available');
                     }
-                    
+
+                    // --- Restore Markdown mode preference ---
+                    if (book.metadata && book.metadata.markdownModeEnabled !== undefined) {
+                        state.settings.markdownModeEnabled = book.metadata.markdownModeEnabled;
+                    } else {
+                        // Default for older books or if not set
+                        state.settings.markdownModeEnabled = false;
+                    }
+                    DOM.markdownModeToggle.checked = state.settings.markdownModeEnabled;
+                    // --- End change ---
+
                     // Save last position data for restoration after render
                     const lastPosition = book.last_position || {};
-                    
+
                     // Restore chapter position
                     if (lastPosition.chapter !== undefined) {
                         state.bookData.currentPosition = lastPosition.chapter;
