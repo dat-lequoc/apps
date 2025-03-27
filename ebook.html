@@ -2019,10 +2019,9 @@
                 }
 
                 // 2. Call Firecrawl API
-                showLoading(); // Show loading indicator during scrape
+                showToast(`Scraping "${url}"...`, 2000); // Notify user scraping has started
                 try {
                     const response = await firecrawlScrapeRequest(state.userApiSettings.firecrawl_api_key, url);
-
                     if (response.error) {
                         throw new Error(response.error.message || 'Firecrawl request failed');
                     }
@@ -2069,24 +2068,11 @@
                     };
 
                     // 5. Save the new book to the library
-                    const success = await saveScrapedBook(scrapedBookData);
-
-                    if (success) {
-                        showToast(`"${scrapedTitle}" saved to library!`, 3000);
-                        // Optionally refresh library view if welcome screen is active
-                        if (DOM.welcomeScreen.style.display !== 'none') {
-                            loadUserLibrary();
-                        }
-                    } else {
-                         // Error message handled within saveScrapedBook or here if needed
-                         // showToast(`Failed to save "${scrapedTitle}" to library.`, 4000);
-                    }
+                    await saveScrapedBook(scrapedBookData); // saveScrapedBook handles its own toast on success/failure
 
                 } catch (error) {
                     console.error('Error scraping and saving link:', error);
-                    showToast(`Error scraping link: ${error.message}`, 5000);
-                } finally {
-                    hideLoading(); // Hide loading indicator
+                    showToast(`Error scraping "${url}": ${error.message}`, 5000);
                 }
             }
 
@@ -2127,6 +2113,11 @@
                     }
 
                     console.log(`Successfully saved scraped book: "${scrapedBookData.title}"`);
+                    showToast(`"${scrapedBookData.title}" saved to library!`, 3000); // Show success toast here
+                    // Optionally refresh library view if welcome screen is active
+                    if (DOM.welcomeScreen.style.display !== 'none') {
+                        loadUserLibrary();
+                    }
                     return true; // Indicate success
 
                 } catch (error) {
