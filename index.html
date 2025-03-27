@@ -284,16 +284,17 @@
 
     .modal-container {
       background: var(--card-background);
-      padding: 28px;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      padding: 24px; /* Reduced padding */
+      border-radius: 10px; /* Slightly smaller radius */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
       width: 90%;
-      max-width: 500px;
+      max-width: 480px; /* Slightly smaller max-width */
       max-height: 90vh;
       overflow-y: auto;
       position: relative;
       transform: translateY(-20px);
       transition: all 0.3s ease;
+      border: 1px solid var(--border-color); /* Add subtle border */
     }
 
     .modal-overlay.active .modal-container {
@@ -302,32 +303,157 @@
 
     .modal-close {
       position: absolute;
-      top: 20px;
-      right: 20px;
+      top: 16px; /* Adjusted position */
+      right: 16px; /* Adjusted position */
       background: transparent;
       border: none;
-      font-size: 24px;
+      font-size: 20px; /* Slightly smaller */
       cursor: pointer;
-      padding: 0;
+      padding: 4px; /* Add padding for easier clicking */
+      line-height: 1;
       width: auto;
       min-width: 0;
       color: var(--text-color);
-      opacity: 0.7;
-      transition: opacity 0.2s;
+      opacity: 0.6; /* Slightly more subtle */
+      transition: opacity 0.2s, transform 0.2s;
+      border-radius: 50%;
     }
 
     .modal-close:hover {
       opacity: 1;
-      background: transparent;
-      transform: none;
+      background: rgba(128, 128, 128, 0.1); /* Subtle hover background */
+      transform: scale(1.1);
       box-shadow: none;
     }
 
     .modal-title {
       margin-top: 0;
-      padding-right: 30px;
+      margin-bottom: 1.5rem; /* Increased bottom margin */
+      padding-right: 30px; /* Keep space for close button */
+      font-size: 1.5rem; /* Slightly smaller title */
+      font-weight: 600;
     }
-    
+
+    /* New styles for modal content */
+    .modal-section {
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .modal-section:last-of-type {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .modal-section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--primary-color);
+    }
+    .modal-section p {
+      margin: 0.25rem 0 0.75rem;
+      font-size: 0.9rem;
+      color: var(--text-color);
+      line-height: 1.5;
+    }
+    .modal-section p span { /* Style for masked keys/model */
+      font-family: monospace;
+      background-color: rgba(128, 128, 128, 0.1);
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .modal-section label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      color: var(--text-color);
+    }
+    .modal-section input[type="password"],
+    .modal-section select {
+      margin-top: 0;
+      margin-bottom: 0.75rem; /* Space below inputs */
+      padding: 10px 12px; /* Compact padding */
+      font-size: 0.9rem;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    .modal-buttons button,
+    #modal-common-buttons button {
+      padding: 8px 14px; /* Compact buttons */
+      font-size: 0.9rem;
+      width: auto; /* Allow buttons to size naturally */
+      min-width: 80px;
+      flex-shrink: 0; /* Prevent shrinking */
+    }
+    .modal-buttons .remove-key-button {
+      background-color: transparent;
+      color: var(--danger-color);
+      border: 1px solid var(--danger-color);
+      margin-left: auto; /* Push remove button to the right */
+    }
+    .modal-buttons .remove-key-button:hover {
+      background-color: rgba(239, 68, 68, 0.1); /* Red 500 with alpha */
+    }
+    .modal-buttons .change-key-button {
+      background-color: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+    .modal-buttons .change-key-button:hover {
+       background-color: rgba(128, 128, 128, 0.1);
+    }
+    #modal-common-buttons {
+      display: flex;
+      justify-content: flex-end; /* Align buttons to the right */
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    #modal-common-buttons #cancel-settings-button {
+      background-color: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+     #modal-common-buttons #cancel-settings-button:hover {
+       background-color: rgba(128, 128, 128, 0.1);
+    }
+    #settings-message {
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 1rem; /* Ensure space below message */
+    }
+    #settings-message:empty {
+        display: none; /* Hide if empty */
+    }
+    /* Style messages based on content */
+    #settings-message:not(:empty) {
+        background-color: rgba(128, 128, 128, 0.1);
+    }
+    #settings-message:not(:empty)::before {
+        content: "ℹ️ "; /* Default info icon */
+    }
+    #settings-message[textContent*="✅"] {
+        background-color: rgba(16, 185, 129, 0.1); /* Emerald 500 with alpha */
+        color: #047857; /* Emerald 700 */
+    }
+    body.dark #settings-message[textContent*="✅"] {
+        color: #34d399; /* Emerald 400 */
+    }
+    #settings-message[textContent*="❌"] {
+        background-color: rgba(239, 68, 68, 0.1); /* Red 500 with alpha */
+        color: #b91c1c; /* Red 700 */
+    }
+     body.dark #settings-message[textContent*="❌"] {
+        color: #f87171; /* Red 400 */
+    }
+
+
     /* Mobile Styles for Modal */
     @media (max-width: 600px) {
       body {
@@ -471,31 +597,60 @@
   <div id="settings-modal" class="modal-overlay">
     <div class="modal-container">
       <button type="button" id="close-modal" class="modal-close">&times;</button>
-      <h2 class="modal-title">Gemini API Settings</h2>
-      <!-- Section to show saved settings -->
-      <div id="saved-api-section" class="hidden">
-        <p>Saved Gemini API Key: <span id="masked-api-key"></span></p>
-        <p>Saved Firecrawl API Key: <span id="masked-firecrawl-api-key"></span></p>
-        <p>Preferred Gemini Model: <span id="saved-model"></span></p>
-        <button type="button" id="remove-api-key-button">Remove API Keys</button>
-        <button type="button" id="change-api-key-button">Change API Keys</button>
-      </div>
-      <!-- Form section to enter a new API key and select a model -->
-      <div id="api-form-section">
-        <form id="settings-form">
-          <input type="password" id="geminiApiKeyInput" placeholder="Enter your Gemini API key" required>
+      <h2 class="modal-title">API Key Settings</h2>
+      <div id="settings-message"></div> <!-- Removed inline style -->
+
+      <!-- Gemini Settings Section -->
+      <div id="gemini-settings-section" class="modal-section">
+        <h3>Gemini API</h3>
+        <!-- Display Saved Key -->
+        <div id="saved-gemini-section" class="hidden">
+          <p>Saved Key: <span id="masked-gemini-api-key"></span></p>
+          <p>Preferred Model: <span id="saved-gemini-model"></span></p>
+          <div class="modal-buttons">
+             <button type="button" class="change-key-button" data-key-type="gemini">Change</button>
+             <button type="button" class="remove-key-button" data-key-type="gemini">Remove</button>
+          </div>
+        </div>
+        <!-- Input Form -->
+        <div id="gemini-form-section" class="hidden">
+          <label for="geminiApiKeyInput">Gemini API Key:</label>
+          <input type="password" id="geminiApiKeyInput" placeholder="Enter Gemini API key">
+          <label for="geminiModelSelect">Gemini Model:</label>
           <select id="geminiModelSelect">
             <option value="gemini-2.0-flash">gemini-2.0-flash</option>
             <option value="gemini-2.0-pro-exp-02-05">gemini-2.0-pro-exp-02-05</option>
             <option value="gemini-2.0-flash-lite-preview-02-05">gemini-2.0-flash-lite-preview-02-05</option>
             <option value="gemini-2.0-flash-thinking-exp-01-21">gemini-2.0-flash-thinking-exp-01-21</option>
           </select>
-          <input type="password" id="firecrawlApiKeyInput" placeholder="Enter your Firecrawl API key (optional)">
-          <button type="submit" id="save-settings-button">Save</button>
-          <button type="button" id="cancel-settings-button">Cancel</button>
-        </form>
+          <!-- Save/Cancel moved to bottom -->
+        </div>
       </div>
-      <div id="settings-message"></div>
+
+      <!-- Firecrawl Settings Section -->
+      <div id="firecrawl-settings-section" class="modal-section">
+        <h3>Firecrawl API</h3>
+         <!-- Display Saved Key -->
+        <div id="saved-firecrawl-section" class="hidden">
+          <p>Saved Key: <span id="masked-firecrawl-api-key"></span></p>
+           <div class="modal-buttons">
+             <button type="button" class="change-key-button" data-key-type="firecrawl">Change</button>
+             <button type="button" class="remove-key-button" data-key-type="firecrawl">Remove</button>
+          </div>
+        </div>
+         <!-- Input Form -->
+        <div id="firecrawl-form-section" class="hidden">
+          <label for="firecrawlApiKeyInput">Firecrawl API Key:</label>
+          <input type="password" id="firecrawlApiKeyInput" placeholder="Enter Firecrawl API key">
+           <!-- Save/Cancel moved to bottom -->
+        </div>
+      </div>
+
+      <!-- Common Buttons - No HR needed due to section borders -->
+      <div id="modal-common-buttons">
+         <button type="button" id="cancel-settings-button">Cancel</button>
+         <button type="button" id="save-settings-button">Save Changes</button>
+      </div>
     </div>
   </div>
 
@@ -697,155 +852,251 @@
       }
     }
 
+    // --- Updated Settings Display Logic ---
+
     function showSavedSettings(data) {
-      // Display masked keys
-      const maskedGeminiKey = data.api_key ? data.api_key.substring(0, 4) + "******" : "Not set";
-      const maskedFirecrawlKey = data.firecrawl_api_key ? data.firecrawl_api_key.substring(0, 4) + "******" : "Not set";
-      
-      document.getElementById("masked-api-key").textContent = maskedGeminiKey;
-      document.getElementById("masked-firecrawl-api-key").textContent = maskedFirecrawlKey;
-      document.getElementById("saved-model").textContent = data.model || "Not set";
-      
-      document.getElementById("saved-api-section").classList.remove("hidden");
-      document.getElementById("api-form-section").classList.add("hidden");
+        const geminiSection = document.getElementById("gemini-settings-section");
+        const firecrawlSection = document.getElementById("firecrawl-settings-section");
+
+        // Gemini
+        if (data.api_key) {
+            geminiSection.querySelector("#masked-gemini-api-key").textContent = data.api_key.substring(0, 4) + "******";
+            geminiSection.querySelector("#saved-gemini-model").textContent = data.model || "Not set";
+            geminiSection.querySelector("#saved-gemini-section").classList.remove("hidden");
+            geminiSection.querySelector("#gemini-form-section").classList.add("hidden");
+        } else {
+            geminiSection.querySelector("#saved-gemini-section").classList.add("hidden");
+            geminiSection.querySelector("#gemini-form-section").classList.remove("hidden");
+            geminiSection.querySelector("#geminiApiKeyInput").value = "";
+            geminiSection.querySelector("#geminiModelSelect").value = data.model || "gemini-2.0-flash";
+        }
+
+        // Firecrawl
+        if (data.firecrawl_api_key) {
+            firecrawlSection.querySelector("#masked-firecrawl-api-key").textContent = data.firecrawl_api_key.substring(0, 4) + "******";
+            firecrawlSection.querySelector("#saved-firecrawl-section").classList.remove("hidden");
+            firecrawlSection.querySelector("#firecrawl-form-section").classList.add("hidden");
+        } else {
+            firecrawlSection.querySelector("#saved-firecrawl-section").classList.add("hidden");
+            firecrawlSection.querySelector("#firecrawl-form-section").classList.remove("hidden");
+            firecrawlSection.querySelector("#firecrawlApiKeyInput").value = "";
+        }
+        settingsMessage.textContent = ""; // Clear any previous messages
+        settingsMessage.className = ''; // Reset message style class
     }
 
-    function showSettingsForm() {
-      // Clear potential previous values
-      document.getElementById("geminiApiKeyInput").value = "";
-      document.getElementById("firecrawlApiKeyInput").value = "";
-      document.getElementById("settings-message").textContent = ""; // Clear messages
-      
-      document.getElementById("saved-api-section").classList.add("hidden");
-      document.getElementById("api-form-section").classList.remove("hidden");
+    function showSettingsForm(keyType, currentData) {
+        settingsMessage.textContent = ""; // Clear messages
+        settingsMessage.className = ''; // Reset message style class
+
+        if (keyType === 'gemini') {
+            const section = document.getElementById("gemini-settings-section");
+            section.querySelector("#saved-gemini-section").classList.add("hidden");
+            section.querySelector("#gemini-form-section").classList.remove("hidden");
+            section.querySelector("#geminiApiKeyInput").value = "";
+            section.querySelector("#geminiApiKeyInput").placeholder = "Enter new Gemini API key (leave blank to keep current)";
+            section.querySelector("#geminiModelSelect").value = currentData.model || "gemini-2.0-flash";
+        } else if (keyType === 'firecrawl') {
+            const section = document.getElementById("firecrawl-settings-section");
+            section.querySelector("#saved-firecrawl-section").classList.add("hidden");
+            section.querySelector("#firecrawl-form-section").classList.remove("hidden");
+            section.querySelector("#firecrawlApiKeyInput").value = "";
+            section.querySelector("#firecrawlApiKeyInput").placeholder = "Enter new Firecrawl API key (leave blank to keep current)";
+        }
     }
 
-    // Settings Modal Handling
+    // --- Settings Modal Handling ---
     const settingsModal = document.getElementById("settings-modal");
     const closeModalBtn = document.getElementById("close-modal");
+    const settingsMessage = document.getElementById("settings-message");
+    let currentUserSettings = null; // Store current settings when modal opens
     
-    // Show the settings modal when the Settings button is clicked
+    // Show the settings modal
     document.getElementById("settings-button").addEventListener("click", async () => {
-      settingsModal.classList.add("active");
-      await loadUserSettings();
-    });
-    
-    // Hide the settings modal when clicking the close button
-    closeModalBtn.addEventListener("click", () => {
-      settingsModal.classList.remove("active");
-    });
-    
-    // Hide the settings modal when clicking Cancel
-    document.getElementById("cancel-settings-button").addEventListener("click", () => {
-      settingsModal.classList.remove("active");
-    });
-    
-    // Hide the modal when clicking outside of it
-    settingsModal.addEventListener("click", (e) => {
-      if (e.target === settingsModal) {
-        settingsModal.classList.remove("active");
-      }
-    });
-    
-    // Also close modal with Escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && settingsModal.classList.contains("active")) {
-        settingsModal.classList.remove("active");
-      }
-    });
-
-    // Handle settings form submission: validate and then save API key and model into Supabase
-    document.getElementById("settings-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const geminiApiKey = document.getElementById("geminiApiKeyInput").value;
-      const firecrawlApiKey = document.getElementById("firecrawlApiKeyInput").value; // Get Firecrawl key
-      const model = document.getElementById("geminiModelSelect").value;
-      const settingsMessage = document.getElementById("settings-message");
-      
-      // Basic validation: Ensure Gemini key is provided if Firecrawl key is not
-      if (!geminiApiKey && !firecrawlApiKey) {
-          settingsMessage.textContent = "Please enter at least one API key.";
-          return;
-      }
-
-      settingsMessage.textContent = "Verifying Gemini API Key (if provided)...";
-      
-      try {
-        // Only verify Gemini key if provided
-        if (geminiApiKey) {
-            const data = await geminiRequest(geminiApiKey, "ping, answer `pong` without additional text", model);
-            const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!responseText || !responseText.includes("pong")) {
-                settingsMessage.textContent = "❌ Invalid Gemini API key or model.";
-                return; // Stop if Gemini key is invalid
-            }
-            settingsMessage.textContent = "✅ Gemini API Key is valid. Saving settings...";
-        } else {
-            settingsMessage.textContent = "Saving settings..."; // No Gemini key to verify
-        }
-
+        settingsMessage.textContent = "Loading settings...";
+        settingsMessage.className = ''; // Reset style
+        settingsModal.classList.add("active");
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          settingsMessage.textContent = "User session expired, please sign in again.";
-          return;
+            settingsMessage.textContent = "❌ Please sign in to manage settings.";
+            // Optionally disable form elements here
+            return;
         }
         const userId = session.user.id;
-        
-        // Prepare data for upsert, including firecrawl_api_key
-        const settingsData = { 
-            user_id: userId, 
-            api_key: geminiApiKey, // Save Gemini key (might be empty)
-            firecrawl_api_key: firecrawlApiKey, // Save Firecrawl key (might be empty)
-            model: model 
+        try {
+            const { data, error } = await supabase
+                .from('user_settings')
+                .select('*')
+                .eq('user_id', userId)
+                .maybeSingle();
+
+            if (error) throw error;
+
+            currentUserSettings = data || { user_id: userId }; // Store current settings or init if null
+            showSavedSettings(currentUserSettings); // Display based on loaded data
+
+        } catch (error) {
+             settingsMessage.textContent = "❌ Error loading settings: " + error.message;
+             currentUserSettings = {}; // Reset
+        }
+    });
+
+    // Hide the settings modal
+    function hideSettingsModal() {
+        settingsModal.classList.remove("active");
+        currentUserSettings = null; // Clear stored settings
+        settingsMessage.textContent = ""; // Clear messages
+        settingsMessage.className = ''; // Reset style
+    }
+
+    closeModalBtn.addEventListener("click", hideSettingsModal);
+    
+    document.getElementById("cancel-settings-button").addEventListener("click", hideSettingsModal);
+
+    settingsModal.addEventListener("click", (e) => {
+        if (e.target === settingsModal) {
+            hideSettingsModal();
+        }
+    });
+    
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && settingsModal.classList.contains("active")) {
+            hideSettingsModal();
+        }
+    });
+
+    // --- Updated Save Logic ---
+    document.getElementById("save-settings-button").addEventListener("click", async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            settingsMessage.textContent = "❌ User session expired, please sign in again.";
+            return;
+        }
+        const userId = session.user.id;
+        settingsMessage.textContent = "Processing...";
+        settingsMessage.className = ''; // Reset style
+
+        // Determine which forms are active to get new values
+        const isGeminiFormActive = !document.getElementById("gemini-form-section").classList.contains("hidden");
+        const isFirecrawlFormActive = !document.getElementById("firecrawl-form-section").classList.contains("hidden");
+
+        let newGeminiKey = currentUserSettings.api_key || ''; // Default to empty string if null/undefined
+        let newModel = currentUserSettings.model;
+        if (isGeminiFormActive) {
+            const inputGeminiKey = document.getElementById("geminiApiKeyInput").value;
+            // Only update if a new key was actually entered
+            if (inputGeminiKey) {
+                 newGeminiKey = inputGeminiKey;
+            }
+            newModel = document.getElementById("geminiModelSelect").value;
+        }
+
+        let newFirecrawlKey = currentUserSettings.firecrawl_api_key || ''; // Default to empty string
+        if (isFirecrawlFormActive) {
+             const inputFirecrawlKey = document.getElementById("firecrawlApiKeyInput").value;
+             // Only update if a new key was actually entered
+             if (inputFirecrawlKey) {
+                 newFirecrawlKey = inputFirecrawlKey;
+             }
+        }
+
+        // Check if Gemini key needs verification (only if it changed and is not empty)
+        const geminiKeyChanged = newGeminiKey !== (currentUserSettings.api_key || '');
+        if (geminiKeyChanged && newGeminiKey) {
+            settingsMessage.textContent = "Verifying new Gemini API Key...";
+            try {
+                const data = await geminiRequest(newGeminiKey, "ping, answer `pong` without additional text", newModel);
+                const responseText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (!responseText || !responseText.includes("pong")) {
+                    settingsMessage.textContent = "❌ Invalid new Gemini API key or model.";
+                    return; // Stop if verification fails
+                }
+                settingsMessage.textContent = "✅ New Gemini API Key is valid. Saving...";
+            } catch (err) {
+                settingsMessage.textContent = "❌ Error verifying Gemini API key: " + err.message;
+                console.error(err);
+                return;
+            }
+        } else {
+             settingsMessage.textContent = "Saving settings...";
+        }
+
+        // Prepare data for upsert - ensure keys are not null
+        const settingsData = {
+            user_id: userId,
+            api_key: newGeminiKey || '', // Ensure empty string instead of null
+            firecrawl_api_key: newFirecrawlKey || '', // Ensure empty string instead of null
+            model: newModel
         };
 
-        const { error } = await supabase
-          .from('user_settings')
-          .upsert(settingsData, { onConflict: 'user_id' }); // Use upsert with onConflict
+        try {
+            // Upsert the data
+            const { data: upsertData, error } = await supabase
+                .from('user_settings')
+                .upsert(settingsData, { onConflict: 'user_id' })
+                .select() // Select the updated/inserted row
+                .single(); // Expect a single row back
 
-        if (error) {
-          settingsMessage.textContent = "Error saving settings: " + error.message;
-        } else {
-          settingsMessage.textContent = "✅ Settings saved successfully.";
-          // Pass both keys to showSavedSettings
-          showSavedSettings({ 
-              api_key: geminiApiKey, 
-              firecrawl_api_key: firecrawlApiKey, 
-              model: model
-          });
+            if (error) throw error;
+
+            settingsMessage.textContent = "✅ Settings saved successfully.";
+            currentUserSettings = upsertData; // Update local cache
+            showSavedSettings(currentUserSettings); // Refresh display
+
+        } catch (error) {
+             settingsMessage.textContent = "❌ Error saving settings: " + error.message;
         }
-      } catch (err) {
-        settingsMessage.textContent = "❌ Invalid API key or connection error";
-        console.error(err);
-      }
     });
 
-    // Handle removal of API keys (set them to empty strings)
-    document.getElementById("remove-api-key-button")?.addEventListener("click", async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      const userId = session.user.id;
-      const settingsMessage = document.getElementById("settings-message");
-      settingsMessage.textContent = "Removing API keys...";
+    // --- Updated Remove/Change Logic ---
 
-      // Update the record, setting keys to empty strings
-      const { error } = await supabase
-        .from('user_settings')
-        .update({ api_key: '', firecrawl_api_key: '' }) // Set keys to empty
-        .eq('user_id', userId);
+    // Handle removal of a specific API key
+    async function removeApiKey(keyType) {
+        if (!currentUserSettings) return;
+        const userId = currentUserSettings.user_id;
+        settingsMessage.textContent = `Removing ${keyType} key...`;
+        settingsMessage.className = ''; // Reset style
 
-      if (error) {
-        settingsMessage.textContent = "Error removing API keys: " + error.message;
-      } else {
-        settingsMessage.textContent = "API keys removed.";
-        // Refresh the form view
-        showSettingsForm();
-      }
-    });
+        const updatePayload = {};
+        if (keyType === 'gemini') {
+            updatePayload.api_key = ''; // Set Gemini key to empty string
+        } else if (keyType === 'firecrawl') {
+            updatePayload.firecrawl_api_key = ''; // Set Firecrawl key to empty string
+        } else {
+            settingsMessage.textContent = `❌ Unknown key type: ${keyType}`;
+            return;
+        }
 
-    // When the user wants to change the API key from a saved state, display the form again
-    document.getElementById("change-api-key-button")?.addEventListener("click", () => {
-      showSettingsForm();
+        try {
+            const { data: updatedData, error } = await supabase
+                .from('user_settings')
+                .update(updatePayload)
+                .eq('user_id', userId)
+                .select() // Select the updated row
+                .single(); // Expect a single row
+
+            if (error) throw error;
+
+            settingsMessage.textContent = `✅ ${keyType.charAt(0).toUpperCase() + keyType.slice(1)} API key removed.`;
+            currentUserSettings = updatedData; // Update local cache
+            showSavedSettings(currentUserSettings); // Refresh display
+
+        } catch (error) {
+             settingsMessage.textContent = `❌ Error removing ${keyType} key: ${error.message}`;
+        }
+    }
+
+    // Add event listeners to all remove/change buttons using event delegation
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-key-button')) {
+            const keyType = e.target.getAttribute('data-key-type');
+            if (confirm(`Are you sure you want to remove the ${keyType} API key?`)) {
+                 removeApiKey(keyType);
+            }
+        } else if (e.target.classList.contains('change-key-button')) {
+            const keyType = e.target.getAttribute('data-key-type');
+            showSettingsForm(keyType, currentUserSettings);
+        }
     });
   </script>
 </body>

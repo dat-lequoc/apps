@@ -120,6 +120,14 @@
             --text-muted: rgba(224, 224, 224, 0.7);
         }
 
+        .hidden {
+            display: none !important; /* Use important to override potential inline styles if needed */
+        }
+
+        #ai-response-area {
+            display: none; /* Initially hidden, controlled by JS */
+        }
+
         /* Base styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -1011,7 +1019,7 @@
                 <p>Open a text, EPUB, or PDF file to start reading</p>
                 <div class="welcome-buttons">
                     <button type="button" id="open-file-btn" class="button">Open File</button>
-                    <button type="button" id="login-btn" class="button" style="display: none;">Sign In</button> <!-- JS controlled -->
+                    <button type="button" id="login-btn" class="button hidden">Sign In</button> <!-- JS controlled -->
                 </div>
 
                 <!-- URL Input Section -->
@@ -1137,8 +1145,8 @@
                         <option value="fr-FR">French</option>
                     </select>
                 </div>
-                <button type="button" id="summarize-chapter-btn" class="button" style="display: none; margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled -->
-                <div id="ai-response-area" style="display: none;"></div> <!-- JS controlled -->
+                <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled, display handled by JS -->
+                <div id="ai-response-area"></div> <!-- JS controlled -->
             </div>
         </div>
 
@@ -1225,7 +1233,7 @@
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading')
             };
-            
+
             // App state
             let state = {
                 // Book data
@@ -1251,20 +1259,20 @@
                 translationTimer: null,
                 navbarHideTimer: null,
                 debounceTimers: {},
-                
+
                 // Event handling
                 touchStartY: 0,
                 touchEndY: 0,
                 lastSelectionRect: null
             };
-            
+
             // Initialize the app
             function init() {
                 setupEventListeners();
                 checkAuthAndLoadApiSettings();
                 loadUserPreferences();
             }
-            
+
             // Set up event listeners
             function setupEventListeners() {
                 // File handling
@@ -1348,12 +1356,12 @@
                 DOM.loginBtn.addEventListener('click', () => {
                     window.open('index.html', '_blank');
                 });
-                
+
                 // Global document events
                 document.addEventListener('keydown', handleKeyPress);
                 document.addEventListener('selectionchange', debounce(handleTextSelection, 300));
             }
-            
+
             // Handle keyboard shortcuts
             function handleKeyPress(e) {
                 // Only handle shortcuts when not in input fields
@@ -1411,7 +1419,7 @@
                     e.preventDefault();
                 }
             }
-            
+
             // Handle touch gestures
             function handleTouchStart(e) {
                 state.touchStartY = e.touches[0].clientY;
@@ -2528,8 +2536,8 @@
                 
                 if (!session) {
                     // Show login button
-                    DOM.loginBtn.style.display = 'inline-block';
-                    
+                    DOM.loginBtn.classList.remove('hidden');
+
                     // Update auth section
                     DOM.authSection.innerHTML = `
                         <p>Sign in to save books to your library</p>
@@ -2542,7 +2550,7 @@
                     return;
                 } else {
                     // User is signed in
-                    DOM.loginBtn.style.display = 'none';
+                    DOM.loginBtn.classList.add('hidden');
                     DOM.authSection.innerHTML = `
                         <p>Signed in as ${session.user.email}</p>
                     `;
@@ -2600,7 +2608,7 @@
                     DOM.processUrlBtn.style.cursor = "pointer";
                 }
             }
-            
+
             // Get the user's Gemini API settings from Supabase
             async function getUserApiSettings() {
                 const { data: { session } } = await supabase.auth.getSession();
