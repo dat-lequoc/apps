@@ -342,6 +342,50 @@
             background-color: rgba(255, 255, 255, 0.1);
         }
 
+        /* Dropdown for moving books */
+        .move-list-dropdown {
+            position: absolute;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px var(--panel-shadow);
+            z-index: 10; /* Ensure it's above other items */
+            min-width: 150px;
+            max-height: 200px; /* Limit height and allow scrolling */
+            overflow-y: auto;
+            display: none; /* Hidden by default */
+            margin-top: 2px; /* Small space below the button */
+            right: 0; /* Align to the right of the actions container */
+        }
+
+        .move-list-dropdown.visible {
+            display: block;
+        }
+
+        .move-list-option {
+            padding: 0.5rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .move-list-option:last-child {
+            border-bottom: none;
+        }
+
+        .move-list-option:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .move-list-option.disabled {
+            color: var(--text-muted);
+            cursor: default;
+            background-color: transparent;
+        }
+
+
         .progress-bar-container {
             height: 4px;
             background-color: rgba(var(--text-color), 0.1);
@@ -1552,7 +1596,25 @@
                 // Global document events
                 document.addEventListener('keydown', handleKeyPress);
                 document.addEventListener('selectionchange', debounce(handleTextSelection, 300));
+                // Add listener to close dropdowns on outside click
+                document.addEventListener('click', handleGlobalClick);
             }
+
+            // Handle clicks outside of specific elements (like dropdowns)
+            function handleGlobalClick(event) {
+                // Close move-to-list dropdowns
+                const openDropdowns = document.querySelectorAll('.move-list-dropdown.visible');
+                openDropdowns.forEach(dropdown => {
+                    // Check if the click was outside the dropdown and its corresponding button
+                    const moveButton = dropdown.previousElementSibling; // Assumes button is right before dropdown
+                    if (!dropdown.contains(event.target) && !moveButton.contains(event.target)) {
+                        dropdown.classList.remove('visible');
+                    }
+                });
+
+                // Add similar logic here for other popups/dropdowns if needed
+            }
+
 
             // Handle keyboard shortcuts
             function handleKeyPress(e) {
@@ -3208,9 +3270,12 @@
                                     <div class="progress-bar" style="width: ${progress}%"></div>
                                 </div>
                             </div>
-                            <div class="library-item-actions">
+                            <div class="library-item-actions" style="position: relative;"> <!-- Added relative positioning -->
                                 <!-- Move button/dropdown will be added dynamically if lists exist -->
-                                <button class="library-item-move" data-id="${book.id}" style="display: none;">Move</button> 
+                                <button class="library-item-move" data-id="${book.id}" data-current-list-id="${book.list_id || ''}" style="display: none;">Move</button>
+                                <div class="move-list-dropdown">
+                                    <!-- Dropdown options populated by JS -->
+                                </div>
                                 <button class="library-item-delete" data-id="${book.id}">×</button>
                             </div>
                         `;
@@ -3228,11 +3293,29 @@
 
                         // Add Move button functionality if lists exist
                         const moveButton = item.querySelector('.library-item-move');
-                        if (moveButton && state.bookLists.length > 0) {
+                        const moveButton = item.querySelector('.library-item-move');
+                        const dropdownContainer = item.querySelector('.move-list-dropdown');
+
+                        if (moveButton && dropdownContainer && state.bookLists.length > 0) {
                             moveButton.style.display = 'inline-block'; // Show the button
                             moveButton.addEventListener('click', (event) => {
-                                event.stopPropagation(); // Prevent opening the book
-                                showMoveToListOptions(event.target, book.id, book.list_id);
+                                event.stopPropagation(); // Prevent opening the book or closing dropdown immediately
+
+                                // Close other open dropdowns first
+                                document.querySelectorAll('.move-list-dropdown.visible').forEach(dd => {
+                                    if (dd !== dropdownContainer) {
+                                        dd.classList.remove('visible');
+                                    }
+                                });
+
+                                // Toggle current dropdown
+                                const isVisible = dropdownContainer.classList.toggle('visible');
+                                if (isVisible) {
+                                    const bookId = moveButton.getAttribute('data-id');
+                                    // Use || '' to handle null list_id correctly
+                                    const currentListId = moveButton.getAttribute('data-current-list-id') || null;
+                                    renderMoveToListDropdown(dropdownContainer, bookId, currentListId);
+                                }
                             });
                         }
                     });
@@ -3359,43 +3442,59 @@
                 }
             }
 
-            // Show options to move a book to a list
-            function showMoveToListOptions(buttonElement, bookId, currentListId) {
-                // Simple prompt-based approach for now
-                // TODO: Replace with a custom dropdown/modal for better UX
+            // Render the dropdown options for moving a book
+            function renderMoveToListDropdown(dropdownElement, bookId, currentListIdStr) {
+                dropdownElement.innerHTML = ''; // Clear previous options
 
-                let optionsText = "Move book to:\n0: Your Library (Unlisted)\n";
-                state.bookLists.forEach((list, index) => {
-                    optionsText += `${list.id}: ${list.name}\n`;
-                });
-                optionsText += "\nEnter the number of the target list:";
+                // Convert currentListIdStr back to null if it's an empty string
+                const currentListId = currentListIdStr === '' ? null : parseInt(currentListIdStr, 10);
 
-                const targetListIdInput = prompt(optionsText);
+                // Option to move to 'Unlisted'
+                const unlistedOption = document.createElement('div');
+                unlistedOption.className = 'move-list-option';
+                unlistedOption.textContent = 'Your Library (Unlisted)';
+                unlistedOption.setAttribute('data-target-list-id', ''); // Use empty string for null
 
-                if (targetListIdInput === null) return; // User cancelled
-
-                let targetListId = targetListIdInput.trim();
-
-                // Validate input
-                if (targetListId === '0') {
-                    targetListId = null; // Move to unlisted
-                } else if (!state.bookLists.some(list => list.id == targetListId)) {
-                     showToast("Invalid list number entered.");
-                     return;
+                if (currentListId === null) {
+                    unlistedOption.classList.add('disabled');
+                    unlistedOption.title = 'Already in this list';
                 } else {
-                    // Ensure it's a number for comparison, but keep as string/null for DB
-                    targetListId = parseInt(targetListId, 10);
+                    unlistedOption.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        moveBookToList(bookId, null);
+                        dropdownElement.classList.remove('visible');
+                    });
                 }
+                dropdownElement.appendChild(unlistedOption);
+
+                // Add separator
+                const separator = document.createElement('hr');
+                separator.style.margin = '2px 0';
+                separator.style.borderColor = 'var(--border-color)';
+                dropdownElement.appendChild(separator);
 
 
-                // Check if already in the target list
-                if (targetListId === currentListId || (targetListId === null && currentListId === null)) {
-                    showToast("Book is already in that list.");
-                    return;
-                }
+                // Options for each list
+                state.bookLists.forEach(list => {
+                    const option = document.createElement('div');
+                    option.className = 'move-list-option';
+                    option.textContent = list.name;
+                    option.setAttribute('data-target-list-id', list.id);
 
-                moveBookToList(bookId, targetListId);
+                    if (list.id === currentListId) {
+                        option.classList.add('disabled');
+                        option.title = 'Already in this list';
+                    } else {
+                        option.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            moveBookToList(bookId, list.id);
+                            dropdownElement.classList.remove('visible');
+                        });
+                    }
+                    dropdownElement.appendChild(option);
+                });
             }
+
 
             // Move a book to a different list
             async function moveBookToList(bookId, targetListId) {
