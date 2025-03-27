@@ -3720,6 +3720,59 @@
                     console.error('Error loading user preferences:', error);
                 }
             }
+
+            // Clean Markdown using Gemini AI (Moved *inside* IIFE)
+            async function cleanMarkdownWithAI(rawMarkdown) {
+                // Now has access to 'state'
+                if (!state.userApiSettings || !state.userApiSettings.api_key) {
+                    throw new Error("Gemini API key not available.");
+                }
+            
+                // Limit input size to avoid exceeding API limits (adjust as needed)
+                const maxLength = 25000; // Approx token limit safety margin
+                if (rawMarkdown.length > maxLength) {
+                    console.warn("Raw markdown length exceeds limit for AI cleaning. Truncating.");
+                    rawMarkdown = rawMarkdown.substring(0, maxLength) + "\n\n[Content truncated due to length limit]";
+                }
+            
+                const prompt = `
+You are an expert text processing AI. Your task is to clean up the following Markdown content, which was scraped from a webpage. Focus on extracting the main article content and improving its readability for an ebook reader.
+
+Follow these instructions precisely:
+1.  **Identify and Remove Extraneous Elements:** Eliminate headers, footers, navigation menus, sidebars, advertisements, cookie notices, social media links, comment sections, and other non-essential clutter.
+2.  **Preserve Main Content:** Keep the core article text, including headings (like ##, ###), paragraphs, lists, blockquotes, and code blocks that belong to the main content.
+3.  **Format for Readability:** Ensure paragraphs are well-separated (usually by a single blank line). Maintain the original Markdown formatting for elements like bold (**text**), italics (*text*), and inline code (\`code\`).
+4.  **Link Handling:** Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
+5.  **Structure:** Try to maintain the logical structure of the article using Markdown headings.
+6.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
+
+Here is the raw Markdown content:
+---
+${rawMarkdown}
+---
+Cleaned Markdown Output:`;
+                
+                // Use the configured model, or potentially default to 'gemini-1.5-flash-latest' if appropriate
+                const modelToUse = state.userApiSettings.model || 'gemini-1.5-flash-latest';
+            
+                const response = await geminiRequest( // geminiRequest is defined within the IIFE
+                    state.userApiSettings.api_key,
+                    prompt,
+                    modelToUse
+                );
+            
+                if (response.error) {
+                    throw new Error(response.error.message || 'AI cleaning request failed');
+                }
+            
+                const cleanedContent = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+                if (!cleanedContent) {
+                    throw new Error('AI returned no content.');
+                }
+            
+                return cleanedContent.trim();
+            }
             
             // Return public API
             return {
@@ -3751,58 +3804,6 @@
             // If we don't have chapters, just use the percentComplete
             return Math.round((book.last_position.percentComplete || 0) * 100);
         }
-
-        // Clean Markdown using Gemini AI
-        async function cleanMarkdownWithAI(rawMarkdown) {
-            if (!state.userApiSettings || !state.userApiSettings.api_key) {
-                throw new Error("Gemini API key not available.");
-            }
-        
-            // Limit input size to avoid exceeding API limits (adjust as needed)
-            const maxLength = 25000; // Approx token limit safety margin
-            if (rawMarkdown.length > maxLength) {
-                console.warn("Raw markdown length exceeds limit for AI cleaning. Truncating.");
-                rawMarkdown = rawMarkdown.substring(0, maxLength) + "\n\n[Content truncated due to length limit]";
-            }
-        
-            const prompt = `
-You are an expert text processing AI. Your task is to clean up the following Markdown content, which was scraped from a webpage. Focus on extracting the main article content and improving its readability for an ebook reader.
-
-Follow these instructions precisely:
-1.  **Identify and Remove Extraneous Elements:** Eliminate headers, footers, navigation menus, sidebars, advertisements, cookie notices, social media links, comment sections, and other non-essential clutter.
-2.  **Preserve Main Content:** Keep the core article text, including headings (like ##, ###), paragraphs, lists, blockquotes, and code blocks that belong to the main content.
-3.  **Format for Readability:** Ensure paragraphs are well-separated (usually by a single blank line). Maintain the original Markdown formatting for elements like bold (**text**), italics (*text*), and inline code (\`code\`).
-4.  **Link Handling:** Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
-5.  **Structure:** Try to maintain the logical structure of the article using Markdown headings.
-6.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
-
-Here is the raw Markdown content:
----
-${rawMarkdown}
----
-Cleaned Markdown Output:`;
-            
-                // Use the configured model, or potentially default to 'gemini-1.5-flash-latest' if appropriate
-                const modelToUse = state.userApiSettings.model || 'gemini-1.5-flash-latest';
-            
-                const response = await geminiRequest(
-                    state.userApiSettings.api_key,
-                    prompt,
-                    modelToUse
-                );
-            
-                if (response.error) {
-                    throw new Error(response.error.message || 'AI cleaning request failed');
-                }
-            
-                const cleanedContent = response && response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts && response.candidates[0].content.parts[0] && response.candidates[0].content.parts[0].text;
-            
-                if (!cleanedContent) {
-                    throw new Error('AI returned no content.');
-                }
-            
-                return cleanedContent.trim();
-            }
     </script>
 </body>
 </html>
