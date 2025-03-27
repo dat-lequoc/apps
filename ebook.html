@@ -1463,9 +1463,9 @@
                     content: '',
                     chapters: [],
                     currentPosition: 0,
-                    sourceUrl: null // Added to store the original URL
+                    sourceUrl: null, // Added to store the original URL
+                    currentListId: null // Added to store the list_id of the currently open book
                 },
-                
                 // User settings
                 settings: {
                     fontSize: 100,
@@ -1701,10 +1701,10 @@
                 // Update book title
                 DOM.bookTitle.textContent = file.name;
                 state.bookData.title = file.name;
-                
+                state.bookData.currentListId = null; // Reset list ID for file uploads
+
                 // Process file based on extension
                 const fileExtension = file.name.split('.').pop().toLowerCase();
-                
                 if (fileExtension === 'txt') {
                     processTextFile(file);
                 } else if (fileExtension === 'epub') {
@@ -1737,13 +1737,13 @@
                         customTitle += '...';
                     }
                 }
-                
+
                 DOM.bookTitle.textContent = customTitle;
                 state.bookData.title = customTitle;
-                
+                state.bookData.currentListId = null; // Reset list ID for pasted text
+
                 try {
                     state.bookData.content = text;
-                    
                     // Create a single chapter with all the text content
                     state.bookData.chapters = [{
                         title: customTitle,
@@ -2310,8 +2310,8 @@
                         }
                     };
 
-                    // 5. Save the new book to the library
-                    await saveScrapedBook(scrapedBookData); // saveScrapedBook handles its own toast on success/failure
+                    // 5. Save the new book to the library, passing the current book's list ID
+                    await saveScrapedBook(scrapedBookData, state.bookData.currentListId);
 
                 } catch (error) {
                     console.error('Error scraping and saving link:', error);
@@ -2320,7 +2320,7 @@
             }
 
             // Save a newly scraped book to the Supabase library
-            async function saveScrapedBook(scrapedBookData) {
+            async function saveScrapedBook(scrapedBookData, targetListId = null) {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     console.error('Cannot save scraped book: User not logged in.');
@@ -2341,6 +2341,7 @@
                             file_type: scrapedBookData.file_type,
                             metadata: scrapedBookData.metadata,
                             last_position: scrapedBookData.last_position,
+                            list_id: targetListId, // Assign to the target list
                             // created_at and updated_at will be set by default
                         });
 
@@ -3643,8 +3644,9 @@
                 try {
                     // Set up book data
                     state.bookData.title = book.title;
+                    state.bookData.currentListId = book.list_id || null; // Store the list ID
                     DOM.bookTitle.textContent = book.title;
-                    
+
                     // Check for chapters in metadata
                     if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
                         state.bookData.chapters = book.metadata.chapters.map(chapter => {
