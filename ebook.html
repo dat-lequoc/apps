@@ -1240,9 +1240,9 @@
                 <div id="library-section" style="display: none;">
                     <div id="list-management">
                         <div id="list-filter-group">
-                             <label for="list-filter" style="font-size: 0.9rem; color: var(--text-muted);">View List:</label>
+                             <label for="list-filter" style="font-size: 0.9rem; color: var(--text-muted);">View:</label>
                              <select id="list-filter">
-                                 <option value="all">Your Library (All)</option>
+                                 <option value="all">All</option>
                                  <!-- List options populated by JS -->
                              </select>
                         </div>
@@ -1251,7 +1251,7 @@
                             <button type="button" id="create-list-btn" class="button">+</button>
                         </div>
                     </div>
-                    <h2>Current List: <span id="current-list-name">Your Library (All)</span></h2>
+                    <h2 id="current-list-name">All</h2> <!-- Changed default text and removed "Current List:" -->
                     <div id="library-list">
                         <!-- Library items will be populated here -->
                     </div>
@@ -2736,7 +2736,7 @@
                     } else {
                         // Ensure filter is reset if logged out
                         renderListFilter();
-                        DOM.currentListName.textContent = 'Your Library (All)';
+                        DOM.currentListName.textContent = 'All'; // Updated default text
                     }
                 });
             }
@@ -3244,7 +3244,7 @@
 
                     // Update current list name display
                     const selectedListName = state.bookLists.find(list => list.id == state.selectedListId)?.name;
-                    DOM.currentListName.textContent = state.selectedListId === 'all' ? 'Your Library (All)' : (selectedListName || 'Your Library (Unlisted)');
+                    DOM.currentListName.textContent = state.selectedListId === 'all' ? 'All' : (selectedListName || 'Unlisted'); // Simplified names
 
 
                     if (!books || books.length === 0) {
@@ -3365,11 +3365,11 @@
             // Render the list filter dropdown options
             function renderListFilter() {
                 // Clear existing options except the default 'All'
-                DOM.listFilter.innerHTML = '<option value="all">Your Library (All)</option>';
+                DOM.listFilter.innerHTML = '<option value="all">All</option>'; // Simplified name
                 // Add option for books not in any list
                 const unlistedOption = document.createElement('option');
                 unlistedOption.value = ""; // Represents null list_id
-                unlistedOption.textContent = "Your Library (Unlisted)";
+                unlistedOption.textContent = "Unlisted"; // Simplified name
                 DOM.listFilter.appendChild(unlistedOption);
 
 
@@ -3451,7 +3451,7 @@
                 // Option to move to 'Unlisted'
                 const unlistedOption = document.createElement('div');
                 unlistedOption.className = 'move-list-option';
-                unlistedOption.textContent = 'Your Library (Unlisted)';
+                unlistedOption.textContent = 'Unlisted'; // Simplified name
                 unlistedOption.setAttribute('data-target-list-id', ''); // Use empty string for null
 
                 if (currentListId === null) {
