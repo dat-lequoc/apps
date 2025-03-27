@@ -716,6 +716,8 @@
         
         // Make sure any browse cards UI is hidden too
         document.getElementById('browse-cards-section').classList.add('hidden');
+        document.getElementById('fill-in-blank-exercise-button').classList.add('hidden');
+        document.getElementById('matching-exercise-button').classList.add('hidden');
         
         // Show the review interface and progress bar
         document.getElementById('progress-container').classList.remove('hidden');
@@ -754,6 +756,8 @@
                     document.getElementById('upload-section').classList.remove('hidden');
                     document.getElementById('stats-section').classList.remove('hidden');
                     document.getElementById('review-section').classList.remove('hidden');
+                    document.getElementById('fill-in-blank-exercise-button').classList.remove('hidden');
+                    document.getElementById('matching-exercise-button').classList.remove('hidden');
                     activeReviewSection.classList.add('hidden');
                     document.getElementById('progress-container').classList.add('hidden');
                     editCardBtn.classList.remove('hidden'); // Ensure buttons are visible again
@@ -950,6 +954,8 @@
         document.getElementById('upload-section').classList.remove('hidden');
         document.getElementById('stats-section').classList.remove('hidden');
         document.getElementById('review-section').classList.remove('hidden');
+        document.getElementById('fill-in-blank-exercise-button').classList.remove('hidden');
+        document.getElementById('matching-exercise-button').classList.remove('hidden');
         // Hide the review interface
         activeReviewSection.classList.add('hidden');
         // Clear the remaining review queue
