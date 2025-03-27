@@ -82,8 +82,44 @@
             --border-color: var(--dark-border);
             --panel-shadow: var(--dark-panel-shadow);
             --highlight-color: var(--dark-highlight);
+            --input-bg: rgba(255, 255, 255, 0.05); /* Added for input backgrounds */
+            --text-muted: rgba(var(--text-color), 0.7); /* Added for muted text */
         }
-        
+
+        /* Theme classes */
+        body.light-theme {
+            --bg-color: var(--light-bg);
+            --text-color: var(--light-text);
+            --panel-bg: var(--light-panel-bg);
+            --border-color: var(--light-border);
+            --panel-shadow: var(--light-panel-shadow);
+            --highlight-color: var(--light-highlight);
+            --input-bg: #fff;
+            --text-muted: #666;
+        }
+
+        body.sepia-theme {
+            --bg-color: var(--sepia-bg);
+            --text-color: var(--sepia-text);
+            --panel-bg: var(--sepia-panel-bg);
+            --border-color: var(--sepia-border);
+            --panel-shadow: var(--sepia-panel-shadow);
+            --highlight-color: var(--sepia-highlight);
+            --input-bg: #f7f0e0;
+            --text-muted: rgba(95, 75, 50, 0.7);
+        }
+
+        body.dark-theme {
+            --bg-color: var(--dark-bg);
+            --text-color: var(--dark-text);
+            --panel-bg: var(--dark-panel-bg);
+            --border-color: var(--dark-border);
+            --panel-shadow: var(--dark-panel-shadow);
+            --highlight-color: var(--dark-highlight);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --text-muted: rgba(224, 224, 224, 0.7);
+        }
+
         /* Base styles */
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
@@ -175,7 +211,74 @@
             overflow-y: auto;
             box-shadow: 0 2px 8px var(--panel-shadow);
         }
-        
+
+        #url-input-container {
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        #url-input-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        #url-input {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            font-family: inherit;
+        }
+
+        #toggle-text-input-container {
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+
+        #toggle-text-input {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        #text-input-container {
+            width: 100%;
+            margin-top: 0.75rem;
+            /* display: none; /* Controlled by JS */
+        }
+
+        #text-input {
+            width: 100%;
+            min-height: 150px;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            margin-bottom: 0.75rem;
+            font-family: inherit;
+        }
+
+        #text-input-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #text-input-title {
+            flex: 1;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            margin-right: 0.75rem;
+            font-family: inherit;
+        }
+
         .library-item {
             display: flex;
             justify-content: space-between;
@@ -418,7 +521,11 @@
         #ai-settings-content {
             margin-bottom: 1rem;
         }
-        
+
+        .settings-row.ai-toggle {
+            margin-top: 0.75rem;
+        }
+
         #ai-response-area {
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
@@ -903,23 +1010,31 @@
                 <h1>Enhanced Ebook Reader</h1>
                 <p>Open a text, EPUB, or PDF file to start reading</p>
                 <div class="welcome-buttons">
-                    <button id="open-file-btn" class="button">Open File</button>
-                    <button id="login-btn" class="button" style="display: none;">Sign In</button>
+                    <button type="button" id="open-file-btn" class="button">Open File</button>
+                    <button type="button" id="login-btn" class="button" style="display: none;">Sign In</button> <!-- JS controlled -->
                 </div>
-                
-                <!-- Text Input Section - now a more subtle option -->
-                <div style="text-align: center; margin-top: 0.5rem;">
-                    <a href="#" id="toggle-text-input" style="font-size: 0.9rem; color: var(--text-muted);">or paste text directly</a>
-                </div>
-                
-                <div id="text-input-container" style="width: 100%; margin-top: 0.75rem; display: none;">
-                    <textarea id="text-input" class="full-width-input" style="width: 100%; min-height: 150px; padding: 0.75rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); margin-bottom: 0.75rem; font-family: inherit;"></textarea>
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <input id="text-input-title" type="text" placeholder="Enter a title (optional)" style="flex: 1; padding: 0.5rem; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--input-bg); color: var(--text-color); margin-right: 0.75rem; font-family: inherit;">
-                        <button id="process-text-btn" class="button">Read Text</button>
+
+                <!-- URL Input Section -->
+                <div id="url-input-container">
+                    <div id="url-input-controls">
+                        <input id="url-input" type="url" placeholder="Or enter a URL to read">
+                        <button type="button" id="process-url-btn" class="button">Read URL</button>
                     </div>
                 </div>
-                
+
+                <!-- Text Input Section - now a more subtle option -->
+                <div id="toggle-text-input-container">
+                    <a href="#" id="toggle-text-input">or paste text directly</a>
+                </div>
+
+                <div id="text-input-container" style="display: none;"> <!-- JS controlled -->
+                    <textarea id="text-input" class="full-width-input"></textarea>
+                    <div id="text-input-controls">
+                        <input id="text-input-title" type="text" placeholder="Enter a title (optional)">
+                        <button type="button" id="process-text-btn" class="button">Read Text</button>
+                    </div>
+                </div>
+
                 <!-- Example Ebook Section -->
                 <div class="example-book-section">
                     <p>Don't have an ebook? Download our example:</p>
@@ -939,17 +1054,17 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Top navbar -->
         <div id="navbar">
             <div id="book-title">Ebook Title</div>
             <div id="navbar-buttons">
-                <button class="navbar-btn" id="toc-btn" aria-label="Table of Contents">☰</button>
-                <button class="navbar-btn" id="settings-btn" aria-label="Settings">⚙️</button>
-                <button class="navbar-btn" id="home-btn" aria-label="Home">⌂</button>
+                <button type="button" class="navbar-btn" id="toc-btn" aria-label="Table of Contents">☰</button>
+                <button type="button" class="navbar-btn" id="settings-btn" aria-label="Settings">⚙️</button>
+                <button type="button" class="navbar-btn" id="home-btn" aria-label="Home">⌂</button>
             </div>
         </div>
-        
+
         <!-- Main reader area -->
         <div id="reader-container">
             <div id="content-area"></div>
@@ -958,48 +1073,48 @@
         
         <!-- Navigation buttons -->
         <div id="nav-controls">
-            <div class="nav-btn" id="prev-btn" aria-label="Previous Chapter">←</div>
-            <div class="nav-btn" id="next-btn" aria-label="Next Chapter">→</div>
+            <button type="button" class="nav-btn" id="prev-btn" aria-label="Previous Chapter">←</button>
+            <button type="button" class="nav-btn" id="next-btn" aria-label="Next Chapter">→</button>
         </div>
-        
+
         <!-- Table of contents panel -->
         <div id="toc-panel">
             <div id="toc-header">
                 <h3>Table of Contents</h3>
-                <button class="navbar-btn" id="close-toc-btn" aria-label="Close">✕</button>
+                <button type="button" class="navbar-btn" id="close-toc-btn" aria-label="Close">✕</button>
             </div>
             <div id="toc-content"></div>
         </div>
-        
+
         <!-- Settings panel -->
         <div id="settings-panel">
             <div class="settings-section">
                 <div class="settings-title">Font Size</div>
                 <div class="font-size-controls">
-                    <button class="font-btn" id="font-decrease-btn" aria-label="Decrease Font Size">A-</button>
+                    <button type="button" class="font-btn" id="font-decrease-btn" aria-label="Decrease Font Size">A-</button>
                     <span id="font-size-value">100%</span>
-                    <button class="font-btn" id="font-increase-btn" aria-label="Increase Font Size">A+</button>
+                    <button type="button" class="font-btn" id="font-increase-btn" aria-label="Increase Font Size">A+</button>
                 </div>
             </div>
-            
+
             <div class="settings-section">
                 <div class="settings-title">Line Height</div>
                 <div class="line-height-controls">
-                    <button class="font-btn" id="line-height-decrease-btn" aria-label="Decrease Line Height">-</button>
+                    <button type="button" class="font-btn" id="line-height-decrease-btn" aria-label="Decrease Line Height">-</button>
                     <span id="line-height-value">1.6</span>
-                    <button class="font-btn" id="line-height-increase-btn" aria-label="Increase Line Height">+</button>
+                    <button type="button" class="font-btn" id="line-height-increase-btn" aria-label="Increase Line Height">+</button>
                 </div>
             </div>
-            
+
             <div class="settings-section">
                 <div class="settings-title">Theme</div>
                 <div class="theme-options">
-                    <div class="theme-option light-option" data-theme="light" aria-label="Light Theme"></div>
-                    <div class="theme-option sepia-option" data-theme="sepia" aria-label="Sepia Theme"></div>
-                    <div class="theme-option dark-option active" data-theme="dark" aria-label="Dark Theme"></div>
+                    <div class="theme-option light-option" data-theme="light" title="Light Theme"></div>
+                    <div class="theme-option sepia-option" data-theme="sepia" title="Sepia Theme"></div>
+                    <div class="theme-option dark-option active" data-theme="dark" title="Dark Theme"></div>
                 </div>
             </div>
-            
+
             <!-- AI Features Section -->
             <div class="settings-section" id="ai-features-section">
                 <div class="settings-title">AI Features</div>
@@ -1007,7 +1122,7 @@
                     <!-- This will be populated dynamically -->
                     <p>Loading AI settings...</p>
                 </div>
-                <div class="settings-row" style="margin-top: 0.75rem;">
+                <div class="settings-row ai-toggle">
                     <label for="translation-toggle">Text Selection Translation</label>
                     <input type="checkbox" id="translation-toggle" checked>
                 </div>
@@ -1022,11 +1137,11 @@
                         <option value="fr-FR">French</option>
                     </select>
                 </div>
-                <button id="summarize-chapter-btn" class="button" style="display: none; margin-top: 0.75rem;">Summarize Chapter</button>
-                <div id="ai-response-area" style="display: none;"></div>
+                <button type="button" id="summarize-chapter-btn" class="button" style="display: none; margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled -->
+                <div id="ai-response-area" style="display: none;"></div> <!-- JS controlled -->
             </div>
         </div>
-        
+
         <!-- Overlay for panels -->
         <div id="overlay"></div>
         
@@ -1045,9 +1160,9 @@
         
         <!-- Toast notification -->
         <div id="toast"></div>
-        
+
         <!-- File input (hidden) -->
-        <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;">
+        <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;"> <!-- Standard practice -->
     </div>
 
     <script>
@@ -1082,6 +1197,9 @@
                 processTextBtn: document.getElementById('process-text-btn'),
                 toggleTextInput: document.getElementById('toggle-text-input'),
                 textInputContainer: document.getElementById('text-input-container'),
+                urlInputContainer: document.getElementById('url-input-container'),
+                urlInput: document.getElementById('url-input'),
+                processUrlBtn: document.getElementById('process-url-btn'),
                 fontDecreaseBtn: document.getElementById('font-decrease-btn'),
                 fontIncreaseBtn: document.getElementById('font-increase-btn'),
                 fontSizeValue: document.getElementById('font-size-value'),
@@ -1160,7 +1278,8 @@
                     e.preventDefault();
                     DOM.textInputContainer.style.display = DOM.textInputContainer.style.display === 'none' ? 'block' : 'none';
                 });
-                
+                DOM.processUrlBtn.addEventListener('click', processUrlInput);
+
                 // Navigation
                 DOM.tocBtn.addEventListener('click', toggleTocPanel);
                 DOM.closeTocBtn.addEventListener('click', closeTocPanel);
@@ -1699,6 +1818,131 @@
                 };
                 reader.readAsArrayBuffer(file);
             }
+
+            // Firecrawl API helper
+            async function firecrawlScrapeRequest(apiKey, url) {
+                try {
+                    const response = await fetch('https://api.firecrawl.dev/v0/scrape', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({ url: url })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Firecrawl API request failed with status ${response.status}`);
+                    }
+                    
+                    return await response.json();
+                } catch (error) {
+                    console.error('Error calling Firecrawl API:', error);
+                    return { error: { message: error.message || 'Failed to connect to Firecrawl API' } };
+                }
+            }
+
+            // Process URL input using Firecrawl
+            async function processUrlInput() {
+                const url = DOM.urlInput.value.trim();
+                if (!url) {
+                    showToast('Please enter a valid URL');
+                    return;
+                }
+
+                // Check for Firecrawl API key
+                if (!state.userApiSettings || !state.userApiSettings.firecrawl_api_key) {
+                    showToast('Firecrawl API key not configured. Please set it up in the main dashboard.');
+                    // Optionally open the dashboard in a new tab
+                    // window.open('index.html', '_blank'); 
+                    return;
+                }
+
+                showLoading();
+                DOM.bookTitle.textContent = `Reading: ${url}`; // Temporary title
+                state.bookData.title = url; // Use URL as initial title
+
+                try {
+                    const response = await firecrawlScrapeRequest(state.userApiSettings.firecrawl_api_key, url);
+
+                    if (response.error) {
+                        throw new Error(response.error.message);
+                    }
+
+                    if (!response.data || !response.data.markdown) {
+                        throw new Error('No markdown content received from Firecrawl.');
+                    }
+
+                    const markdownContent = response.data.markdown;
+                    state.bookData.content = markdownContent; // Store raw markdown
+
+                    // Update title if Firecrawl provided one
+                    if (response.data.metadata && response.data.metadata.title) {
+                        state.bookData.title = response.data.metadata.title;
+                        DOM.bookTitle.textContent = state.bookData.title;
+                    }
+
+                    // Process markdown into chapters (simple split for now, could be improved)
+                    // Treat major headings (##) as chapter breaks
+                    const lines = markdownContent.split('\n');
+                    let chapters = [];
+                    let currentChapterContent = [];
+                    let currentChapterTitle = state.bookData.title || 'Chapter 1';
+                    let chapterIndex = 1;
+
+                    lines.forEach((line, index) => {
+                        const trimmedLine = line.trim();
+                        if (trimmedLine.startsWith('## ') && currentChapterContent.length > 0) {
+                            // Start new chapter
+                            chapters.push({
+                                title: currentChapterTitle,
+                                content: currentChapterContent.join('\n'),
+                                startLine: 0, // Adjust if needed
+                                endLine: 0    // Adjust if needed
+                            });
+                            currentChapterTitle = trimmedLine.substring(3).trim() || `Chapter ${++chapterIndex}`;
+                            currentChapterContent = [line]; // Include the heading in the new chapter
+                        } else {
+                            if (trimmedLine.startsWith('## ') && currentChapterContent.length === 0) {
+                                // Set title for the first chapter
+                                currentChapterTitle = trimmedLine.substring(3).trim() || `Chapter ${chapterIndex}`;
+                            }
+                            currentChapterContent.push(line);
+                        }
+                    });
+
+                    // Add the last chapter
+                    if (currentChapterContent.length > 0) {
+                         chapters.push({
+                            title: currentChapterTitle,
+                            content: currentChapterContent.join('\n'),
+                            startLine: 0, // Adjust if needed
+                            endLine: 0    // Adjust if needed
+                        });
+                    }
+                    
+                    // If no chapters were created (e.g., no '##' headings), create one chapter
+                    if (chapters.length === 0) {
+                         chapters.push({
+                            title: state.bookData.title || 'Content',
+                            content: markdownContent,
+                            startLine: 0,
+                            endLine: lines.length
+                        });
+                    }
+
+                    state.bookData.chapters = chapters;
+                    showBook();
+
+                } catch (error) {
+                    console.error('Error processing URL:', error);
+                    showToast(`Error reading URL: ${error.message}`);
+                    goToHome(); // Go back to welcome screen on error
+                } finally {
+                    hideLoading();
+                }
+            }
             
             // Book display functions
             function showBook() {
@@ -1733,17 +1977,55 @@
                 // Update chapter title in navbar
                 DOM.bookTitle.textContent = `${state.bookData.title || 'Book'} - ${chapter.title}`;
                 
-                // Split text into paragraphs
-                const paragraphs = chapter.content.split('\n');
-                paragraphs.forEach((paragraph, index) => {
-                    if (paragraph.trim()) {
+                // Process content (basic markdown to HTML)
+                const lines = chapter.content.split('\n');
+                let currentElement = null;
+
+                lines.forEach((line, index) => {
+                    const trimmedLine = line.trim();
+
+                    if (trimmedLine.startsWith('# ')) { // H1
+                        const h = document.createElement('h1');
+                        h.textContent = trimmedLine.substring(2).trim();
+                        DOM.contentArea.appendChild(h);
+                        currentElement = null;
+                    } else if (trimmedLine.startsWith('## ')) { // H2
+                        const h = document.createElement('h2');
+                        h.textContent = trimmedLine.substring(3).trim();
+                        DOM.contentArea.appendChild(h);
+                        currentElement = null;
+                    } else if (trimmedLine.startsWith('### ')) { // H3
+                        const h = document.createElement('h3');
+                        h.textContent = trimmedLine.substring(4).trim();
+                        DOM.contentArea.appendChild(h);
+                        currentElement = null;
+                    } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) { // List item
+                        if (!currentElement || currentElement.tagName !== 'UL') {
+                            currentElement = document.createElement('ul');
+                            DOM.contentArea.appendChild(currentElement);
+                        }
+                        const li = document.createElement('li');
+                        li.textContent = trimmedLine.substring(2).trim();
+                        currentElement.appendChild(li);
+                    } else if (trimmedLine === '---' || trimmedLine === '***') { // Horizontal rule
+                        DOM.contentArea.appendChild(document.createElement('hr'));
+                        currentElement = null;
+                    } else if (trimmedLine) { // Paragraph
                         const p = document.createElement('p');
-                        p.textContent = paragraph;
+                        // Basic inline markdown (bold, italic) - could be expanded
+                        let processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                        processedLine = processedLine.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                        p.innerHTML = processedLine; // Use innerHTML for basic formatting
                         p.setAttribute('data-p-index', index); // Add index for position tracking
                         DOM.contentArea.appendChild(p);
-                    } else {
-                        // Add empty spacing for blank lines
-                        DOM.contentArea.appendChild(document.createElement('br'));
+                        currentElement = null;
+                    } else if (currentElement && currentElement.tagName === 'P') {
+                         // Add extra space after a paragraph if followed by a blank line
+                         DOM.contentArea.appendChild(document.createElement('br'));
+                         currentElement = null;
+                    } else if (!currentElement) {
+                         // Add single break for consecutive blank lines outside paragraphs/lists
+                         DOM.contentArea.appendChild(document.createElement('br'));
                     }
                 });
                 
@@ -2273,20 +2555,50 @@
                 // User is logged in, check if they have API settings
                 state.userApiSettings = await getUserApiSettings();
                 
-                if (!state.userApiSettings) {
-                    DOM.aiSettingsContent.innerHTML = `
-                        <p>To use AI features, please set up your Gemini API key in the 
-                        <a href="index.html" target="_blank">main dashboard</a>.</p>
+                let aiSettingsHtml = '';
+                let canUseAi = false;
+                let canUseFirecrawl = false;
+
+                if (state.userApiSettings) {
+                    if (state.userApiSettings.api_key && state.userApiSettings.model) {
+                        aiSettingsHtml += `
+                            <p>✅ Gemini API Key configured</p>
+                            <p>Model: ${state.userApiSettings.model}</p>`;
+                        canUseAi = true;
+                    } else {
+                         aiSettingsHtml += `<p>❌ Gemini API Key not configured. <a href="index.html" target="_blank">Set up in dashboard</a>.</p>`;
+                    }
+                    
+                    if (state.userApiSettings.firecrawl_api_key) {
+                        aiSettingsHtml += `<p>✅ Firecrawl API Key configured</p>`;
+                        canUseFirecrawl = true;
+                    } else {
+                        aiSettingsHtml += `<p>❌ Firecrawl API Key not configured. <a href="index.html" target="_blank">Set up in dashboard</a>.</p>`;
+                    }
+                } else {
+                    aiSettingsHtml = `
+                        <p>To use AI features (Summarize, Translate, Read URL), please 
+                        <a href="index.html" target="_blank">sign in and configure API keys</a> in the main dashboard.</p>
                     `;
-                    return;
                 }
+
+                DOM.aiSettingsContent.innerHTML = aiSettingsHtml;
+
+                // Enable/disable features based on keys
+                DOM.summarizeBtn.style.display = canUseAi ? 'block' : 'none';
+                DOM.translationToggle.disabled = !canUseAi; // Disable toggle if no Gemini key
+                DOM.processUrlBtn.disabled = !canUseFirecrawl; // Disable URL button if no Firecrawl key
                 
-                // User has API settings, enable AI features
-                DOM.aiSettingsContent.innerHTML = `
-                    <p>✅ API Key configured</p>
-                    <p>Model: ${state.userApiSettings.model}</p>
-                `;
-                DOM.summarizeBtn.style.display = 'block';
+                // Add tooltip or visual cue for disabled URL button
+                if (!canUseFirecrawl) {
+                    DOM.urlInputContainer.title = "Firecrawl API key needed. Set it up in the main dashboard.";
+                    DOM.processUrlBtn.style.opacity = "0.5";
+                    DOM.processUrlBtn.style.cursor = "not-allowed";
+                } else {
+                    DOM.urlInputContainer.title = "";
+                    DOM.processUrlBtn.style.opacity = "1";
+                    DOM.processUrlBtn.style.cursor = "pointer";
+                }
             }
             
             // Get the user's Gemini API settings from Supabase
@@ -2296,7 +2608,7 @@
                 
                 const { data, error } = await supabase
                     .from('user_settings')
-                    .select('*')
+                    .select('api_key, model, firecrawl_api_key') // Select all needed keys
                     .eq('user_id', session.user.id)
                     .maybeSingle();
                     
@@ -2842,12 +3154,12 @@
                 toast.innerHTML = `
                     <div class="flashcard-header">
                         <div class="flashcard-word">${escapeHTML(flashcardData.word)}</div>
-                        <button class="flashcard-close-btn" aria-label="Close">×</button>
+                        <button type="button" class="flashcard-close-btn" aria-label="Close">×</button>
                     </div>
                     <div class="flashcard-translation">${formatTranslation(flashcardData.translation_answer)}</div>
                     <div class="flashcard-actions">
-                        <button class="flashcard-speak-btn" aria-label="Speak">🔊</button>
-                        <button class="flashcard-save-btn">Save</button>
+                        <button type="button" class="flashcard-speak-btn" aria-label="Speak">🔊</button>
+                        <button type="button" class="flashcard-save-btn">Save</button>
                     </div>
                 `;
                 
