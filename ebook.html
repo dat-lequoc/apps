@@ -83,40 +83,6 @@
             --panel-shadow: var(--dark-panel-shadow);
             --highlight-color: var(--dark-highlight);
             --input-bg: rgba(255, 255, 255, 0.05); /* Added for input backgrounds */
-            --text-muted: rgba(var(--text-color), 0.7); /* Added for muted text */
-        }
-
-        /* Theme classes */
-        body.light-theme {
-            --bg-color: var(--light-bg);
-            --text-color: var(--light-text);
-            --panel-bg: var(--light-panel-bg);
-            --border-color: var(--light-border);
-            --panel-shadow: var(--light-panel-shadow);
-            --highlight-color: var(--light-highlight);
-            --input-bg: #fff;
-            --text-muted: #666;
-        }
-
-        body.sepia-theme {
-            --bg-color: var(--sepia-bg);
-            --text-color: var(--sepia-text);
-            --panel-bg: var(--sepia-panel-bg);
-            --border-color: var(--sepia-border);
-            --panel-shadow: var(--sepia-panel-shadow);
-            --highlight-color: var(--sepia-highlight);
-            --input-bg: #f7f0e0;
-            --text-muted: rgba(95, 75, 50, 0.7);
-        }
-
-        body.dark-theme {
-            --bg-color: var(--dark-bg);
-            --text-color: var(--dark-text);
-            --panel-bg: var(--dark-panel-bg);
-            --border-color: var(--dark-border);
-            --panel-shadow: var(--dark-panel-shadow);
-            --highlight-color: var(--dark-highlight);
-            --input-bg: rgba(255, 255, 255, 0.05);
             --text-muted: rgba(224, 224, 224, 0.7);
         }
 
@@ -177,19 +143,19 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Allow scrolling from top */
             background-color: var(--bg-color);
             z-index: 100;
-            padding: 1rem;
+            padding: 5vh 1rem; /* Add vertical padding */
             overflow-y: auto;
         }
-        
+
         #welcome-screen h1 {
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.5rem; /* Increased margin */
             text-align: center;
-            font-size: 2rem;
+            font-size: 2.2rem; /* Slightly larger */
         }
-        
+
         .welcome-content {
             display: flex;
             flex-direction: column;
@@ -197,17 +163,26 @@
             justify-content: center;
             width: 100%;
             max-width: 600px;
-            padding: 0 1.25rem;
+            padding: 1rem; /* Adjusted padding */
         }
-        
-        .welcome-buttons {
+
+        .welcome-actions { /* Renamed for clarity */
             display: flex;
-            gap: 1rem;
-            margin-top: 1.25rem;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column; /* Stack actions vertically */
+            gap: 1.5rem; /* Increased gap */
+            margin-top: 1.5rem;
+            width: 100%;
+            align-items: center;
         }
-        
+
+        .main-actions { /* Group main buttons */
+             display: flex;
+             gap: 1rem;
+             justify-content: center;
+             flex-wrap: wrap; /* Allow wrapping on small screens */
+             width: 100%;
+        }
+
         #library-section {
             width: 100%;
             max-width: 600px;
@@ -215,24 +190,26 @@
             padding: 1.25rem;
             background-color: var(--panel-bg);
             border-radius: 8px;
-            max-height: 50vh;
+            max-height: 50vh; /* Keep max height */
             overflow-y: auto;
             box-shadow: 0 2px 8px var(--panel-shadow);
         }
 
-        #url-input-container {
+        /* Input Group Styling */
+        .input-group {
             width: 100%;
-            margin-top: 1rem;
-        }
-
-        #url-input-controls {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 0.75rem;
+            flex-direction: column;
+            gap: 0.75rem; /* Space between elements in the group */
         }
 
-        #url-input {
+        .input-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .input-field { /* Common style for text/url inputs */
             flex: 1;
             padding: 0.75rem;
             border-radius: 6px;
@@ -240,51 +217,32 @@
             background-color: var(--input-bg);
             color: var(--text-color);
             font-family: inherit;
+            font-size: 1rem;
+        }
+
+        #text-input { /* Specific textarea style */
+            width: 100%;
+            min-height: 120px; /* Slightly smaller default height */
+            margin-bottom: 0; /* Remove bottom margin, handled by gap */
         }
 
         #toggle-text-input-container {
             text-align: center;
-            margin-top: 0.5rem;
+            margin-top: 0.5rem; /* Keep small margin */
         }
 
         #toggle-text-input {
             font-size: 0.9rem;
             color: var(--text-muted);
+            cursor: pointer;
+        }
+        #toggle-text-input:hover {
+            text-decoration: underline;
         }
 
         #text-input-container {
             width: 100%;
-            margin-top: 0.75rem;
             /* display: none; /* Controlled by JS */
-        }
-
-        #text-input {
-            width: 100%;
-            min-height: 150px;
-            padding: 0.75rem;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-            margin-bottom: 0.75rem;
-            font-family: inherit;
-        }
-
-        #text-input-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #text-input-title {
-            flex: 1;
-            padding: 0.5rem;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-            background-color: var(--input-bg);
-            color: var(--text-color);
-            margin-right: 0.75rem;
-            font-family: inherit;
         }
 
         .library-item {
@@ -1042,41 +1000,45 @@
         <div id="welcome-screen">
             <div class="welcome-content">
                 <h1>Enhanced Ebook Reader</h1>
-                <p>Open a text, EPUB, or PDF file to start reading</p>
-                <div class="welcome-buttons">
-                    <button type="button" id="open-file-btn" class="button">Open File</button>
-                    <button type="button" id="login-btn" class="button hidden">Sign In</button> <!-- JS controlled -->
-                </div>
+                <p>Open a local file, read from a URL, or paste text.</p>
 
-                <!-- URL Input Section -->
-                <div id="url-input-container">
-                    <div id="url-input-controls">
-                        <input id="url-input" type="url" placeholder="Or enter a URL to read">
-                        <button type="button" id="process-url-btn" class="button">Read URL</button>
+                <div class="welcome-actions">
+                    <!-- Main Actions: Open File / Sign In -->
+                    <div class="main-actions">
+                        <button type="button" id="open-file-btn" class="button">Open File</button>
+                        <button type="button" id="login-btn" class="button hidden">Sign In</button> <!-- JS controlled -->
+                    </div>
+
+                    <!-- URL Input Group -->
+                    <div class="input-group" id="url-input-container">
+                        <div class="input-row">
+                            <input id="url-input" type="url" placeholder="Or enter a URL to read" class="input-field">
+                            <button type="button" id="process-url-btn" class="button">Read URL</button>
+                        </div>
+                    </div>
+
+                    <!-- Text Input Group (Initially hidden) -->
+                    <div id="toggle-text-input-container">
+                        <a href="#" id="toggle-text-input">or paste text directly</a>
+                    </div>
+                    <div class="input-group" id="text-input-container" style="display: none;"> <!-- JS controlled -->
+                        <textarea id="text-input" class="input-field" placeholder="Paste your text here..."></textarea>
+                        <div class="input-row">
+                            <input id="text-input-title" type="text" placeholder="Enter a title (optional)" class="input-field">
+                            <button type="button" id="process-text-btn" class="button">Read Text</button>
+                        </div>
+                    </div>
+
+                    <!-- Example Ebook Section -->
+                    <div class="example-book-section">
+                        <p>Don't have an ebook? Try our example:</p>
+                        <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
                     </div>
                 </div>
 
-                <!-- Text Input Section - now a more subtle option -->
-                <div id="toggle-text-input-container">
-                    <a href="#" id="toggle-text-input">or paste text directly</a>
-                </div>
-
-                <div id="text-input-container" style="display: none;"> <!-- JS controlled -->
-                    <textarea id="text-input" class="full-width-input"></textarea>
-                    <div id="text-input-controls">
-                        <input id="text-input-title" type="text" placeholder="Enter a title (optional)">
-                        <button type="button" id="process-text-btn" class="button">Read Text</button>
-                    </div>
-                </div>
-
-                <!-- Example Ebook Section -->
-                <div class="example-book-section">
-                    <p>Don't have an ebook? Download our example:</p>
-                    <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
-                </div>
-                
                 <div class="auth-section" id="auth-section">
-                    <p>Sign in to save books to your library</p>
+                    <!-- Content dynamically updated by JS -->
+                    <p>Sign in to save books to your library.</p>
                 </div>
                 
                 <!-- Library Section -->
