@@ -985,11 +985,94 @@
             transition: transform 0.3s ease;
             text-align: center;
         }
-        
+
         #toast.visible {
             transform: translateX(-50%) translateY(0);
         }
-        
+
+        /* Link Action Confirmation Toast */
+        .link-action-toast {
+            position: fixed;
+            bottom: 1.25rem; /* Same as regular toast */
+            left: 50%;
+            transform: translateX(-50%) translateY(150px); /* Start off-screen */
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px var(--panel-shadow);
+            z-index: 1001; /* Above regular toast */
+            transition: transform 0.3s ease;
+            width: 90%;
+            max-width: 400px;
+            text-align: left;
+        }
+
+        .link-action-toast.visible {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .link-action-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            font-weight: 500;
+        }
+
+        .link-action-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0;
+            line-height: 1;
+        }
+
+        .link-action-url {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            word-break: break-all; /* Wrap long URLs */
+            color: var(--text-muted);
+            max-height: 3.6em; /* Limit height to roughly 3 lines */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .link-action-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end; /* Align buttons to the right */
+        }
+
+        .link-action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s;
+        }
+
+        .link-action-btn.scrape {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .link-action-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        .link-action-btn.scrape:hover {
+            background-color: #3367d6; /* Darker blue on hover */
+        }
+
         /* Line height control */
         .line-height-controls {
             display: flex;
@@ -2126,7 +2209,69 @@
                     return false; // Indicate failure
                 }
             }
-            
+
+            // Show confirmation toast for link actions
+            function showLinkActionConfirmation(url, linkText) {
+                // Remove any existing confirmation toast
+                const existingToast = document.querySelector('.link-action-toast');
+                if (existingToast) {
+                    existingToast.remove();
+                }
+
+                // Create the toast element
+                const toast = document.createElement('div');
+                toast.className = 'link-action-toast';
+                toast.innerHTML = `
+                    <div class="link-action-header">
+                        <span>Action for Link:</span>
+                        <button type="button" class="link-action-close-btn" aria-label="Close">×</button>
+                    </div>
+                    <div class="link-action-url" title="${escapeHTML(url)}">${escapeHTML(linkText)}</div>
+                    <div class="link-action-buttons">
+                        <button type="button" class="link-action-btn open">Open Link</button>
+                        <button type="button" class="link-action-btn scrape">Scrape & Save</button>
+                    </div>
+                `;
+
+                // Append to body
+                document.body.appendChild(toast);
+
+                // Add event listeners
+                const closeBtn = toast.querySelector('.link-action-close-btn');
+                const openBtn = toast.querySelector('.link-action-btn.open');
+                const scrapeBtn = toast.querySelector('.link-action-btn.scrape');
+
+                const removeToast = () => {
+                    toast.classList.remove('visible');
+                    // Remove from DOM after transition
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300); // Match CSS transition duration
+                };
+
+                closeBtn.addEventListener('click', removeToast);
+
+                openBtn.addEventListener('click', () => {
+                    window.open(url, '_blank', 'noopener noreferrer');
+                    removeToast();
+                });
+
+                scrapeBtn.addEventListener('click', () => {
+                    scrapeAndSaveLink(url); // Call the existing scrape function
+                    removeToast();
+                });
+
+                // Make the toast visible with transition
+                requestAnimationFrame(() => {
+                    toast.classList.add('visible');
+                });
+
+                 // Optional: Auto-hide after a delay (e.g., 15 seconds)
+                 setTimeout(removeToast, 15000);
+            }
+
             // Book display functions
             function showBook() {
                 // Hide welcome screen
