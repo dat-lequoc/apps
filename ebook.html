@@ -3728,13 +3728,6 @@
                     throw new Error("Gemini API key not available.");
                 }
             
-                // Limit input size to avoid exceeding API limits (adjust as needed)
-                const maxLength = 25000; // Approx token limit safety margin
-                if (rawMarkdown.length > maxLength) {
-                    console.warn("Raw markdown length exceeds limit for AI cleaning. Truncating.");
-                    rawMarkdown = rawMarkdown.substring(0, maxLength) + "\n\n[Content truncated due to length limit]";
-                }
-            
                 const prompt = `
 You are an expert text processing AI. Your task is to clean up the following Markdown content, which was scraped from a webpage. Focus on extracting the main article content and improving its readability for an ebook reader.
 
