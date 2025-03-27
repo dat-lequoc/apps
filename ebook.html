@@ -1114,6 +1114,14 @@
                     <div class="theme-option dark-option active" data-theme="dark" title="Dark Theme"></div>
                 </div>
             </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">Display Mode</div>
+                <div class="settings-row">
+                    <label for="markdown-mode-toggle">Raw Markdown Mode</label>
+                    <input type="checkbox" id="markdown-mode-toggle">
+                </div>
+            </div>
 
             <!-- AI Features Section -->
             <div class="settings-section" id="ai-features-section">
@@ -1223,7 +1231,8 @@
                 aiResponseArea: document.getElementById('ai-response-area'),
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
-                translationLoading: document.getElementById('translation-loading')
+                translationLoading: document.getElementById('translation-loading'),
+                markdownModeToggle: document.getElementById('markdown-mode-toggle') // Added Markdown toggle
             };
 
             // App state
@@ -1241,6 +1250,7 @@
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
+                    markdownModeEnabled: false // Added Markdown mode setting
                 },
                 
                 // User data
@@ -1323,6 +1333,13 @@
                         setTheme(option.getAttribute('data-theme'));
                         saveUserPreferences();
                     });
+                });
+
+                // Markdown Mode Toggle
+                DOM.markdownModeToggle.addEventListener('change', function() {
+                    state.settings.markdownModeEnabled = this.checked;
+                    displayCurrentChapter(); // Re-render content
+                    saveUserPreferences();
                 });
                 
                 // AI features
@@ -1977,62 +1994,101 @@
                 const chapter = state.bookData.chapters[state.bookData.currentPosition];
                 if (!chapter) return;
                 
-                DOM.contentArea.innerHTML = '';
+                DOM.contentArea.innerHTML = ''; // Clear previous content
                 
                 // Update chapter title in navbar
                 DOM.bookTitle.textContent = `${state.bookData.title || 'Book'} - ${chapter.title}`;
-                
-                // Process content (basic markdown to HTML)
-                const lines = chapter.content.split('\n');
-                let currentElement = null;
 
-                lines.forEach((line, index) => {
-                    const trimmedLine = line.trim();
+                // Check if Markdown mode is enabled
+                if (state.settings.markdownModeEnabled) {
+                    // Render Markdown with basic formatting (links, bold) while preserving line breaks
+                    let processedContent = chapter.content;
 
-                    if (trimmedLine.startsWith('# ')) { // H1
-                        const h = document.createElement('h1');
-                        h.textContent = trimmedLine.substring(2).trim();
-                        DOM.contentArea.appendChild(h);
-                        currentElement = null;
-                    } else if (trimmedLine.startsWith('## ')) { // H2
-                        const h = document.createElement('h2');
-                        h.textContent = trimmedLine.substring(3).trim();
-                        DOM.contentArea.appendChild(h);
-                        currentElement = null;
-                    } else if (trimmedLine.startsWith('### ')) { // H3
-                        const h = document.createElement('h3');
-                        h.textContent = trimmedLine.substring(4).trim();
-                        DOM.contentArea.appendChild(h);
-                        currentElement = null;
-                    } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) { // List item
-                        if (!currentElement || currentElement.tagName !== 'UL') {
-                            currentElement = document.createElement('ul');
-                            DOM.contentArea.appendChild(currentElement);
+                    // Apply [link text](url) markdown -> <a> tags FIRST
+                    // Added rel="noopener noreferrer" for security
+                    processedContent = processedContent.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
+                        const safeUrl = url.trim().replace(/"/g, '&quot;'); // Escape quotes in URL
+                        // Basic check for common protocols or relative/anchor paths
+                        if (safeUrl.startsWith('http:') || safeUrl.startsWith('https:') || safeUrl.startsWith('/') || safeUrl.startsWith('#')) {
+                             // Escape HTML entities in link text to prevent XSS if text contains HTML chars
+                             // We will apply bold *after* this, so don't escape the asterisks here yet.
+                             const escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                             return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${escapedText}</a>`;
                         }
-                        const li = document.createElement('li');
-                        li.textContent = trimmedLine.substring(2).trim();
-                        currentElement.appendChild(li);
-                    } else if (trimmedLine === '---' || trimmedLine === '***') { // Horizontal rule
-                        DOM.contentArea.appendChild(document.createElement('hr'));
-                        currentElement = null;
-                    } else if (trimmedLine) { // Paragraph
-                        const p = document.createElement('p');
-                        // Basic inline markdown (bold, italic) - could be expanded
-                        let processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                        processedLine = processedLine.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                        p.innerHTML = processedLine; // Use innerHTML for basic formatting
-                        p.setAttribute('data-p-index', index); // Add index for position tracking
-                        DOM.contentArea.appendChild(p);
-                        currentElement = null;
-                    } else if (currentElement && currentElement.tagName === 'P') {
-                         // Add extra space after a paragraph if followed by a blank line
-                         DOM.contentArea.appendChild(document.createElement('br'));
-                         currentElement = null;
-                    } else if (!currentElement) {
-                         // Add single break for consecutive blank lines outside paragraphs/lists
-                         DOM.contentArea.appendChild(document.createElement('br'));
-                    }
-                });
+                        // If URL looks unsafe or not standard, just display the escaped text
+                        return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    });
+
+                    // Apply **bold** markdown -> <strong> tags SECOND
+                    // Using a non-greedy match for content inside **
+                    // This will now correctly apply bold inside the already created <a> tags or anywhere else.
+                    processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+                    // Replace newline characters with <br> tags to preserve line breaks
+                    processedContent = processedContent.replace(/\n/g, '<br>');
+
+                    // Set the innerHTML. Assumes the original markdown source is relatively safe
+                    // or that the potential harm from unescaped HTML (outside links/bold) is acceptable.
+                    DOM.contentArea.innerHTML = processedContent;
+
+                    // Ensure wrapping works correctly, overriding potential inherited styles
+                    DOM.contentArea.style.whiteSpace = 'normal';
+                    DOM.contentArea.style.wordWrap = 'break-word';
+
+                } else {
+                    // Original HTML rendering logic
+                    const lines = chapter.content.split('\n');
+                    let currentElement = null;
+
+                    lines.forEach((line, index) => {
+                        // ... (keep existing HTML rendering logic here) ...
+                        const trimmedLine = line.trim();
+
+                        if (trimmedLine.startsWith('# ')) { // H1
+                            const h = document.createElement('h1');
+                            h.textContent = trimmedLine.substring(2).trim();
+                            DOM.contentArea.appendChild(h);
+                            currentElement = null;
+                        } else if (trimmedLine.startsWith('## ')) { // H2
+                            const h = document.createElement('h2');
+                            h.textContent = trimmedLine.substring(3).trim();
+                            DOM.contentArea.appendChild(h);
+                            currentElement = null;
+                        } else if (trimmedLine.startsWith('### ')) { // H3
+                            const h = document.createElement('h3');
+                            h.textContent = trimmedLine.substring(4).trim();
+                            DOM.contentArea.appendChild(h);
+                            currentElement = null;
+                        } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) { // List item
+                            if (!currentElement || currentElement.tagName !== 'UL') {
+                                currentElement = document.createElement('ul');
+                                DOM.contentArea.appendChild(currentElement);
+                            }
+                            const li = document.createElement('li');
+                            li.textContent = trimmedLine.substring(2).trim();
+                            currentElement.appendChild(li);
+                        } else if (trimmedLine === '---' || trimmedLine === '***') { // Horizontal rule
+                            DOM.contentArea.appendChild(document.createElement('hr'));
+                            currentElement = null;
+                        } else if (trimmedLine) { // Paragraph
+                            const p = document.createElement('p');
+                            // Basic inline markdown (bold, italic) - could be expanded
+                            let processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                            processedLine = processedLine.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                            p.innerHTML = processedLine; // Use innerHTML for basic formatting
+                            p.setAttribute('data-p-index', index); // Add index for position tracking
+                            DOM.contentArea.appendChild(p);
+                            currentElement = null;
+                        } else if (currentElement && currentElement.tagName === 'P') {
+                             // Add extra space after a paragraph if followed by a blank line
+                             DOM.contentArea.appendChild(document.createElement('br'));
+                             currentElement = null;
+                        } else if (!currentElement) {
+                             // Add single break for consecutive blank lines outside paragraphs/lists
+                             DOM.contentArea.appendChild(document.createElement('br'));
+                        }
+                    });
+                } // End of the 'else' block for HTML rendering
                 
                 // Initially scroll to top (will be updated if restoring position)
                 DOM.contentArea.scrollTop = 0;
@@ -3471,6 +3527,7 @@
                     fontSize: state.settings.fontSize,
                     lineHeight: state.settings.lineHeight,
                     theme: state.settings.theme,
+                    markdownModeEnabled: state.settings.markdownModeEnabled, // Added Markdown mode
                     translationEnabled: DOM.translationToggle.checked,
                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
                     speechLanguage: DOM.speechLanguage.value
@@ -3480,6 +3537,7 @@
                 localStorage.setItem('ebook-font-size', preferences.fontSize);
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
                 localStorage.setItem('ebook-theme', preferences.theme);
+                localStorage.setItem('markdown-mode-enabled', preferences.markdownModeEnabled); // Added Markdown mode
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
                 localStorage.setItem('speech-language', preferences.speechLanguage);
@@ -3553,6 +3611,11 @@
                 // Load speech language setting
                 const speechLanguage = localStorage.getItem('speech-language') || 'en-US';
                 DOM.speechLanguage.value = speechLanguage;
+
+                // Load Markdown mode setting
+                const markdownModeEnabled = localStorage.getItem('markdown-mode-enabled') === 'true';
+                state.settings.markdownModeEnabled = markdownModeEnabled;
+                DOM.markdownModeToggle.checked = markdownModeEnabled;
                 
                 // Check if user is logged in to load server settings
                 const { data: { session } } = await supabase.auth.getSession();
@@ -3603,6 +3666,13 @@
                     if (prefs.speechLanguage) {
                         DOM.speechLanguage.value = prefs.speechLanguage;
                         localStorage.setItem('speech-language', prefs.speechLanguage);
+                    }
+
+                    // Apply Markdown mode
+                    if (prefs.markdownModeEnabled !== undefined) {
+                        state.settings.markdownModeEnabled = prefs.markdownModeEnabled;
+                        DOM.markdownModeToggle.checked = prefs.markdownModeEnabled;
+                        localStorage.setItem('markdown-mode-enabled', prefs.markdownModeEnabled);
                     }
                 } catch (error) {
                     console.error('Error loading user preferences:', error);
