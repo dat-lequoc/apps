@@ -75,6 +75,7 @@ drop table if exists user_settings;
 create table user_settings (
   user_id uuid references auth.users not null primary key,
   api_key text not null,
+  firecrawl_api_key text not null,
   model text not null,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
