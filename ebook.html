@@ -1483,7 +1483,7 @@
                 navbarHideTimer: null,
                 debounceTimers: {},
                 bookLists: [], // Added for custom lists
-                selectedListId: null, // null means 'Your Library (All)'
+                selectedListId: 'all', // Default to 'All' view
 
                 // Event handling
                 touchStartY: 0,
@@ -2721,7 +2721,7 @@
                     currentPosition: 0,
                     sourceUrl: null // Reset sourceUrl
                 };
-                state.selectedListId = null; // Reset selected list
+                state.selectedListId = 'all'; // Reset selected list to 'All'
                 state.bookLists = []; // Clear loaded lists
 
                 // Hide the source URL section
@@ -3223,13 +3223,12 @@
 
                     // Apply list filter
                     if (state.selectedListId === 'all') {
-                        // 'all' includes books with list_id = null AND books in any list
-                        // No additional filter needed here if we want all books regardless of list
-                        // If 'all' should ONLY show books NOT in a list, use: .is('list_id', null)
+                        // 'all' means show all books, so no list_id filter is applied.
                     } else if (state.selectedListId) {
+                        // Filter by specific list ID
                         query = query.eq('list_id', state.selectedListId);
                     } else {
-                        // Default: Show books not in any list (list_id is null)
+                        // Filter for books not in any list (list_id is null) - This corresponds to the "Unlisted" option
                         query = query.is('list_id', null);
                     }
 
