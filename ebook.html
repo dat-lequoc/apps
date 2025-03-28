@@ -187,12 +187,13 @@
             width: 100%;
             max-width: 600px;
             margin-top: 2.5rem;
-            padding: 1.25rem;
             background-color: var(--panel-bg);
             border-radius: 8px;
-            max-height: 50vh; /* Keep max height */
-            overflow-y: auto;
+            height: 50vh; /* Use fixed height */
             box-shadow: 0 2px 8px var(--panel-shadow);
+            display: flex; /* Use flexbox */
+            flex-direction: column; /* Stack header and list vertically */
+            overflow: hidden; /* Ensure content respects max-height */
         }
 
         #list-management {
@@ -222,9 +223,11 @@
         #create-list-group {
             display: flex;
             gap: 0.5rem;
+            align-items: center; /* Align items vertically */
         }
 
         #new-list-name {
+            display: none; /* Hide initially */
             padding: 0.4rem 0.6rem;
             border-radius: 4px;
             border: 1px solid var(--border-color);
@@ -232,17 +235,136 @@
             color: var(--text-color);
             font-size: 0.9rem;
             flex: 1; /* Take available space */
+            margin-right: 0.5rem; /* Add some space before the button */
         }
 
         #create-list-btn {
             padding: 0.4rem 0.8rem;
             font-size: 0.9rem;
+            min-width: 40px; /* Ensure minimum width */
+            text-align: center;
+        }
+
+        /* New List Controls Wrapper */
+        #list-controls-wrapper {
+            display: flex;
+            align-items: center; /* Vertically align badges and create group */
+            gap: 1rem; /* Space between badge container and create group */
+            margin-bottom: 1rem; /* Space below the whole control row */
+            padding-bottom: 0.5rem; /* Padding below the controls */
+            border-bottom: 1px solid var(--border-color); /* Separator */
+            flex-wrap: wrap; /* Allow wrapping if needed on very small screens */
+            flex-shrink: 0; /* Prevent header from shrinking */
+            padding: 1.25rem 1.25rem 0.5rem; /* Add padding back to header */
+        }
+
+        /* List Badge Styling */
+        #list-badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            flex-grow: 1; /* Allow badges to take available space */
+            /* Removed margin-bottom, padding, border-bottom - handled by wrapper */
+        }
+
+        .list-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 12px; /* Pill shape */
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background-color: var(--input-bg); /* Default background */
+            color: var(--text-muted);
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .list-badge:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .list-badge.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        /* Badge Colors (Example cycle) */
+        .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.2); border-color: rgba(52, 168, 83, 0.4); color: #a5d6a7; }
+        .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.2); border-color: rgba(251, 188, 5, 0.4); color: #ffe082; }
+        .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.2); border-color: rgba(234, 67, 53, 0.4); color: #ef9a9a; }
+        .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.2); border-color: rgba(66, 133, 244, 0.4); color: #a3c2f4; }
+        .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.2); border-color: rgba(156, 39, 176, 0.4); color: #ce93d8; }
+
+        .list-badge.active[data-color-index="0"],
+        .list-badge.active[data-color-index="1"],
+        .list-badge.active[data-color-index="2"],
+        .list-badge.active[data-color-index="3"],
+        .list-badge.active[data-color-index="4"] {
+             background-color: var(--primary-color); /* Keep active color consistent */
+             border-color: var(--primary-color);
+             color: white;
         }
 
 
+        /* Adjust Create List Group for Flex Layout */
+        #create-list-group {
+            /* display: flex; */ /* Already flex */
+            /* gap: 0.5rem; */ /* Already has gap */
+            /* align-items: center; */ /* Already aligned */
+            flex-shrink: 0; /* Prevent create group from shrinking */
+        }
+
+        #new-list-name {
+            /* display: none; */ /* Already hidden */
+            /* padding, border-radius, border, background-color, color, font-size */ /* Keep existing styles */
+            /* flex: 1; */ /* Remove flex: 1 to prevent taking all space */
+            width: 150px; /* Give it a fixed or max-width */
+            /* margin-right: 0.5rem; */ /* Keep margin */
+        }
+
+        #create-list-btn {
+            /* padding, font-size, min-width, text-align */ /* Keep existing styles */
+        }
+
+        /* Library List Styling */
+        #library-list {
+            flex: 1 1 auto; /* Use flex: 1 to take available space */
+            overflow-y: scroll; /* Keep scroll */
+            -webkit-overflow-scrolling: touch;
+            padding: 0 1.25rem 1.25rem;
+            min-height: 0; /* Keep this for Firefox compatibility */
+            position: relative; /* Create a positioning context */
+            max-height: calc(100% - 50px); /* Account for header height */
+            /* Custom scrollbar styling */
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: rgba(155, 155, 155, 0.5) transparent; /* Firefox */
+        }
+        
+        /* WebKit/Blink browsers (Chrome, Safari, Edge) scrollbar styling */
+        #library-list::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+        }
+        
+        #library-list::-webkit-scrollbar-track {
+            background: transparent; /* Track background */
+        }
+        
+        #library-list::-webkit-scrollbar-thumb {
+            background-color: rgba(155, 155, 155, 0.5); /* Scrollbar color */
+            border-radius: 4px; /* Rounded corners */
+            border: 2px solid transparent; /* Creates padding around scrollbar thumb */
+        }
+        
+        #library-list::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(155, 155, 155, 0.8); /* Darker on hover */
+        }
+
         /* Input Group Styling */
         .input-group {
-            width: 100%;
+            /* width: 100%; */ /* Remove fixed width for general input groups if needed, or adjust */
             display: flex;
             flex-direction: column;
             gap: 0.75rem; /* Space between elements in the group */
@@ -405,6 +527,7 @@
             display: flex;
             gap: 0.5rem;
             margin-left: 0.5rem;
+            flex-shrink: 0; /* Prevent action buttons from shrinking */
         }
         
         .library-item-delete {
@@ -1238,20 +1361,16 @@
                 
                 <!-- Library Section -->
                 <div id="library-section" style="display: none;">
-                    <div id="list-management">
-                        <div id="list-filter-group">
-                             <label for="list-filter" style="font-size: 0.9rem; color: var(--text-muted);">View:</label>
-                             <select id="list-filter">
-                                 <option value="all">All</option>
-                                 <!-- List options populated by JS -->
-                             </select>
+                    <!-- Removed list-management div -->
+                    <div id="list-controls-wrapper"> <!-- New wrapper -->
+                        <div id="list-badge-container">
+                             <!-- Badges will be populated here by JS -->
                         </div>
-                        <div id="create-list-group">
+                        <div id="create-list-group"> <!-- Moved here -->
                             <input type="text" id="new-list-name" placeholder="New list name..." />
                             <button type="button" id="create-list-btn" class="button">+</button>
                         </div>
                     </div>
-                    <!-- Removed h2#current-list-name -->
                     <div id="library-list">
                         <!-- Library items will be populated here -->
                     </div>
@@ -1449,10 +1568,11 @@
                 cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
                 sourceUrlSection: document.getElementById('source-url-section'), // Added source URL section
                 sourceUrlLink: document.getElementById('source-url-link'),      // Added source URL link
-                listFilter: document.getElementById('list-filter'),             // Added list filter dropdown
+                // listFilter: document.getElementById('list-filter'), // Removed list filter dropdown
+                listBadgeContainer: document.getElementById('list-badge-container'), // Added badge container
                 createListBtn: document.getElementById('create-list-btn'),       // Added create list button
-                newListNameInput: document.getElementById('new-list-name')     // Added new list name input
-                // Removed currentListName as the element is deleted
+                newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
+                createListGroup: document.getElementById('create-list-group') // Added create list group
             };
 
             // App state
@@ -1484,6 +1604,7 @@
                 debounceTimers: {},
                 bookLists: [], // Added for custom lists
                 selectedListId: 'all', // Default to 'All' view
+                isCreatingList: false, // Flag for list creation UI state
 
                 // Event handling
                 touchStartY: 0,
@@ -1590,8 +1711,9 @@
                 });
 
                 // List management listeners
-                DOM.listFilter.addEventListener('change', handleListFilterChange);
-                DOM.createListBtn.addEventListener('click', handleCreateList);
+                // DOM.listFilter.addEventListener('change', handleListFilterChange); // Removed
+                DOM.listBadgeContainer.addEventListener('click', handleListBadgeClick); // Added
+                DOM.createListBtn.addEventListener('click', toggleCreateListInput); // Modified
 
                 // Global document events
                 document.addEventListener('keydown', handleKeyPress);
@@ -1612,9 +1734,12 @@
                     }
                 });
 
-                // Add similar logic here for other popups/dropdowns if needed
+                // Cancel list creation if clicking outside the input/button
+                // Check remains the same as DOM.createListGroup is the direct container
+                if (state.isCreatingList && !DOM.createListGroup.contains(event.target)) {
+                    cancelListCreation();
+                }
             }
-
 
             // Handle keyboard shortcuts
             function handleKeyPress(e) {
@@ -1635,12 +1760,22 @@
                     e.preventDefault();
                 }
                 
-                // Escape - close panels
+                // Escape - close panels or cancel list creation
                 if (e.key === 'Escape') {
-                    closeAllPanels();
+                    if (state.isCreatingList) {
+                        cancelListCreation();
+                    } else {
+                        closeAllPanels();
+                    }
                     e.preventDefault();
                 }
-                
+
+                // Enter key in new list input confirms creation
+                if (e.key === 'Enter' && state.isCreatingList && e.target === DOM.newListNameInput) {
+                    handleCreateList();
+                    e.preventDefault();
+                }
+
                 // T - toggle table of contents
                 if (e.key === 't' && !e.ctrlKey && !e.metaKey) {
                     toggleTocPanel();
@@ -2732,13 +2867,12 @@
                 // Refresh library and lists if user is logged in
                 supabase.auth.getSession().then(({ data: { session } }) => {
                     if (session) {
-                        fetchBookLists().then(() => {
-                             loadUserLibrary();
+                        fetchBookLists().then(() => { // Fetches lists and renders badges
+                             loadUserLibrary(); // Loads books for the default 'all' list
                         });
                     } else {
-                        // Ensure filter is reset if logged out
-                        renderListFilter();
-                        // Removed update to DOM.currentListName
+                        // Ensure badges are cleared/reset if logged out
+                        renderListBadges();
                     }
                 });
             }
@@ -3199,16 +3333,39 @@
                     .select('api_key, model, firecrawl_api_key') // Select all needed keys
                     .eq('user_id', session.user.id)
                     .maybeSingle();
-                    
+
                 if (error) {
                     console.error('Error fetching API settings:', error);
                     return null;
                 }
-                
+
                 return data;
             }
-            
-            // Library functions
+
+            // --- List Creation UI Functions ---
+
+            function toggleCreateListInput() {
+                if (!state.isCreatingList) {
+                    // Show input, change button, set state
+                    DOM.newListNameInput.style.display = 'block';
+                    DOM.newListNameInput.focus();
+                    DOM.createListBtn.textContent = '✓'; // Change to checkmark or "Confirm"
+                    state.isCreatingList = true;
+                } else {
+                    // Try to create list
+                    handleCreateList();
+                    // handleCreateList will call cancelListCreation on success/failure
+                }
+            }
+
+            function cancelListCreation() {
+                DOM.newListNameInput.style.display = 'none';
+                DOM.newListNameInput.value = ''; // Clear input
+                DOM.createListBtn.textContent = '+'; // Reset button
+                state.isCreatingList = false;
+            }
+
+            // --- Library functions ---
             async function loadUserLibrary() {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
@@ -3351,62 +3508,93 @@
                     if (error) throw error;
 
                     state.bookLists = data || [];
-                    renderListFilter(); // Update the dropdown
+                    renderListBadges(); // Update the badges
                 } catch (error) {
                     console.error('Error fetching book lists:', error);
                     showToast('Could not load book lists');
                     state.bookLists = [];
-                    renderListFilter(); // Render empty filter on error
+                    renderListBadges(); // Render empty badges on error
                 }
             }
 
-            // Render the list filter dropdown options
-            function renderListFilter() {
-                // Clear existing options except the default 'All'
-                DOM.listFilter.innerHTML = '<option value="all">All</option>'; // Simplified name
-                // Add option for books not in any list
-                const unlistedOption = document.createElement('option');
-                unlistedOption.value = ""; // Represents null list_id
-                unlistedOption.textContent = "Unlisted"; // Simplified name
-                DOM.listFilter.appendChild(unlistedOption);
+            // Render the list badges
+            function renderListBadges() {
+                DOM.listBadgeContainer.innerHTML = ''; // Clear existing badges
+                const badgeColors = 5; // Number of colors defined in CSS
 
+                // Helper function to create a badge
+                const createBadge = (text, listId, isSpecial = false, colorIndex = -1) => {
+                    const badge = document.createElement('div');
+                    badge.className = 'list-badge';
+                    badge.textContent = text;
+                    badge.setAttribute('data-list-id', listId === null ? '' : listId); // Use empty string for null
 
-                // Add options for each list
-                state.bookLists.forEach(list => {
-                    const option = document.createElement('option');
-                    option.value = list.id;
-                    option.textContent = list.name;
-                    DOM.listFilter.appendChild(option);
+                    // Apply active state
+                    const currentIdStr = state.selectedListId === null ? '' : String(state.selectedListId);
+                    const badgeIdStr = listId === null ? '' : String(listId);
+                    if (currentIdStr === badgeIdStr) {
+                        badge.classList.add('active');
+                    }
+
+                    // Apply color index for non-special badges
+                    if (!isSpecial && colorIndex >= 0) {
+                         badge.setAttribute('data-color-index', colorIndex % badgeColors);
+                    }
+
+                    return badge;
+                };
+
+                // Add 'All' badge
+                DOM.listBadgeContainer.appendChild(createBadge('All', 'all', true));
+
+                // Add 'Unlisted' badge
+                DOM.listBadgeContainer.appendChild(createBadge('Unlisted', null, true));
+
+                // Add badges for each list
+                state.bookLists.forEach((list, index) => {
+                    DOM.listBadgeContainer.appendChild(createBadge(list.name, list.id, false, index));
                 });
-
-                // Set the selected value based on current state
-                DOM.listFilter.value = state.selectedListId === null ? "" : (state.selectedListId || "all");
             }
 
-            // Handle list filter change
-            function handleListFilterChange() {
-                const selectedValue = DOM.listFilter.value;
+            // Handle list badge click
+            function handleListBadgeClick(event) {
+                const clickedBadge = event.target.closest('.list-badge');
+                if (!clickedBadge || clickedBadge.classList.contains('active')) {
+                    return; // Ignore clicks outside badges or on the active badge
+                }
+
+                const selectedValue = clickedBadge.getAttribute('data-list-id');
                 state.selectedListId = selectedValue === "" ? null : selectedValue; // Store null for 'Unlisted', 'all' for 'All', or the ID
-                loadUserLibrary(); // Reload the library view
+
+                // Update active state visually
+                DOM.listBadgeContainer.querySelectorAll('.list-badge').forEach(badge => {
+                    badge.classList.remove('active');
+                });
+                clickedBadge.classList.add('active');
+
+                loadUserLibrary(); // Reload the library view for the selected list
             }
 
-            // Handle create new list button click
+
+            // Handle create new list action (called by toggleCreateListInput or Enter key)
             async function handleCreateList() {
                 const listName = DOM.newListNameInput.value.trim();
                 if (!listName) {
                     showToast('Please enter a name for the new list.');
+                    DOM.newListNameInput.focus(); // Keep focus if name is empty
                     return;
                 }
 
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) {
                     showToast('Please sign in to create lists.');
-                    return;
+                    return; // Don't reset UI yet
                 }
 
-                // Disable button while creating
+                // Show loading state on button (visual feedback)
                 DOM.createListBtn.disabled = true;
                 DOM.createListBtn.classList.add('loading');
+                DOM.createListBtn.textContent = '...'; // Indicate loading
 
                 try {
                     const { data, error } = await supabase
@@ -3424,19 +3612,23 @@
                     }
 
                     showToast(`List "${listName}" created.`);
-                    DOM.newListNameInput.value = ''; // Clear input
-                    await fetchBookLists(); // Refresh the list data and dropdown
-                    // Optionally switch to the new list
+                    cancelListCreation(); // Hide input, reset button state
+                    await fetchBookLists(); // Refresh the list data and badges
+                    // Optionally switch to the new list and reload library
                     // state.selectedListId = data.id;
+                    // renderListBadges(); // Update badge active state
                     // loadUserLibrary();
 
                 } catch (error) {
                     console.error('Error creating list:', error);
                     showToast(`Error: ${error.message}`);
-                } finally {
+                    // Don't cancel on error, allow user to retry or fix name
                     DOM.createListBtn.disabled = false;
                     DOM.createListBtn.classList.remove('loading');
+                    DOM.createListBtn.textContent = '✓'; // Keep confirm state on error
+                    DOM.newListNameInput.focus();
                 }
+                // No finally block needed as success calls cancelListCreation
             }
 
             // Render the dropdown options for moving a book
