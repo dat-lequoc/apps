@@ -482,6 +482,51 @@
 
       // --- End FSRS Implementation ---
 
+      // Function to speak text aloud using Speech Synthesis
+      function speakText(text, lang = 'en-US') {
+        if ('speechSynthesis' in window) {
+          // Cancel any ongoing speech
+          window.speechSynthesis.cancel();
+
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = lang;
+
+          // Try to find a suitable voice
+          const voices = window.speechSynthesis.getVoices();
+          // Filter for voices matching the language code (e.g., 'en-US')
+          let suitableVoices = voices.filter(voice => voice.lang === lang);
+          
+          // If no exact match, try matching the language part (e.g., 'en')
+          if (suitableVoices.length === 0) {
+              const langPart = lang.split('-')[0];
+              suitableVoices = voices.filter(voice => voice.lang.startsWith(langPart + '-'));
+          }
+
+          if (suitableVoices.length > 0) {
+            // Prefer a voice explicitly marked as default or a standard voice
+            let selectedVoice = suitableVoices.find(voice => voice.default);
+            if (!selectedVoice) {
+                // Simple preference for female voices if available, otherwise take the first one
+                selectedVoice = suitableVoices.find(voice => voice.name.includes('Female') || voice.name.includes('female')) || suitableVoices[0];
+            }
+            utterance.voice = selectedVoice;
+            console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+          } else {
+              console.warn(`No suitable voice found for language: ${lang}`);
+          }
+
+          utterance.rate = 0.9; // Slightly slower rate for clarity
+          utterance.pitch = 1.0;
+
+          // Speak the utterance
+          window.speechSynthesis.speak(utterance);
+        } else {
+          console.error('Speech Synthesis not supported in this browser.');
+          // Optionally show a message to the user
+          // showNotification('Text-to-speech is not supported on this browser.', 'error');
+        }
+      }
+      
       // Initialize Supabase client (replace with your project's credentials)
       const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
       const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
@@ -825,11 +870,7 @@
           playAudio(currentCard.word_audio);
         } else {
           // If no audio file exists, use speech synthesis to speak the word
-          const utterance = new SpeechSynthesisUtterance(currentCard.word);
-          // Optional: You can set language, rate, pitch, etc.
-          utterance.lang = 'en-US';
-          utterance.rate = 0.9;
-          window.speechSynthesis.speak(utterance);
+          speakText(currentCard.word, 'en-US'); // Use the new speakText function
         }
       });
 
