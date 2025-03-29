@@ -696,38 +696,58 @@
       e.preventDefault();
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      
+
       // Clear previous messages
       authMessage.textContent = "Processing...";
 
       try {
         // Attempt sign in first
         let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
         if (error) {
-          // If sign in fails due to invalid credentials, try sign up
+          // Handle specific errors
           if (error.message.includes("Invalid login credentials")) {
-            const signUpResponse = await supabase.auth.signUp({ 
-              email, 
+            // User likely doesn't exist, try signing them up
+            authMessage.textContent = "Account not found, attempting to sign up...";
+            const signUpResponse = await supabase.auth.signUp({
+              email,
               password,
               options: {
-                emailRedirectTo: 'https://dat-lequoc.github.io/apps/'
+                // Use the current page URL for redirection after confirmation
+                emailRedirectTo: window.location.href
               }
             });
             if (signUpResponse.error) {
+              // Handle potential sign-up errors (e.g., password too weak)
               authMessage.textContent = `Sign up failed: ${signUpResponse.error.message}`;
               return;
             }
-            authMessage.textContent = "Sign-up successful! Please check your email for confirmation.";
-            return;
+            // Sign up successful, inform user to confirm email
+            authMessage.textContent = "Sign-up successful! Please check your email for a confirmation link.";
+            // We don't log them in automatically here, they need to confirm first.
+            return; // Stop execution here
+
+          } else if (error.message.includes("Email not confirmed")) {
+             // User exists but email is not confirmed
+             // Provide a more helpful message than the raw error
+             authMessage.textContent = "Please confirm your email address. Check your inbox for the confirmation link.";
+             // Optional: Add a button/link here to resend confirmation email
+             // Example: Add link -> const resendLink = document.createElement('a'); ...
+             // Example: Call resend -> await supabase.auth.resend({ type: 'signup', email: email });
+             return; // Stop execution here
+
+          } else {
+             // Handle other potential sign-in errors
+             authMessage.textContent = `Sign in failed: ${error.message}`;
+             return; // Stop execution here
           }
-          authMessage.textContent = `Sign in failed: ${error.message}`;
-          return;
         }
 
-        // Success - clear message and update UI
-        authMessage.textContent = "";
-        checkAuth();
-        
+        // Sign in successful (data is not null and no error)
+        authMessage.textContent = ""; // Clear processing message
+        // No need to call checkAuth() here, onAuthStateChange listener will handle UI update
+        // checkAuth();
+
       } catch (err) {
         console.error("Auth error:", err);
         authMessage.textContent = "An unexpected error occurred. Please try again.";
