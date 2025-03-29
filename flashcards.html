@@ -827,8 +827,8 @@
           // If no audio file exists, use speech synthesis to speak the word
           const utterance = new SpeechSynthesisUtterance(currentCard.word);
           // Optional: You can set language, rate, pitch, etc.
-          // utterance.lang = 'en-US';
-          // utterance.rate = 0.9;
+          utterance.lang = 'en-US';
+          utterance.rate = 0.9;
           window.speechSynthesis.speak(utterance);
         }
       });
