@@ -1507,6 +1507,10 @@
                     <input type="checkbox" id="auto-speak-toggle" checked>
                 </div>
                 <div class="settings-row">
+                    <label for="speak-selection-toggle">Speak Full Selection (instead of just flashcard word)</label>
+                    <input type="checkbox" id="speak-selection-toggle">
+                </div>
+                <div class="settings-row">
                     <label for="speech-language">Speech Language</label>
                     <select id="speech-language">
                         <option value="en-US">English</option>
@@ -1596,6 +1600,7 @@
                 aiSettingsContent: document.getElementById('ai-settings-content'),
                 translationToggle: document.getElementById('translation-toggle'),
                 autoSpeakToggle: document.getElementById('auto-speak-toggle'),
+                speakSelectionToggle: document.getElementById('speak-selection-toggle'), // Added Speak Selection toggle
                 speechLanguage: document.getElementById('speech-language'),
                 aiResponseArea: document.getElementById('ai-response-area'),
                 translationPopup: document.getElementById('translation-popup'),
@@ -1628,9 +1633,10 @@
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
-                    markdownModeEnabled: false // Added Markdown mode setting
+                    markdownModeEnabled: false, // Added Markdown mode setting
+                    speakSelectionEnabled: false // Added Speak Selection setting
                 },
-                
+
                 // User data
                 session: null,
                 userApiSettings: null,
@@ -1733,7 +1739,14 @@
                     localStorage.setItem('auto-speak-enabled', this.checked);
                     saveUserPreferences();
                 });
-                
+
+                // Speak Selection Toggle
+                DOM.speakSelectionToggle.addEventListener('change', function() {
+                    state.settings.speakSelectionEnabled = this.checked;
+                    localStorage.setItem('speak-selection-enabled', this.checked);
+                    saveUserPreferences();
+                });
+
                 DOM.speechLanguage.addEventListener('change', function() {
                     localStorage.setItem('speech-language', this.value);
                     saveUserPreferences();
@@ -3036,8 +3049,13 @@
                         // Show loading state
                         DOM.translationContent.textContent = 'Translating...';
                         DOM.translationLoading.style.display = 'flex';
-                        
-                        // Get translation
+
+                        // Speak the full selection if enabled
+                        if (state.settings.speakSelectionEnabled) {
+                            speakText(selectedText);
+                        }
+
+                        // Get translation (and potentially generate flashcard which might speak word if setting is off)
                         translateText(selectedText);
                     }, 750);
                 }
@@ -4277,14 +4295,15 @@
                 toast.querySelector('.flashcard-speak-btn').addEventListener('click', () => {
                     speakText(flashcardData.word);
                 });
-                
-                // Auto-speak if enabled
+
+                // Auto-speak the flashcard word ONLY if auto-speak is enabled AND speak-full-selection is disabled
                 const autoSpeakEnabled = localStorage.getItem('auto-speak-enabled') !== 'false';
-                if (autoSpeakEnabled) {
+                const speakSelectionEnabled = state.settings.speakSelectionEnabled; // Use state value
+                if (autoSpeakEnabled && !speakSelectionEnabled) {
                     // Small delay to ensure the toast is fully rendered
                     setTimeout(() => speakText(flashcardData.word), 300);
                 }
-                
+
                 // Save button functionality
                 toast.querySelector('.flashcard-save-btn').addEventListener('click', async () => {
                     const saveButton = toast.querySelector('.flashcard-save-btn');
@@ -4568,9 +4587,10 @@
                     markdownModeEnabled: state.settings.markdownModeEnabled, // Added Markdown mode
                     translationEnabled: DOM.translationToggle.checked,
                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
+                    speakSelectionEnabled: state.settings.speakSelectionEnabled, // Added Speak Selection
                     speechLanguage: DOM.speechLanguage.value
                 };
-                
+
                 // Always save to localStorage as fallback
                 localStorage.setItem('ebook-font-size', preferences.fontSize);
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
@@ -4578,8 +4598,9 @@
                 localStorage.setItem('markdown-mode-enabled', preferences.markdownModeEnabled); // Added Markdown mode
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
+                localStorage.setItem('speak-selection-enabled', preferences.speakSelectionEnabled); // Added Speak Selection
                 localStorage.setItem('speech-language', preferences.speechLanguage);
-                
+
                 // If user is logged in, save to Supabase
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
@@ -4654,7 +4675,12 @@
                 const markdownModeEnabled = localStorage.getItem('markdown-mode-enabled') === 'true';
                 state.settings.markdownModeEnabled = markdownModeEnabled;
                 DOM.markdownModeToggle.checked = markdownModeEnabled;
-                
+
+                // Load Speak Selection setting
+                const speakSelectionEnabled = localStorage.getItem('speak-selection-enabled') === 'true';
+                state.settings.speakSelectionEnabled = speakSelectionEnabled;
+                DOM.speakSelectionToggle.checked = speakSelectionEnabled;
+
                 // Check if user is logged in to load server settings
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) return;
@@ -4711,6 +4737,13 @@
                         state.settings.markdownModeEnabled = prefs.markdownModeEnabled;
                         DOM.markdownModeToggle.checked = prefs.markdownModeEnabled;
                         localStorage.setItem('markdown-mode-enabled', prefs.markdownModeEnabled);
+                    }
+
+                    // Apply Speak Selection toggle
+                    if (prefs.speakSelectionEnabled !== undefined) {
+                        state.settings.speakSelectionEnabled = prefs.speakSelectionEnabled;
+                        DOM.speakSelectionToggle.checked = prefs.speakSelectionEnabled;
+                        localStorage.setItem('speak-selection-enabled', prefs.speakSelectionEnabled);
                     }
                 } catch (error) {
                     console.error('Error loading user preferences:', error);
