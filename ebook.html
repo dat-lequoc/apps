@@ -1326,6 +1326,25 @@
             align-items: center;
             gap: 1rem;
         }
+    
+        /* Source URL display in content area */
+        #source-url-display {
+            display: none; /* Hidden by default */
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+            color: var(--text-muted); /* Use muted color for the "Source:" label */
+        }
+    
+        #source-url-content-link {
+            word-break: break-all;
+            color: var(--primary-color); /* Link color */
+            text-decoration: none;
+        }
+        #source-url-content-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body class="dark-theme">
@@ -1410,7 +1429,13 @@
 
         <!-- Main reader area -->
         <div id="reader-container">
-            <div id="content-area"></div>
+            <div id="content-area">
+                <!-- Placeholder for Source URL -->
+                <div id="source-url-display" style="display: none; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); font-size: 0.9rem;">
+                    Source: <a id="source-url-content-link" href="#" target="_blank" rel="noopener noreferrer" style="word-break: break-all; color: var(--primary-color);"></a>
+                </div>
+                <!-- Chapter content will be added here by JS -->
+            </div>
             <div id="progress-bar"></div>
         </div>
         
@@ -1491,17 +1516,9 @@
                 <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled, display handled by JS -->
                 <div id="ai-response-area"></div> <!-- JS controlled -->
             </div>
-
-            <!-- Source URL Section (New) -->
-            <div class="settings-section" id="source-url-section" style="display: none;">
-                <div class="settings-title">Source URL</div>
-                <div class="settings-row">
-                    <a id="source-url-link" href="#" target="_blank" rel="noopener noreferrer" style="word-break: break-all; color: var(--primary-color);"></a>
-                </div>
-            </div>
-            <!-- End Source URL Section -->
+            <!-- Source URL Section removed from settings -->
         </div>
-
+    
         <!-- Overlay for panels -->
         <div id="overlay"></div>
         
@@ -1586,8 +1603,8 @@
                 translationLoading: document.getElementById('translation-loading'),
                 markdownModeToggle: document.getElementById('markdown-mode-toggle'), // Added Markdown toggle
                 cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
-                sourceUrlSection: document.getElementById('source-url-section'), // Added source URL section
-                sourceUrlLink: document.getElementById('source-url-link'),      // Added source URL link
+                sourceUrlDisplay: document.getElementById('source-url-display'),      // Added source URL display area in content
+                sourceUrlContentLink: document.getElementById('source-url-content-link'), // Added source URL link in content area
                 // listFilter: document.getElementById('list-filter'), // Removed list filter dropdown
                 listBadgeContainer: document.getElementById('list-badge-container'), // Added badge container
                 createListBtn: document.getElementById('create-list-btn'),       // Added create list button
@@ -2761,13 +2778,13 @@
                     DOM.summarizeBtn.style.display = 'block';
                 }
     
-                // Update Source URL link in settings panel
+                // Update Source URL display at the top of the content area
                 if (state.bookData.sourceUrl) {
-                    DOM.sourceUrlLink.href = state.bookData.sourceUrl;
-                    DOM.sourceUrlLink.textContent = state.bookData.sourceUrl;
-                    DOM.sourceUrlSection.style.display = 'block'; // Show the section
+                    DOM.sourceUrlContentLink.href = state.bookData.sourceUrl;
+                    DOM.sourceUrlContentLink.textContent = state.bookData.sourceUrl;
+                    DOM.sourceUrlDisplay.style.display = 'block'; // Show the display area
                 } else {
-                    DOM.sourceUrlSection.style.display = 'none'; // Hide the section
+                    DOM.sourceUrlDisplay.style.display = 'none'; // Hide the display area
                 }
             }
             
@@ -2906,8 +2923,8 @@
                 state.selectedListId = 'all'; // Reset selected list to 'All'
                 state.bookLists = []; // Clear loaded lists
 
-                // Hide the source URL section
-                DOM.sourceUrlSection.style.display = 'none'; 
+                // Hide the source URL display in the content area
+                DOM.sourceUrlDisplay.style.display = 'none';
                 
                 // Refresh library and lists if user is logged in
                 supabase.auth.getSession().then(({ data: { session } }) => {
