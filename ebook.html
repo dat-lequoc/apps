@@ -189,7 +189,7 @@
             margin-top: 2.5rem;
             background-color: var(--panel-bg);
             border-radius: 8px;
-            height: 50vh; /* Use fixed height */
+            height: 100vh; /* Use fixed height */
             box-shadow: 0 2px 8px var(--panel-shadow);
             display: flex; /* Use flexbox */
             flex-direction: column; /* Stack header and list vertically */
@@ -274,7 +274,7 @@
             cursor: pointer;
             border: 1px solid var(--border-color);
             background-color: var(--input-bg); /* Default background */
-            color: var(--text-muted);
+            color: var(--text-color); /* Use main text color for better default contrast */
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
             white-space: nowrap;
         }
@@ -291,12 +291,19 @@
             font-weight: 500;
         }
 
-        /* Badge Colors (Example cycle) */
-        .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.2); border-color: rgba(52, 168, 83, 0.4); color: #a5d6a7; }
-        .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.2); border-color: rgba(251, 188, 5, 0.4); color: #ffe082; }
-        .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.2); border-color: rgba(234, 67, 53, 0.4); color: #ef9a9a; }
-        .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.2); border-color: rgba(66, 133, 244, 0.4); color: #a3c2f4; }
-        .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.2); border-color: rgba(156, 39, 176, 0.4); color: #ce93d8; }
+        /* Badge Colors (Example cycle) - Using darker text colors for better contrast */
+        .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.2); border-color: rgba(52, 168, 83, 0.4); color: #137333; } /* Darker Green */
+        .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.2); border-color: rgba(251, 188, 5, 0.4); color: #b06000; } /* Darker Yellow/Orange */
+        .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.2); border-color: rgba(234, 67, 53, 0.4); color: #a50e0e; } /* Darker Red */
+        .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.2); border-color: rgba(66, 133, 244, 0.4); color: #1a73e8; } /* Darker Blue */
+        .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.2); border-color: rgba(156, 39, 176, 0.4); color: #6a1b9a; } /* Darker Purple */
+
+        /* Ensure sufficient contrast in light theme */
+        body.light-theme .list-badge[data-color-index="0"] { color: #0d652d; }
+        body.light-theme .list-badge[data-color-index="1"] { color: #995200; }
+        body.light-theme .list-badge[data-color-index="2"] { color: #940a0a; }
+        body.light-theme .list-badge[data-color-index="3"] { color: #0b57d0; }
+        body.light-theme .list-badge[data-color-index="4"] { color: #58117a; }
 
         .list-badge.active[data-color-index="0"],
         .list-badge.active[data-color-index="1"],
@@ -1195,6 +1202,19 @@
         
         a:hover {
             text-decoration: underline;
+        }
+
+        /* Style links within the reader content area */
+        #content-area a {
+            text-decoration: underline;
+            font-style: italic;
+            /* Inherit color from parent, or set specific color */
+            color: var(--primary-color); /* Or inherit */
+        }
+
+        #content-area a:hover {
+            /* Optional: slightly different hover effect if needed */
+            color: #3367d6; /* Example: darker blue on hover */
         }
         
         /* Toast notification */
@@ -2301,11 +2321,36 @@
 
                     state.bookData.content = finalMarkdownContent; // Store final markdown (raw or cleaned)
 
-                    // Update title if Firecrawl provided one
-                    if (response.data.metadata && response.data.metadata.title) {
-                        state.bookData.title = response.data.metadata.title;
+                    // --- START: AI Title and Category Generation ---
+                    showToast('Generating title and category with AI...', 3000);
+                    const { generatedTitle, listId } = await generateTitleAndCategory(finalMarkdownContent);
+
+                    if (generatedTitle) {
+                        state.bookData.title = generatedTitle; // Use AI title
                         DOM.bookTitle.textContent = state.bookData.title;
+                        showToast(`AI generated title: "${generatedTitle}"`, 3000);
+                    } else {
+                        // Fallback to Firecrawl title or URL if AI fails
+                        if (response.data.metadata && response.data.metadata.title) {
+                            state.bookData.title = response.data.metadata.title;
+                            DOM.bookTitle.textContent = state.bookData.title;
+                        }
+                        // If still no title, the URL is already set as state.bookData.title
+                        showToast('Could not generate AI title, using default.', 2000);
                     }
+
+                    // Assign the determined list ID (will be null if categorization failed or no lists)
+                    state.bookData.currentListId = listId;
+                    if (listId !== null) {
+                        const listName = state.bookLists.find(l => l.id === listId)?.name || 'Unknown List';
+                        showToast(`Categorized into: "${listName}"`, 3000);
+                        console.log("Categorized into: ", listName);
+                    } else {
+                         showToast('Categorized as Unlisted.', 2000);
+                        console.log("Categorized as Unlisted: ", listId);
+                    }
+                    // --- END: AI Title and Category Generation ---
+
 
                     // Process markdown into chapters (simple split for now, could be improved)
                     // Treat major headings (##) as chapter breaks
@@ -3818,7 +3863,8 @@
                                 file_type: fileType,
                                 metadata: metadata,
                                 last_position: lastPosition,
-                                list_id: null // New books initially go to the main library (unlisted)
+                                // Use the currentListId from state, which might have been set by AI
+                                list_id: state.bookData.currentListId || null 
                             });
                         
                         if (error) throw error;
@@ -4679,8 +4725,8 @@ ${rawMarkdown}
 ---
 Cleaned Markdown Output:`;
                 
-                // Use the configured model, or potentially default to 'gemini-1.5-flash-latest' if appropriate
-                const modelToUse = state.userApiSettings.model || 'gemini-1.5-flash-latest';
+                // Use the configured model, or potentially default to 'gemini-2.0-flash' if appropriate
+                const modelToUse = state.userApiSettings.model || 'gemini-2.0-flash';
             
                 const response = await geminiRequest( // geminiRequest is defined within the IIFE
                     state.userApiSettings.api_key,
@@ -4699,6 +4745,121 @@ Cleaned Markdown Output:`;
                 }
             
                 return cleanedContent.trim();
+            }
+
+            // Generate Title and Category using AI
+            async function generateTitleAndCategory(content) {
+                if (!state.userApiSettings || !state.userApiSettings.api_key) {
+                    console.warn("Gemini API key not available for title/category generation.");
+                    return { generatedTitle: null, listId: null };
+                }
+                // Ensure we have lists to categorize into
+                if (!state.bookLists || state.bookLists.length === 0) {
+                    console.warn("No book lists available for categorization.");
+                     // Proceed with title generation only
+                }
+
+                // Limit content length for the prompt
+                const maxContentLength = 5000; // Reduced length for title/category task
+                const truncatedContent = content.length > maxContentLength
+                    ? content.substring(0, maxContentLength) + "..."
+                    : content;
+
+                // Prepare list information for the prompt
+                const listOptions = state.bookLists && state.bookLists.length > 0
+                    ? state.bookLists.map(list => `- ${list.name} (ID: ${list.id})`).join('\n')
+                    : "No lists available.";
+
+                const prompt = `
+Analyze the following text content scraped from a webpage.
+
+Content Snippet:
+---
+${truncatedContent}
+---
+
+Based on the content, perform the following tasks:
+1.  **Generate a concise and relevant title** for this content (max 10 words).
+2.  **Categorize the content** into ONE of the following existing lists. Choose the list that best fits the topic. If none fit well, choose null.
+
+Available Lists:
+${listOptions}
+- Unlisted (ID: null)
+
+Return the result ONLY in this exact JSON format. The value for "list_id" MUST be either the numeric ID of the chosen list (e.g., 6) or the string "null". Do not include the list name in the "list_id" field.
+
+Example Output:
+{
+  "title": "Example Title About AI",
+  "list_id": 6 
+}
+
+Another Example Output (if no list fits):
+{
+  "title": "Example Title About Something Else",
+  "list_id": null
+}
+
+Actual Output JSON:
+{
+  "title": "Generated Title",
+  "list_id": chosen_list_id_or_null 
+}`;
+
+                try {
+                    const response = await geminiRequest(
+                        state.userApiSettings.api_key,
+                        prompt,
+                        'gemini-2.0-flash' // Force flash model
+                    );
+                    console.log("list options", listOptions);
+
+                    if (response.error) {
+                        throw new Error(response.error.message);
+                    }
+
+                    const resultText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+                    
+                    // Attempt to parse the JSON response
+                    let parsedResult = {};
+                    try {
+                        // Find the JSON part in the response
+                        const jsonMatch = resultText.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            parsedResult = JSON.parse(jsonMatch[0]);
+                        } else {
+                             console.warn("AI did not return valid JSON for title/category.", resultText);
+                             parsedResult = { title: null, list_id: null }; // Fallback
+                        }
+                    } catch (jsonError) {
+                        console.error('Error parsing title/category JSON:', jsonError, resultText);
+                        parsedResult = { title: null, list_id: null }; // Fallback
+                    }
+
+                    // Validate and sanitize list_id (should be string 'null' or a number)
+                    let listId = parsedResult.list_id;
+                    if (listId === 'null' || listId === null) {
+                        listId = null;
+                    } else if (typeof listId === 'string' && !isNaN(parseInt(listId))) {
+                         listId = parseInt(listId); // Convert numeric string ID to number if needed by DB logic
+                    } else if (typeof listId !== 'number') {
+                         console.warn(`Received unexpected list_id type: ${typeof listId}, value: ${listId}. Defaulting to null.`);
+                         listId = null; // Default to null if invalid type/value
+                    }
+                    console.log("parsedResult", parsedResult);
+                    console.log("got listId", listId);
+
+
+                    return {
+                        generatedTitle: parsedResult.title || null,
+                        listId: listId
+                    };
+
+                } catch (error) {
+                    console.error('Error generating title and category:', error);
+                    showToast(`AI title/category generation failed: ${error.message}`, 4000);
+                    return { generatedTitle: null, listId: null }; // Return nulls on error
+                }
             }
             
             // Return public API
