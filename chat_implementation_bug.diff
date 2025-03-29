@@ -1,0 +1,616 @@
+diff --git a/ebook.html b/ebook.html
+index 4fbd83d..1c0b6cc 100644
+--- a/ebook.html
++++ b/ebook.html
+@@ -699,6 +699,7 @@
+             -webkit-overflow-scrolling: touch;
+             user-select: text;
+             -webkit-user-select: text;
++            cursor: text; /* Ensure text cursor is shown over content */
+             transition: background-color 0.3s ease, color 0.3s ease;
+             background-color: var(--bg-color);
+             color: var(--text-color);
+@@ -1236,8 +1237,8 @@
+         #content-area a {
+             text-decoration: underline;
+             font-style: italic;
+-            /* Inherit color from parent, or set specific color */
+             color: var(--primary-color); /* Or inherit */
++            cursor: pointer; /* Ensure links show pointer cursor */
+         }
+ 
+         #content-area a:hover {
+@@ -1605,6 +1606,157 @@
+             transform: scale(0.95); /* Click effect */
+         }
+ 
++        /* Chat Panel Styles */
++        #chat-panel {
++            top: 50%;
++            left: 50%;
++            transform: translate(-50%, -50%) scale(0.9); /* Start slightly scaled down */
++            width: 90%; /* Use percentage for responsiveness */
++            max-width: 800px; /* Increased max-width */
++            height: 85vh; /* Increased height */
++            max-height: 800px; /* Increased max-height */
++            opacity: 0;
++            transition: transform 0.3s ease, opacity 0.3s ease;
++            display: flex; /* Use flex for layout */
++            /* flex-direction: column; */ /* Already set by .panel */
++            overflow: hidden; /* Prevent content overflow */
++        }
++
++        #chat-panel.visible {
++            transform: translate(-50%, -50%) scale(1);
++            opacity: 1;
++            display: flex; /* Ensure display is flex when visible */
++        }
++
++        #chat-header {
++            padding: 0.75rem 1rem; /* Reduced padding */
++            border-bottom: 1px solid var(--border-color);
++            display: flex;
++            justify-content: space-between;
++            align-items: center;
++            flex-shrink: 0; /* Prevent header from shrinking */
++        }
++
++        /* Chat Header Controls Layout */
++        .chat-header-controls {
++            display: flex;
++            align-items: center;
++            gap: 0.75rem; /* Space between controls */
++        }
++
++        #chat-header h3 {
++            margin: 0;
++            font-size: 1.1rem;
++            flex-grow: 1; /* Allow title to take space */
++        }
++
++        /* Style the clear button */
++        .chat-clear-btn {
++            font-size: 1rem; /* Adjust icon size */
++            width: 28px; /* Slightly smaller */
++            height: 28px;
++        }
++
++        /* Style the context toggle */
++        .chat-context-toggle {
++            display: flex;
++            align-items: center;
++            gap: 0.3rem;
++        }
++
++        #chat-messages {
++            flex: 1 1 auto; /* Allow message area to grow and shrink */
++            overflow-y: auto;
++            padding: 1rem;
++            display: flex;
++            flex-direction: column;
++            gap: 0.75rem; /* Space between messages */
++            min-height: 0; /* Important for flex scrolling */
++            scrollbar-width: thin; /* Firefox */
++            scrollbar-color: rgba(155, 155, 155, 0.5) transparent; /* Firefox */
++        }
++
++        #chat-messages::-webkit-scrollbar { width: 6px; }
++        #chat-messages::-webkit-scrollbar-track { background: transparent; }
++        #chat-messages::-webkit-scrollbar-thumb { background-color: rgba(155, 155, 155, 0.5); border-radius: 3px; }
++
++        .chat-message {
++            padding: 0.6rem 0.9rem;
++            border-radius: 8px;
++            max-width: 85%;
++            word-wrap: break-word;
++            line-height: 1.5;
++        }
++
++        .chat-message.user {
++            background-color: var(--primary-color);
++            color: white;
++            align-self: flex-end; /* Align user messages to the right */
++            border-bottom-right-radius: 2px; /* Slightly different shape */
++        }
++
++        .chat-message.assistant {
++            background-color: rgba(255, 255, 255, 0.08); /* Slightly different background */
++            color: var(--text-color);
++            align-self: flex-start; /* Align assistant messages to the left */
++            border-bottom-left-radius: 2px;
++        }
++
++        /* Style links within assistant messages */
++        .chat-message.assistant a {
++            color: var(--primary-color);
++            text-decoration: underline;
++        }
++        .chat-message.assistant a:hover {
++            color: #66a3ff; /* Lighter blue on hover */
++        }
++
++        /* Loading indicator for assistant message */
++        .chat-message.assistant.loading::after {
++            content: '...';
++            display: inline-block;
++            animation: loading-dots 1.5s infinite;
++        }
++
++        @keyframes loading-dots {
++            0%, 20% { content: '.'; }
++            40% { content: '..'; }
++            60%, 100% { content: '...'; }
++        }
++
++
++        #chat-input-area {
++            display: flex;
++            padding: 0.75rem 1rem;
++            border-top: 1px solid var(--border-color);
++            gap: 0.5rem;
++            align-items: flex-end; /* Align items to bottom */
++            flex-shrink: 0; /* Prevent input area from shrinking */
++        }
++
++        #chat-input {
++            flex: 1; /* Take available space */
++            padding: 0.6rem 0.8rem;
++            border-radius: 6px;
++            border: 1px solid var(--border-color);
++            background-color: var(--input-bg);
++            color: var(--text-color);
++            font-family: inherit;
++            font-size: 0.95rem;
++            resize: none; /* Disable manual resize */
++            line-height: 1.4;
++            max-height: 100px; /* Limit height */
++            overflow-y: auto; /* Allow scrolling if needed */
++        }
++
++        #chat-send-btn {
++            padding: 0.6rem 1rem; /* Match input padding */
++            font-size: 0.95rem;
++            height: fit-content; /* Adjust height to content */
++            align-self: flex-end; /* Align button to bottom */
++        }
++
++
+         /* ... existing code ... */
+     </style>
+ </head>
+@@ -1684,6 +1836,7 @@
+             <div id="navbar-buttons">
+                 <button type="button" class="navbar-btn" id="toc-btn" aria-label="Table of Contents">☰</button>
+                 <button type="button" class="navbar-btn" id="settings-btn" aria-label="Settings">⚙️</button>
++                <button type="button" class="navbar-btn" id="chat-btn" aria-label="Chat">💬</button> <!-- Added Chat Button -->
+                 <button type="button" class="navbar-btn" id="home-btn" aria-label="Home">⌂</button>
+             </div>
+         </div>
+@@ -1787,6 +1940,29 @@
+             </div>
+             <!-- Source URL Section removed from settings -->
+         </div>
++
++        <!-- Chat Panel -->
++        <div id="chat-panel" class="panel"> <!-- Use common panel class -->
++            <div id="chat-header">
++                <h3>Chat with AI</h3>
++                <div class="chat-header-controls"> <!-- New container for controls -->
++                    <button type="button" class="icon-btn chat-clear-btn" id="chat-clear-btn" aria-label="Clear Chat" title="Clear Chat History">🗑️</button>
++                    <div class="chat-context-toggle">
++                        <input type="checkbox" id="chat-full-doc-toggle" style="width: 16px; height: 16px; vertical-align: middle;">
++                        <label for="chat-full-doc-toggle" style="font-size: 0.85rem; vertical-align: middle; cursor: pointer;">Use Full Document</label>
++                    </div>
++                    <button type="button" class="navbar-btn" id="close-chat-btn" aria-label="Close">✕</button>
++                </div>
++            </div>
++            <div id="chat-messages">
++                <!-- Chat messages will be populated here -->
++                <div class="chat-message assistant">Hello! Ask me anything about the current chapter (or toggle 'Use Full Document' above).</div>
++            </div>
++            <div id="chat-input-area">
++                <textarea id="chat-input" placeholder="Type your message..." rows="2"></textarea>
++                <button type="button" id="chat-send-btn" class="button">Send</button>
++            </div>
++        </div>
+     
+         <!-- Overlay for panels -->
+         <div id="overlay"></div>
+@@ -1879,7 +2055,16 @@
+                 listBadgeContainer: document.getElementById('list-badge-container'), // Added badge container
+                 createListBtn: document.getElementById('create-list-btn'),       // Added create list button
+                 newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
+-                createListGroup: document.getElementById('create-list-group') // Added create list group
++                createListGroup: document.getElementById('create-list-group'), // Added create list group
++                // Chat elements
++                chatBtn: document.getElementById('chat-btn'),
++                chatPanel: document.getElementById('chat-panel'),
++                closeChatBtn: document.getElementById('close-chat-btn'),
++                chatMessages: document.getElementById('chat-messages'),
++                chatInput: document.getElementById('chat-input'),
++                chatSendBtn: document.getElementById('chat-send-btn'),
++                chatClearBtn: document.getElementById('chat-clear-btn'), // Added Clear Chat button
++                chatFullDocToggle: document.getElementById('chat-full-doc-toggle') // Added Full Doc toggle
+             };
+ 
+             // App state
+@@ -1917,7 +2102,10 @@
+                 // Event handling
+                 touchStartY: 0,
+                 touchEndY: 0,
+-                lastSelectionRect: null
++                lastSelectionRect: null,
++                // Chat state
++                chatHistory: [], // Stores { role: 'user'/'model', parts: [{ text: '...' }] }
++                chatUseFullDocument: false // Added state for full document context
+             };
+ 
+             // Initialize the app
+@@ -1946,8 +2134,10 @@
+                 DOM.tocBtn.addEventListener('click', toggleTocPanel);
+                 DOM.closeTocBtn.addEventListener('click', closeTocPanel);
+                 DOM.settingsBtn.addEventListener('click', toggleSettingsPanel);
++                DOM.chatBtn.addEventListener('click', toggleChatPanel); // Listener for chat button
+                 DOM.homeBtn.addEventListener('click', goToHome);
+                 DOM.overlay.addEventListener('click', closeAllPanels);
++                DOM.closeChatBtn.addEventListener('click', closeChatPanel); // Listener for chat close button
+                 DOM.prevBtn.addEventListener('click', goToPrevious);
+                 DOM.nextBtn.addEventListener('click', goToNext);
+                 
+@@ -2035,6 +2225,21 @@
+                 document.addEventListener('selectionchange', debounce(handleTextSelection, 300));
+                 // Add listener to close dropdowns on outside click
+                 document.addEventListener('click', handleGlobalClick);
++
++                // Chat input listeners
++                DOM.chatSendBtn.addEventListener('click', handleSendMessage);
++                DOM.chatInput.addEventListener('keydown', (e) => {
++                    if (e.key === 'Enter' && !e.shiftKey) {
++                        e.preventDefault(); // Prevent newline
++                        handleSendMessage();
++                    }
++                });
++                DOM.chatClearBtn.addEventListener('click', clearChat); // Listener for clear chat button
++                DOM.chatFullDocToggle.addEventListener('change', (e) => { // Listener for full doc toggle
++                    state.chatUseFullDocument = e.target.checked;
++                    // Optionally add a message indicating context change
++                    displayChatMessage('assistant', `Context switched to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`);
++                });
+             }
+ 
+             // Handle clicks outside of specific elements (like dropdowns)
+@@ -2054,6 +2259,11 @@
+                 if (state.isCreatingList && !DOM.createListGroup.contains(event.target)) {
+                     cancelListCreation();
+                 }
++
++                // Close chat panel if visible and click is outside it
++                if (DOM.chatPanel.classList.contains('visible') && !DOM.chatPanel.contains(event.target) && !DOM.chatBtn.contains(event.target)) {
++                     closeChatPanel();
++                }
+             }
+ 
+             // Handle keyboard shortcuts
+@@ -2122,6 +2332,15 @@
+                     saveUserPreferences();
+                     e.preventDefault();
+                 }
++
++                // C - toggle chat panel
++                if (e.key === 'c' && !e.ctrlKey && !e.metaKey) {
++                    // Only toggle if a book is open (reader is visible)
++                    if (DOM.welcomeScreen.style.display === 'none') {
++                        toggleChatPanel();
++                        e.preventDefault();
++                    }
++                }
+             }
+ 
+             // Handle touch gestures
+@@ -3178,6 +3397,28 @@
+                 DOM.settingsPanel.classList.remove('visible');
+                 DOM.overlay.classList.remove('visible');
+             }
++
++            function toggleChatPanel() {
++                const isVisible = DOM.chatPanel.classList.toggle('visible');
++                // DOM.overlay.classList.toggle('visible', isVisible); // Don't use main overlay for chat
++                DOM.tocPanel.classList.remove('visible');
++                DOM.settingsPanel.classList.remove('visible');
++                if (isVisible) {
++                    DOM.chatInput.focus(); // Focus input when opened
++                }
++            }
++
++            function closeChatPanel() {
++                DOM.chatPanel.classList.remove('visible');
++                // DOM.overlay.classList.remove('visible'); // Overlay wasn't shown by chat panel
++            }
++
++            function closeAllPanels() {
++                DOM.tocPanel.classList.remove('visible');
++                DOM.settingsPanel.classList.remove('visible');
++                DOM.chatPanel.classList.remove('visible'); // Close chat panel too
++                DOM.overlay.classList.remove('visible');
++            }
+             
+             function goToHome() {
+                 DOM.welcomeScreen.style.display = 'flex';
+@@ -3667,11 +3908,25 @@
+ 
+ 
+                 // Enable/disable features based on keys
+-                // DOM.summarizeBtn.style.display = canUseAi ? 'block' : 'none'; // summarizeBtn is removed
+-                DOM.translationToggle.disabled = !canUseAi; // Disable toggle if no Gemini key
++                DOM.translationToggle.disabled = !canUseAi; // Disable translation toggle if no Gemini key
++                DOM.chatBtn.disabled = !canUseAi; // Disable chat button if no Gemini key
+                 DOM.processUrlBtn.disabled = !canUseFirecrawl; // Disable URL button if no Firecrawl key
+-                
+-                // Add tooltip or visual cue for disabled URL button
++
++                // Add tooltip or visual cue for disabled buttons
++                 if (!canUseAi) {
++                    DOM.chatBtn.style.opacity = "0.5";
++                    DOM.chatBtn.style.cursor = "not-allowed";
++                    DOM.chatBtn.title = "Gemini API key needed for chat. Set it up in the main dashboard.";
++                    DOM.translationToggle.closest('.settings-row').title = "Gemini API key needed for translation."; // Add tooltip to parent row
++                    DOM.translationToggle.style.cursor = "not-allowed";
++                 } else {
++                    DOM.chatBtn.style.opacity = "1";
++                    DOM.chatBtn.style.cursor = "pointer";
++                    DOM.chatBtn.title = "Chat with AI about this chapter";
++                    DOM.translationToggle.closest('.settings-row').title = "";
++                    DOM.translationToggle.style.cursor = "pointer";
++                 }
++
+                 if (!canUseFirecrawl) {
+                     DOM.urlInputContainer.title = "Firecrawl API key needed. Set it up in the main dashboard.";
+                     DOM.processUrlBtn.style.opacity = "0.5";
+@@ -4390,22 +4645,193 @@
+                 
+                 return true;
+             }
+-            
++
++            // --- Chat Functions ---
++
++            function clearChat() {
++                state.chatHistory = []; // Clear history state
++                DOM.chatMessages.innerHTML = ''; // Clear UI
++                // Add the initial greeting back
++                displayChatMessage('assistant', "Chat cleared. Ask me anything about the " + (state.chatUseFullDocument ? "document." : "current chapter."));
++                DOM.chatInput.focus();
++            }
++
++            function displayChatMessage(sender, message, isLoading = false) {
++                const messageElement = document.createElement('div');
++                messageElement.classList.add('chat-message', sender); // sender is 'user' or 'assistant'
++
++                // Basic Markdown rendering for assistant messages (bold, links)
++                if (sender === 'assistant') {
++                    let processedMessage = escapeHTML(message); // Escape first
++                    processedMessage = processedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Bold
++                    // Basic link detection (simple http/https)
++                    processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
++                    // Convert newlines to <br> tags AFTER other processing
++                    processedMessage = processedMessage.replace(/\n/g, '<br>');
++                    messageElement.innerHTML = processedMessage; // Use innerHTML for formatted content
++                } else {
++                    messageElement.textContent = message; // User messages as plain text
++                }
++
++
++                if (isLoading) {
++                    messageElement.classList.add('loading');
++                }
++
++                DOM.chatMessages.appendChild(messageElement);
++
++                // Scroll to the bottom
++                DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
++
++                return messageElement; // Return the element for potential updates (like removing loading)
++            }
++
++            async function handleSendMessage() {
++                const userMessage = DOM.chatInput.value.trim();
++                if (!userMessage) return;
++
++                // Check for API key
++                if (!state.userApiSettings || !state.userApiSettings.api_key) {
++                    displayChatMessage('assistant', 'Sorry, the Gemini API key is not configured. Please set it up in the main dashboard.');
++                    return;
++                }
++
++                // Display user message
++                displayChatMessage('user', userMessage);
++                state.chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
++                DOM.chatInput.value = ''; // Clear input
++                DOM.chatInput.focus();
++
++                // Display temporary loading message for assistant
++                const loadingElement = displayChatMessage('assistant', '', true);
++                DOM.chatSendBtn.disabled = true; // Disable send button while waiting
++
++                try {
++                    // --- Prepare Context (Chapter or Full Document) ---
++                    let contextContent = "";
++                    let contextSource = "";
++                    const maxContextLength = 8000; // Increased max length slightly for full doc
++
++                    if (state.chatUseFullDocument) {
++                        contextSource = "the full document";
++                        // Concatenate content from all chapters
++                        contextContent = state.bookData.chapters.map(ch => ch.content).join("\n\n---\n\n"); // Join chapters with separator
++                    } else {
++                        contextSource = "the current chapter";
++                        const currentChapter = state.bookData.chapters[state.bookData.currentPosition];
++                        contextContent = currentChapter ? currentChapter.content : "No chapter content available.";
++                    }
++
++                    // --- Context is no longer truncated ---
++                    // const truncatedContext = contextContent.length > maxContextLength
++                    //     ? contextContent.substring(0, maxContextLength) + "...\n[Content Truncated]"
++                    //     : contextContent;
++                    const fullContext = contextContent; // Use the full content directly
++                    // --- End Context Preparation ---
++
++
++                    // Limit chat history sent
++                    const historyToSend = state.chatHistory.slice(-6); // Send last 6 messages (3 user, 3 model)
++
++                    // Construct the prompt
++                    const language = localStorage.getItem('speech-language') || 'en-US'; // Get target language
++                    const languageName = language.startsWith('fr') ? 'French' : 'English'; // Basic language name detection
++
++                    const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and may ask questions about the current chapter's content. Be concise and helpful. Remember the user is likely learning ${languageName}, so explain concepts clearly and simply if needed. Avoid overly complex language unless the user asks for it. Use Markdown for formatting (like **bold**).`;
++
++                    // Combine system prompt, history, context, and latest user message
++                    // Note: Gemini API expects history in { role: 'user'/'model', parts: [{ text: '...' }] } format
++                    const requestPayload = {
++                        contents: [
++                            // Start with the system instruction (as user role, Gemini doesn't have explicit system role yet)
++                            { role: 'user', parts: [{ text: systemPrompt }] },
++                            { role: 'model', parts: [{ text: "Understood. I'm ready to help with the chapter content." }] }, // Priming response
++                            // Add chat history
++                            ...historyToSend.slice(0, -1), // Add all history except the last user message
++                            // Add context before the final user question - Use fullContext and update text
++                            { role: 'user', parts: [{ text: `Here is the full context from ${contextSource}:\n\n---\n${fullContext}\n---\n\nNow, please answer my question:` }] },
++                            { role: 'model', parts: [{ text: "Okay, I have the context. What is your question?" }] }, // Acknowledge context
++                            // Add the actual last user message
++                            historyToSend[historyToSend.length - 1]
++                        ],
++                        // Optional: Add safety settings or generation config if needed
++                        // generationConfig: { ... },
++                        // safetySettings: [ ... ]
++                    };
++
++
++                    // Call Gemini API (using a modified request function if needed, or adapt the payload)
++                    const response = await geminiChatRequest(
++                        state.userApiSettings.api_key,
++                        requestPayload.contents, // Send the structured contents
++                        state.userApiSettings.model
++                    );
++
++                    // Remove loading indicator from the temporary message
++                    loadingElement.remove(); // Remove the placeholder entirely
++
++                    if (response.error) {
++                        displayChatMessage('assistant', `Sorry, there was an error: ${response.error.message}`);
++                        state.chatHistory.push({ role: 'model', parts: [{ text: `Error: ${response.error.message}` }] });
++                    } else {
++                        const assistantResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
++                        displayChatMessage('assistant', assistantResponse);
++                        state.chatHistory.push({ role: 'model', parts: [{ text: assistantResponse }] });
++                    }
++
++                } catch (error) {
++                    console.error('Error handling chat message:', error);
++                    loadingElement.remove(); // Ensure loading is removed on error
++                    displayChatMessage('assistant', 'An unexpected error occurred while processing your request.');
++                    state.chatHistory.push({ role: 'model', parts: [{ text: `Unexpected Error: ${error.message}` }] });
++                } finally {
++                     DOM.chatSendBtn.disabled = false; // Re-enable send button
++                     // Keep chat history trimmed if it gets too long
++                     if (state.chatHistory.length > 20) {
++                         state.chatHistory = state.chatHistory.slice(-20);
++                     }
++                }
++            }
++
++
++            // --- End Chat Functions ---
++
+             // AI features
+             // Gemini API helper functions
+             const getApiUrl = (model) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=`;
+-            
+-            async function geminiRequest(apiKey, message, model) {
++
++            // Function for single-turn Gemini requests (translation, cleaning, etc.)
++            async function geminiSingleRequest(apiKey, promptText, model) {
+                 try {
+                     const res = await fetch(`${getApiUrl(model)}${apiKey}`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({
+                             contents: [{
+-                                parts: [{ text: message }]
++                                parts: [{ text: promptText }]
+                             }]
+                         })
+                     });
++
++                    if (!res.ok) {
++                        const errorData = await res.json();
++                        throw new Error(errorData.error?.message || 'API request failed');
++                    }
++
++                    return res.json();
++                } catch (error) {
++                    console.error('Error calling Gemini API (single request):', error);
++                    return { error: { message: error.message || 'Failed to connect to Gemini API' } };
++                }
++            }
++            // Modified Gemini request function for chat (multi-turn)
++            async function geminiChatRequest(apiKey, contents, model) {
++                 try {
++                    const res = await fetch(`${getApiUrl(model)}${apiKey}`, {
++                        method: 'POST',
++                        headers: { 'Content-Type': 'application/json' },
++                        body: JSON.stringify({ contents: contents }) // Send the full contents array
++                    });
+                     
+                     if (!res.ok) {
+                         const errorData = await res.json();
+@@ -4432,10 +4858,10 @@
+                 
+                 try {
+                     const prompt = `Translate the following English text to Vietnamese. Only return the translation without any explanation or additional text.\n\nText: "${text}"`;
+-                    
+-                    const response = await geminiRequest(
+-                        state.userApiSettings.api_key, 
+-                        prompt, 
++
++                    const response = await geminiSingleRequest( // Use the correct function
++                        state.userApiSettings.api_key,
++                        prompt,
+                         state.userApiSettings.model
+                     );
+                     
+@@ -4474,10 +4900,10 @@
+                         "phrase": "A sentence showing the word in context, with the <b>word</b> in bold",
+                         "translation_answer": "vietnamese translation\\nBrief definition in English"
+                     }`;
+-                    
+-                    const response = await geminiRequest(
+-                        state.userApiSettings.api_key, 
+-                        prompt, 
++
++                    const response = await geminiSingleRequest( // Use the correct function
++                        state.userApiSettings.api_key,
++                        prompt,
+                         state.userApiSettings.model
+                     );
+                     
+@@ -5015,8 +5441,8 @@ Cleaned Markdown Output:`;
+                 
+                 // Use the configured model, or potentially default to 'gemini-2.0-flash' if appropriate
+                 const modelToUse = state.userApiSettings.model || 'gemini-2.0-flash';
+-            
+-                const response = await geminiRequest( // geminiRequest is defined within the IIFE
++
++                const response = await geminiSingleRequest( // Use the correct function
+                     state.userApiSettings.api_key,
+                     prompt,
+                     modelToUse
+@@ -5095,7 +5521,7 @@ Actual Output JSON:
+ }`;
+ 
+                 try {
+-                    const response = await geminiRequest(
++                    const response = await geminiSingleRequest( // Use the correct function
+                         state.userApiSettings.api_key,
+                         prompt,
+                         'gemini-2.0-flash' // Force flash model
