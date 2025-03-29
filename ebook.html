@@ -726,7 +726,35 @@
             max-height: 80vh;
             overflow-y: auto;
         }
-        
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
+            gap: 1.25rem; /* Same as settings-section margin */
+            margin-bottom: 1.25rem; /* Spacing below the grid */
+            padding-bottom: 1rem; /* Padding inside the grid bottom */
+            border-bottom: 1px solid var(--border-color); /* Border for the whole grid */
+        }
+
+        /* Remove bottom border and margin from sections inside the grid */
+        .settings-grid > .settings-section {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        /* Ensure last grid doesn't have double border */
+        #settings-panel > .settings-grid:last-of-type {
+             border-bottom: none; /* Remove border if it's the last element before AI section */
+        }
+        /* Adjust if AI section is the very last */
+         #settings-panel > .settings-section:last-child {
+             border-bottom: none;
+             margin-bottom: 0;
+             padding-bottom: 0;
+         }
+
+
         #settings-panel.visible {
             transform: translateY(0);
         }
@@ -1345,6 +1373,239 @@
         #source-url-content-link:hover {
             text-decoration: underline;
         }
+
+        /* API Status Styling in Settings */
+        #api-status-container {
+            margin-top: 1.5rem; /* Add space above the status section */
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .api-status-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.4rem;
+        }
+
+        .api-status-item .status-icon {
+            margin-right: 0.5rem;
+            font-size: 1rem; /* Adjust icon size if needed */
+        }
+
+        .api-status-item .status-text a {
+            color: var(--primary-color);
+            text-decoration: underline;
+        }
+
+        /* ... existing code ... */
+        /* Panels */
+        .panel {
+            position: fixed;
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border-radius: var(--panel-radius);
+            box-shadow: 0 5px 20px var(--panel-shadow);
+            z-index: 1001;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ... existing code ... */
+
+        .settings-content {
+            /* Use grid for layout */
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 18px 25px; /* Row gap, Column gap - Reduced */
+            padding: 20px; /* Reduced padding */
+            max-height: 75vh; /* Adjusted max-height */
+            overflow-y: auto;
+            align-items: start; /* Align items to the top of their grid cell */
+        }
+
+        /* Make dividers and specific sections span both columns */
+        .settings-content > .settings-divider,
+        .settings-content > .ai-features-section,
+        .settings-content > .api-status-section {
+            grid-column: 1 / -1; /* Span across all columns */
+            margin-top: 0; /* Adjust spacing */
+            margin-bottom: 0; /* Adjust spacing */
+        }
+        /* Add some spacing specifically around dividers */
+        .settings-content > .settings-divider {
+            margin-top: 3px; /* Slightly reduced */
+            margin-bottom: 3px; /* Slightly reduced */
+        }
+
+
+        .settings-section {
+            /* Remove bottom margin, rely on grid gap */
+            margin-bottom: 0;
+            display: flex;
+            flex-direction: column; /* Stack label and control vertically */
+            gap: 8px; /* Space between label and control - Reduced */
+        }
+
+        /* Remove margin from last section as gap handles spacing */
+        .settings-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .settings-section > label { /* Use > for direct child */
+            display: block;
+            margin-bottom: 0px; /* Keep 0, rely on section gap */
+            font-weight: bold;
+            color: var(--text-color);
+            font-size: 0.95em; /* Slightly smaller label */
+        }
+
+        .setting-control {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Consistent gap for controls - Reduced */
+        }
+
+        /* Specific layout for button controls */
+        .setting-control.font-size-control,
+        .setting-control.line-height-control {
+            justify-content: space-between; /* Space out buttons */
+        }
+
+        .setting-control.font-size-control span,
+        .setting-control.line-height-control span {
+            min-width: 40px; /* Give space for the value */
+            text-align: center;
+            font-weight: bold;
+            flex-grow: 1; /* Allow span to take up space */
+        }
+
+        /* Style theme buttons */
+        .theme-control {
+            justify-content: flex-start; /* Align theme buttons left */
+            gap: 10px; /* Reduced */
+        }
+
+        .theme-option {
+            width: 28px; /* Slightly smaller */
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: border-color 0.3s ease, transform 0.2s ease;
+        }
+        .theme-option:hover {
+            transform: scale(1.1);
+        }
+        .theme-option.active {
+             border-color: var(--primary-color);
+             border-width: 3px;
+        }
+        .theme-option[data-theme="light"] { background-color: var(--light-panel-bg); }
+        .theme-option[data-theme="sepia"] { background-color: var(--sepia-panel-bg); }
+        .theme-option[data-theme="dark"] { background-color: var(--dark-panel-bg); }
+
+
+        /* Align label and control in checkbox sections */
+        .setting-control.checkbox-control {
+            justify-content: space-between; /* Push checkbox to the right */
+            /* Ensure it takes full width for alignment */
+            width: 100%;
+            padding: 1px 0; /* Add slight padding for better spacing - Reduced */
+        }
+
+        /* Ensure label text doesn't prevent checkbox alignment */
+        .setting-control.checkbox-control label {
+            margin-bottom: 0; /* Override default label margin */
+            font-weight: normal; /* Normal weight for checkbox labels */
+            flex-grow: 1; /* Allow label to take available space */
+            cursor: pointer; /* Make label clickable */
+        }
+
+        /* Ensure the input itself doesn't cause layout shifts */
+        .setting-control.checkbox-control input[type="checkbox"] {
+            margin: 0; /* Reset margins */
+            flex-shrink: 0; /* Prevent checkbox from shrinking */
+            cursor: pointer;
+            /* Optional: Adjust size if needed */
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Special handling for Display Mode section */
+        .settings-section:has(#markdownModeToggle) > label {
+            /* Align the "Display Mode" label */
+            margin-bottom: 5px; /* Add space above the checkbox row */
+        }
+        .settings-section:has(#markdownModeToggle) .setting-control.checkbox-control {
+             /* Keep default justify-content: space-between; */
+             /* margin-top: 5px; */ /* Add space below the main label */
+        }
+
+        /* Style the select dropdown section */
+        .setting-control:has(#speechLanguageSelect) {
+            justify-content: space-between; /* Align label left, select right */
+            width: 100%;
+            padding: 1px 0; /* Reduced */
+        }
+        .setting-control:has(#speechLanguageSelect) label {
+             margin-bottom: 0;
+             font-weight: normal;
+             flex-shrink: 0; /* Prevent label from shrinking */
+             cursor: default; /* Not clickable */
+        }
+        #speechLanguageSelect {
+            padding: 5px 8px; /* Adjust padding - Reduced */
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            max-width: 160px; /* Limit width */
+            font-size: 0.9em;
+        }
+
+        /* Ensure the API status section aligns items nicely */
+        .api-status-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px; /* Space between API status lines - Reduced */
+            margin-top: 5px; /* Add space above this section */
+        }
+
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Reduced */
+            font-size: 0.9em;
+        }
+        /* ... existing code ... */
+        .icon-btn {
+            padding: 0; /* Remove padding, use width/height */
+            border-radius: 50%;
+            width: 30px; /* Fixed size */
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border-color);
+            background-color: var(--panel-bg); /* Match panel background */
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+            font-size: 1.1em; /* Adjust icon size if needed */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .icon-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle hover */
+            border-color: var(--primary-color);
+        }
+        .icon-btn:active {
+            transform: scale(0.95); /* Click effect */
+        }
+
+        /* ... existing code ... */
     </style>
 </head>
 <body class="dark-theme">
@@ -1456,48 +1717,49 @@
 
         <!-- Settings panel -->
         <div id="settings-panel">
-            <div class="settings-section">
-                <div class="settings-title">Font Size</div>
-                <div class="font-size-controls">
-                    <button type="button" class="font-btn" id="font-decrease-btn" aria-label="Decrease Font Size">A-</button>
-                    <span id="font-size-value">100%</span>
-                    <button type="button" class="font-btn" id="font-increase-btn" aria-label="Increase Font Size">A+</button>
+            <div class="settings-grid"> <!-- Start Font/Line Height Grid -->
+                <div class="settings-section">
+                    <div class="settings-title">Font Size</div>
+                    <div class="font-size-controls">
+                        <button type="button" class="font-btn" id="font-decrease-btn" aria-label="Decrease Font Size">A-</button>
+                        <span id="font-size-value">100%</span>
+                        <button type="button" class="font-btn" id="font-increase-btn" aria-label="Increase Font Size">A+</button>
+                    </div>
                 </div>
-            </div>
 
-            <div class="settings-section">
-                <div class="settings-title">Line Height</div>
-                <div class="line-height-controls">
-                    <button type="button" class="font-btn" id="line-height-decrease-btn" aria-label="Decrease Line Height">-</button>
-                    <span id="line-height-value">1.6</span>
-                    <button type="button" class="font-btn" id="line-height-increase-btn" aria-label="Increase Line Height">+</button>
+                <div class="settings-section">
+                    <div class="settings-title">Line Height</div>
+                    <div class="line-height-controls">
+                        <button type="button" class="font-btn" id="line-height-decrease-btn" aria-label="Decrease Line Height">-</button>
+                        <span id="line-height-value">1.6</span>
+                        <button type="button" class="font-btn" id="line-height-increase-btn" aria-label="Increase Line Height">+</button>
+                    </div>
                 </div>
-            </div>
+            </div> <!-- End Font/Line Height Grid -->
 
-            <div class="settings-section">
-                <div class="settings-title">Theme</div>
-                <div class="theme-options">
-                    <div class="theme-option light-option" data-theme="light" title="Light Theme"></div>
-                    <div class="theme-option sepia-option" data-theme="sepia" title="Sepia Theme"></div>
-                    <div class="theme-option dark-option active" data-theme="dark" title="Dark Theme"></div>
+            <div class="settings-grid"> <!-- Start Theme/Display Mode Grid -->
+                <div class="settings-section">
+                    <div class="settings-title">Theme</div>
+                    <div class="theme-options">
+                        <div class="theme-option light-option" data-theme="light" title="Light Theme"></div>
+                        <div class="theme-option sepia-option" data-theme="sepia" title="Sepia Theme"></div>
+                        <div class="theme-option dark-option active" data-theme="dark" title="Dark Theme"></div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="settings-section">
-                <div class="settings-title">Display Mode</div>
-                <div class="settings-row">
-                    <label for="markdown-mode-toggle">Markdown Mode</label>
-                    <input type="checkbox" id="markdown-mode-toggle">
+
+                <div class="settings-section">
+                    <div class="settings-title">Display Mode</div>
+                    <div class="settings-row">
+                        <label for="markdown-mode-toggle">Markdown Mode</label>
+                        <input type="checkbox" id="markdown-mode-toggle">
+                    </div>
                 </div>
-            </div>
+            </div> <!-- End Theme/Display Mode Grid -->
 
             <!-- AI Features Section -->
             <div class="settings-section" id="ai-features-section">
                 <div class="settings-title">AI Features</div>
-                <div id="ai-settings-content">
-                    <!-- This will be populated dynamically -->
-                    <p>Loading AI settings...</p>
-                </div>
+                <!-- AI Toggles moved up -->
                 <div class="settings-row ai-toggle">
                     <label for="translation-toggle">Text Selection Translation</label>
                     <input type="checkbox" id="translation-toggle" checked>
@@ -1517,7 +1779,11 @@
                         <option value="fr-FR">French</option>
                     </select>
                 </div>
-                <!-- Summarize button and response area removed -->
+                <!-- Re-add the missing container for API status -->
+                <div id="ai-settings-content">
+                    <!-- This will be populated dynamically -->
+                    <p>Loading API status...</p>
+                </div>
             </div>
             <!-- Source URL Section removed from settings -->
         </div>
@@ -1596,7 +1862,7 @@
                 librarySection: document.getElementById('library-section'),
                 authSection: document.getElementById('auth-section'),
                 // summarizeBtn removed
-                aiSettingsContent: document.getElementById('ai-settings-content'),
+                // aiSettingsContent: document.getElementById('ai-settings-content'), // Initialization moved
                 translationToggle: document.getElementById('translation-toggle'),
                 autoSpeakToggle: document.getElementById('auto-speak-toggle'),
                 speakSelectionToggle: document.getElementById('speak-selection-toggle'), // Added Speak Selection toggle
@@ -3342,38 +3608,66 @@
 
                 // User is logged in, check if they have API settings
                 state.userApiSettings = await getUserApiSettings();
-                
-                let aiSettingsHtml = '';
+
+                let apiStatusHtml = '<div id="api-status-container">'; // Use the new container ID
                 let canUseAi = false;
                 let canUseFirecrawl = false;
 
                 if (state.userApiSettings) {
+                    // Gemini Status
                     if (state.userApiSettings.api_key && state.userApiSettings.model) {
-                        aiSettingsHtml += `
-                            <p>✅ Gemini API Key configured</p>
-                            <p>Model: ${state.userApiSettings.model}</p>`;
+                        apiStatusHtml += `
+                            <div class="api-status-item">
+                                <span class="status-icon">✅</span>
+                                <span class="status-text">Gemini API configured (Model: ${escapeHTML(state.userApiSettings.model)})</span>
+                            </div>`;
                         canUseAi = true;
                     } else {
-                         aiSettingsHtml += `<p>❌ Gemini API Key not configured. <a href="index.html" target="_blank">Set up in dashboard</a>.</p>`;
+                         apiStatusHtml += `
+                            <div class="api-status-item">
+                                <span class="status-icon">❌</span>
+                                <span class="status-text">Gemini API not configured. <a href="index.html" target="_blank">Set up</a>.</span>
+                            </div>`;
                     }
-                    
+
+                    // Firecrawl Status
                     if (state.userApiSettings.firecrawl_api_key) {
-                        aiSettingsHtml += `<p>✅ Firecrawl API Key configured</p>`;
+                        apiStatusHtml += `
+                            <div class="api-status-item">
+                                <span class="status-icon">✅</span>
+                                <span class="status-text">Firecrawl API configured</span>
+                            </div>`;
                         canUseFirecrawl = true;
                     } else {
-                        aiSettingsHtml += `<p>❌ Firecrawl API Key not configured. <a href="index.html" target="_blank">Set up in dashboard</a>.</p>`;
+                        apiStatusHtml += `
+                            <div class="api-status-item">
+                                <span class="status-icon">❌</span>
+                                <span class="status-text">Firecrawl API not configured. <a href="index.html" target="_blank">Set up</a>.</span>
+                            </div>`;
                     }
                 } else {
-                    aiSettingsHtml = `
-                        <p>To use AI features (Summarize, Translate, Read URL), please 
-                        <a href="index.html" target="_blank">sign in and configure API keys</a> in the main dashboard.</p>
-                    `;
+                    // General message if no settings found (likely not logged in or error fetching)
+                    apiStatusHtml += `
+                        <div class="api-status-item">
+                            <span class="status-icon">⚠️</span>
+                            <span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI features.</span>
+                        </div>`;
                 }
 
-                DOM.aiSettingsContent.innerHTML = aiSettingsHtml;
+                apiStatusHtml += '</div>'; // Close the container
+
+                // Get the element reference just before use and add a check
+                DOM.aiSettingsContent = document.getElementById('ai-settings-content');
+                if (DOM.aiSettingsContent) {
+                    DOM.aiSettingsContent.innerHTML = apiStatusHtml;
+                } else {
+                    console.error("Error: Could not find the #ai-settings-content element in the DOM.");
+                    showToast("Error displaying AI status: UI element missing.");
+                }
+
 
                 // Enable/disable features based on keys
-                DOM.summarizeBtn.style.display = canUseAi ? 'block' : 'none';
+                // DOM.summarizeBtn.style.display = canUseAi ? 'block' : 'none'; // summarizeBtn is removed
                 DOM.translationToggle.disabled = !canUseAi; // Disable toggle if no Gemini key
                 DOM.processUrlBtn.disabled = !canUseFirecrawl; // Disable URL button if no Firecrawl key
                 
