@@ -3327,19 +3327,9 @@
                 state.session = session;
                 
                 if (!session) {
-                    // Show login button
-                    DOM.loginBtn.classList.remove('hidden');
-
-                    // Update auth section
-                    DOM.authSection.innerHTML = `
-                        <p>Sign in to save books to your library</p>
-                    `;
-                    
-                    // Update AI settings
-                    DOM.aiSettingsContent.innerHTML = `
-                        <p>Please <a href="index.html" target="_blank">sign in</a> to use AI features.</p>
-                    `;
-                    return;
+                    // Redirect to index.html if not logged in
+                    window.location.href = 'index.html';
+                    return; // Stop further execution in this function
                 } else {
                     // User is signed in
                     DOM.loginBtn.classList.add('hidden');
