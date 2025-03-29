@@ -77,9 +77,13 @@ create table user_settings (
   api_key text not null,
   firecrawl_api_key text not null,
   model text not null,
+  preferences jsonb default '{}'::jsonb, -- Stores user-specific UI and feature preferences
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Add comment for the preferences column
+comment on column public.user_settings.preferences is 'Stores user-specific UI and feature preferences as a JSON object.';
 
 -- Enable RLS (Row Level Security) for user_settings
 alter table user_settings enable row level security;
