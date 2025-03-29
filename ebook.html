@@ -1517,8 +1517,7 @@
                         <option value="fr-FR">French</option>
                     </select>
                 </div>
-                <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem;">Summarize Chapter</button> <!-- JS controlled, display handled by JS -->
-                <div id="ai-response-area"></div> <!-- JS controlled -->
+                <!-- Summarize button and response area removed -->
             </div>
             <!-- Source URL Section removed from settings -->
         </div>
@@ -1596,13 +1595,13 @@
                 loginBtn: document.getElementById('login-btn'),
                 librarySection: document.getElementById('library-section'),
                 authSection: document.getElementById('auth-section'),
-                summarizeBtn: document.getElementById('summarize-chapter-btn'),
+                // summarizeBtn removed
                 aiSettingsContent: document.getElementById('ai-settings-content'),
                 translationToggle: document.getElementById('translation-toggle'),
                 autoSpeakToggle: document.getElementById('auto-speak-toggle'),
                 speakSelectionToggle: document.getElementById('speak-selection-toggle'), // Added Speak Selection toggle
                 speechLanguage: document.getElementById('speech-language'),
-                aiResponseArea: document.getElementById('ai-response-area'),
+                // aiResponseArea removed
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
@@ -1730,7 +1729,7 @@
                 });
                 
                 // AI features
-                DOM.summarizeBtn.addEventListener('click', summarizeCurrentChapter);
+                // summarizeBtn listener removed
                 DOM.translationToggle.addEventListener('change', function() {
                     localStorage.setItem('translation-enabled', this.checked);
                     saveUserPreferences();
@@ -2786,10 +2785,7 @@
                 // Update progress bar
                 updateProgressBar();
                 
-                // Make summarize button visible if API settings are available
-                if (state.userApiSettings) {
-                    DOM.summarizeBtn.style.display = 'block';
-                }
+                // summarizeBtn visibility logic removed
     
                 // Update Source URL display at the top of the content area
                 if (state.bookData.sourceUrl) {
@@ -3391,6 +3387,7 @@
                     DOM.processUrlBtn.style.opacity = "1";
                     DOM.processUrlBtn.style.cursor = "pointer";
                 }
+                // Removed summarizeBtn display logic from checkAuthAndLoadApiSettings
             }
 
             // Get the user's Gemini API settings from Supabase
@@ -4522,50 +4519,7 @@
                 }
             }
             
-            // Summarize current chapter using AI
-            async function summarizeCurrentChapter() {
-                if (!state.userApiSettings) {
-                    await checkAuthAndLoadApiSettings();
-                    
-                    if (!state.userApiSettings) {
-                        showToast('Please configure API key in settings to use AI features');
-                        return;
-                    }
-                }
-                
-                const chapter = state.bookData.chapters[state.bookData.currentPosition];
-                if (!chapter) return;
-                
-                // Show response area and set initial message
-                DOM.aiResponseArea.style.display = 'block';
-                DOM.aiResponseArea.textContent = 'Generating summary...';
-                
-                try {
-                    // Limit content to avoid token limits
-                    const maxContentLength = 15000;
-                    const chapterContent = chapter.content.length > maxContentLength 
-                        ? chapter.content.substring(0, maxContentLength) + "..." 
-                        : chapter.content;
-                    
-                    const prompt = `Summarize the following text from a book chapter titled "${chapter.title}":\n\n${chapterContent}\n\nProvide a concise summary (about 3-5 sentences) that captures the main points and ideas.`;
-                    
-                    const response = await geminiRequest(
-                        state.userApiSettings.api_key, 
-                        prompt, 
-                        state.userApiSettings.model
-                    );
-                    
-                    if (response.error) {
-                        throw new Error(response.error.message);
-                    }
-                    
-                    const summary = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate summary.';
-                    DOM.aiResponseArea.textContent = summary;
-                } catch (error) {
-                    console.error('Error generating summary:', error);
-                    DOM.aiResponseArea.textContent = `Error: ${error.message || 'An error occurred while generating the summary.'}`;
-                }
-            }
+            // summarizeCurrentChapter function removed
             
             // Save user preferences to Supabase or localStorage
             async function saveUserPreferences() {
