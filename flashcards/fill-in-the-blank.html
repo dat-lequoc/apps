@@ -1268,9 +1268,10 @@
 
       // Reset button
       document.getElementById('reset-exercise-btn').addEventListener('click', () => {
-        // Clear all input fields and reset their styling
+        // Clear all input fields, reset their styling, and clear previous value tracking
         document.querySelectorAll('.blank-input').forEach(input => {
           input.value = '';
+          input.dataset.previousValue = ''; // Clear previous value tracking
           applyInputStyling(input, false, true); // Reset styling to default/empty
         });
 
