@@ -281,10 +281,10 @@
         <div class="mb-4">
           <label for="exercise-model-select" class="block text-sm font-medium mb-1">Model</label>
           <select id="exercise-model-select" class="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-            <option value="gemini-2.0-flash" selected>Gemini Flash (Default)</option>
+            <option value="gemini-2.0-flash">Gemini Flash</option>
             <option value="gemini-2.0-pro-exp-02-05">Gemini Pro</option>
             <option value="gemini-2.0-flash-lite-preview-02-05">Gemini Flash Lite</option>
-            <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini Flash Thinking</option>
+            <option value="gemini-2.0-flash-thinking-exp-01-21" selected>Gemini Flash Thinking (Default)</option>
           </select>
         </div>
         
@@ -740,7 +740,7 @@
           Write an interesting short paragraph.
           
           IMPORTANT INSTRUCTIONS:
-          1. Use each word EXACTLY as provided - do not change the form, tense, plurality, etc.
+          1. Use EACH word from the list EXACTLY ONCE. Do not change the form, tense, plurality, etc.
           2. Mark EACH blank space as "[BLANK]" (not with brackets around the word or any other format)
           3. Make sure the number of [BLANK] tokens matches exactly the number of words provided
           4. Do not number the blanks - use the exact same token "[BLANK]" for each one
@@ -760,7 +760,7 @@
           DO NOT use formats like "[WORD]" or "[OTHER_FORMAT]" - only use "[BLANK]".`;
           
           // Get the selected model from the dropdown 
-          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-flash';
+          const selectedModel = document.getElementById('exercise-model-select').value || userModel || 'gemini-2.0-flash-thinking-exp-01-21';
           const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${userApiKey}`;
           
           statusEl.textContent = "Generating content with Gemini API...";
