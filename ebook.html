@@ -4736,7 +4736,13 @@
                     const language = localStorage.getItem('speech-language') || 'en-US'; // Get target language
                     const languageName = language.startsWith('fr') ? 'French' : 'English'; // Basic language name detection
 
-                    const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and may ask questions about the current chapter's content. Be concise and helpful. Remember the user is likely learning ${languageName}, so explain concepts clearly and simply if needed. Avoid overly complex language unless the user asks for it. Use Markdown for formatting (like **bold**).`;
+                    // --- Updated System Prompt ---
+                    const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).
+Use the provided context to answer questions, summarize, translate, explain concepts, or perform other tasks related to the text.
+Be concise and helpful. Remember the user is likely learning ${languageName}, so explain concepts clearly and simply if needed.
+Use Markdown for formatting (like **bold**).
+If asked to perform a task that ignores the provided text (like telling a joke or providing general knowledge), politely state that you are focused on assisting with the ebook content.`;
+                    // --- End Updated System Prompt ---
 
                     // Combine system prompt, history, context, and latest user message
                     // Note: Gemini API expects history in { role: 'user'/'model', parts: [{ text: '...' }] } format
