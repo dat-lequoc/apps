@@ -527,13 +527,20 @@
 
           // Handle auto mode progression
           if (isAutoMode) {
-              feedbackEl.innerHTML += `<p class="mt-1 text-sm">Loading next batch...</p>`;
+              // Check if there are more cards remaining for the next batch
+              if (remainingCards.length > 0) {
+                  feedbackEl.innerHTML += `<p class="mt-1 text-sm">Batch complete! Loading next batch...</p>`;
+              } else {
+                  feedbackEl.innerHTML += `<p class="mt-1 text-sm">Final batch complete! Finishing up...</p>`;
+              }
+              // Always call startNextBatch to handle either the next batch or the final completion/redirection
               setTimeout(() => {
-                  if (feedbackEl) feedbackEl.remove();
+                  if (feedbackEl) feedbackEl.remove(); // Remove the message before potentially redirecting
                   startNextBatch();
               }, 1500); // Wait 1.5 seconds
           } else {
-              feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise above.</p>`;
+              // Manual mode: Allow generating a new exercise
+              feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise using the configuration above.</p>`;
           }
       }
 
