@@ -533,11 +533,28 @@
               } else {
                   feedbackEl.innerHTML += `<p class="mt-1 text-sm">Final batch complete! Finishing up...</p>`;
               }
-              // Always call startNextBatch to handle either the next batch or the final completion/redirection
-              setTimeout(() => {
-                  if (feedbackEl) feedbackEl.remove(); // Remove the message before potentially redirecting
-                  startNextBatch();
-              }, 1500); // Wait 1.5 seconds
+              // Handle next batch or final redirection
+              if (remainingCards.length > 0) {
+                  // There are more cards, load the next batch after a delay
+                  setTimeout(() => {
+                      if (feedbackEl) feedbackEl.remove(); // Remove the message
+                      startNextBatch(); // Start the next batch
+                  }, 1500); // Wait 1.5 seconds
+              } else {
+                  // This was the final batch, handle redirection after a delay
+                  setTimeout(() => {
+                      if (feedbackEl) feedbackEl.remove(); // Remove the message
+                      console.log("All fill-in-the-blank batches completed. Returning to flashcards.");
+                      
+                      // Clear any potential learned words from this session before leaving
+                      localStorage.removeItem('learnedWords');
+                      localStorage.removeItem('lastPractice');
+                      localStorage.removeItem('practiceHistory');
+                      
+                      // Redirect back to the main flashcards page
+                      window.location.href = '../flashcards.html';
+                  }, 2000); // Wait 2 seconds before redirecting
+              }
           } else {
               // Manual mode: Allow generating a new exercise
               feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise using the configuration above.</p>`;
@@ -879,24 +896,13 @@
       
       // Implement Automatic Batching Logic:
       async function startNextBatch() {
-          if (remainingCards.length === 0) {
-              // All batches completed
-              console.log("All fill-in-the-blank batches completed. Returning to flashcards.");
-              // Optionally show a completion message before redirecting
-              const statusEl = document.getElementById('exercise-status');
-              statusEl.textContent = "All exercises complete! Redirecting back...";
-              statusEl.className = "mt-2 text-sm text-green-500";
-              document.getElementById('exercise-container').classList.add('hidden'); // Hide exercise UI
-              
-              // Clear any potential learned words from this session before leaving
-              localStorage.removeItem('learnedWords');
-              localStorage.removeItem('lastPractice');
-              localStorage.removeItem('practiceHistory');
+          // This function now ONLY handles starting the NEXT batch.
+          // The final redirection is handled in showFinalSuccessMessage.
 
-              setTimeout(() => {
-                  window.location.href = '../flashcards.html';
-              }, 2000); // Wait 2 seconds before redirecting
-              return;
+          if (remainingCards.length === 0) {
+              // This should ideally not be reached if showFinalSuccessMessage handles the final step.
+              console.warn("startNextBatch called with no remaining cards. Final redirection should have happened.");
+              return; 
           }
 
           // Take the next batch
