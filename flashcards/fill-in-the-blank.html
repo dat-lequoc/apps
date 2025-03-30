@@ -482,14 +482,59 @@
         document.getElementById("api-form-section").classList.remove("hidden");
       }
 
-      // Helper function to check if exercise is complete and trigger answer check
+      // Helper function to check if exercise is complete AND correct, then trigger final success state
       function checkCompletionAndTriggerCheck() {
-        const allWordsUsed = Array.from(document.querySelectorAll('.word-item')).every(item => item.classList.contains('used'));
-        const allInputsFilled = Array.from(document.querySelectorAll('.blank-input')).every(input => input.value.trim() !== '');
+          const allInputs = Array.from(document.querySelectorAll('.blank-input'));
+          const allCorrectlyFilled = allInputs.every(input => {
+              const index = parseInt(input.getAttribute('data-index'));
+              const correctAnswer = exerciseData.answers[index];
+              // Check if input has value AND it's the correct one (implicitly checks green border)
+              return input.value.trim() === correctAnswer;
+          });
 
-        if (allWordsUsed && allInputsFilled) {
-          checkAnswers();
-        }
+          // Optional: Check if all word items are used (might be redundant if all inputs are correctly filled)
+          // const allWordsUsed = Array.from(document.querySelectorAll('.word-item')).every(item => item.classList.contains('used'));
+
+          if (allCorrectlyFilled) {
+              // If all inputs are filled correctly, trigger the success state (similar to what checkAnswers did)
+              showFinalSuccessMessage();
+          }
+      }
+
+      // Extracted function to show the final success message and handle auto mode
+      function showFinalSuccessMessage() {
+          let feedbackEl = document.getElementById('exercise-feedback');
+          // Create the feedback element if it doesn't exist
+          if (!feedbackEl) {
+              feedbackEl = document.createElement('div');
+              feedbackEl.id = 'exercise-feedback';
+              const buttonContainer = document.querySelector('#exercise-container .flex.justify-between');
+              if (buttonContainer) {
+                  buttonContainer.before(feedbackEl);
+              } else {
+                  document.getElementById('exercise-text').after(feedbackEl);
+              }
+          }
+
+          feedbackEl.className = 'my-3 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
+          feedbackEl.innerHTML = `<p>Great job! All answers are correct!</p>`;
+
+          // Make the feedback message visible
+          feedbackEl.style.opacity = '0';
+          setTimeout(() => {
+              feedbackEl.style.opacity = '1';
+          }, 10);
+
+          // Handle auto mode progression
+          if (isAutoMode) {
+              feedbackEl.innerHTML += `<p class="mt-1 text-sm">Loading next batch...</p>`;
+              setTimeout(() => {
+                  if (feedbackEl) feedbackEl.remove();
+                  startNextBatch();
+              }, 1500); // Wait 1.5 seconds
+          } else {
+              feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise above.</p>`;
+          }
       }
 
       // Initialize theme and event listeners
@@ -926,11 +971,17 @@
             if (emptyInputs.length > 0) {
               emptyInputs[0].value = word;
     
+              const targetInput = emptyInputs[0];
+              targetInput.value = word; // Set the value
+
               // Visually mark the word as used
               if (!wordSpan.classList.contains('used')) {
                 wordSpan.classList.add('used');
-                checkCompletionAndTriggerCheck(); // Check completion after click
               }
+
+              // Provide instant feedback for the input that was filled
+              provideInstantFeedback(targetInput);
+              // Note: checkCompletionAndTriggerCheck is called inside provideInstantFeedback
             }
             
             // Speak the word when it is clicked
@@ -973,108 +1024,99 @@
             e.preventDefault();
             input.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900');
             const word = e.dataTransfer.getData('text/plain');
-            input.value = word;
+            input.value = word; // Set the value
 
             // Mark the corresponding word item as used
             const wordItem = Array.from(document.querySelectorAll('.word-item')).find(item => item.textContent === word && !item.classList.contains('used'));
             if (wordItem) {
               wordItem.classList.add('used');
             }
-            checkCompletionAndTriggerCheck(); // Check completion after drop
+
+            // Provide instant feedback for this input
+            provideInstantFeedback(input);
+            // Note: checkCompletionAndTriggerCheck is called inside provideInstantFeedback
           });
 
-          // Add input event listener to check completion on input change (e.g., typing)
+          // Add input event listener for instant feedback on typing/manual changes
           input.addEventListener('input', () => {
-            checkCompletionAndTriggerCheck(); // Check completion after manual input
+            provideInstantFeedback(input);
           });
         });
       }
-      
-      // Check answers function (extracted for reusability)
-      function checkAnswers() {
-        if (!exerciseData) return;
-        
-        const inputs = document.querySelectorAll('.blank-input');
-        let allCorrect = true;
-        
-        inputs.forEach((input, index) => {
-          const userAnswer = input.value.trim();
-          const correctAnswer = exerciseData.answers[index];
-          
-          // First, remove all state classes to start fresh
-          input.classList.remove(
-            'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
-            'dark:bg-green-900', 'dark:bg-red-900', 'border-gray-300'
-          );
-          
-          // Check if the answer is empty or incorrect
-          if (userAnswer === '') {
-            // Empty answer - mark as red with stronger styling
-            input.classList.add('border-2', 'border-red-500');
-            input.style.backgroundColor = 'rgba(254, 202, 202, 0.3)'; // Light red bg
-            input.placeholder = "Empty";
-            allCorrect = false;
-          } else if (userAnswer === correctAnswer) {
-            // Correct answer - mark as green with stronger styling
+
+      // Helper function to apply styling based on correctness
+      function applyInputStyling(input, isCorrect, isEmpty = false) {
+        // Reset styles first
+        input.classList.remove(
+          'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
+          'dark:bg-green-900', 'dark:bg-red-900', 'border-2', 'border-gray-300'
+        );
+        input.style.backgroundColor = ''; // Reset inline background color
+        input.placeholder = ""; // Clear placeholder
+
+        if (isEmpty) {
+            // Style for empty input during final check (optional, could just be default)
+            // input.classList.add('border-2', 'border-yellow-500'); // Example: yellow border for empty
+        } else if (isCorrect) {
+            // Correct answer styling
             input.classList.add('border-2', 'border-green-500');
             input.style.backgroundColor = 'rgba(187, 247, 208, 0.3)'; // Light green bg
-            input.placeholder = "";
-          } else {
-            // Wrong answer - mark as red with stronger styling
+        } else {
+            // Incorrect answer styling
             input.classList.add('border-2', 'border-red-500');
             input.style.backgroundColor = 'rgba(254, 202, 202, 0.3)'; // Light red bg
-            input.placeholder = "";
-            allCorrect = false;
-          }
-        });
-        
-        // Show feedback message if all answers are correct
-        let feedbackEl = document.getElementById('exercise-feedback');
-        
-        if (allCorrect) {
-            // Create the feedback element if it doesn't exist
-            if (!feedbackEl) {
-                feedbackEl = document.createElement('div');
-                feedbackEl.id = 'exercise-feedback';
-                // Insert feedback before the buttons, not after exercise text
-                const buttonContainer = document.querySelector('#exercise-container .flex.justify-between');
-                if (buttonContainer) {
-                    buttonContainer.before(feedbackEl);
-                } else {
-                    // Fallback if button container not found
-                    document.getElementById('exercise-text').after(feedbackEl);
-                }
-            }
-            
-            feedbackEl.className = 'my-3 p-3 rounded text-center bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 transition-all';
-            feedbackEl.innerHTML = `<p>Great job! All answers are correct!</p>`;
-            
-            // Make the feedback message visible
-            feedbackEl.style.opacity = '0';
-            setTimeout(() => {
-                feedbackEl.style.opacity = '1';
-            }, 10);
-
-            // If in auto mode, automatically proceed to the next batch after a short delay
-            if (isAutoMode) {
-                feedbackEl.innerHTML += `<p class="mt-1 text-sm">Loading next batch...</p>`;
-                setTimeout(() => {
-                    // Remove feedback before starting next batch
-                    if (feedbackEl) feedbackEl.remove(); 
-                    startNextBatch();
-                }, 1500); // Wait 1.5 seconds
-            } else {
-                 // Manual mode: Maybe add a button to generate a new one or just show success
-                 feedbackEl.innerHTML += `<p class="mt-1 text-sm">You can generate a new exercise above.</p>`;
-                 // Do NOT save learned words here in auto mode, as they were just reviewed
-            }
-
-        } else {
-            // Incorrect: Remove the feedback element if it exists
-            if (feedbackEl) {
-                feedbackEl.remove();
-            }
         }
+      }
+
+      // Function to provide instant feedback for a single input
+      function provideInstantFeedback(input) {
+          if (!exerciseData || !input) return;
+
+          const index = parseInt(input.getAttribute('data-index'));
+          const userAnswer = input.value.trim();
+          const correctAnswer = exerciseData.answers[index];
+
+          if (userAnswer === '') {
+              // If user clears the input, reset styling to default
+              applyInputStyling(input, false, true); // Treat empty as neither correct nor incorrect for instant feedback
+          } else {
+              applyInputStyling(input, userAnswer === correctAnswer);
+          }
+
+          // After providing feedback, check if the whole exercise might be complete
+          checkCompletionAndTriggerCheck();
+      }
+      
+      // Check answers function (now primarily for manual check button, ensures all feedback is shown)
+      function checkAnswers() {
+          if (!exerciseData) return;
+
+          const inputs = document.querySelectorAll('.blank-input');
+          let allCorrect = true;
+
+          inputs.forEach((input) => {
+              const index = parseInt(input.getAttribute('data-index'));
+              const userAnswer = input.value.trim();
+              const correctAnswer = exerciseData.answers[index];
+              const isCorrect = userAnswer === correctAnswer;
+
+              // Apply styling to ensure feedback is visible for all inputs
+              // Note: We use the existing instant feedback styling logic here
+              applyInputStyling(input, isCorrect, userAnswer === '');
+
+              if (userAnswer === '' || !isCorrect) {
+                  allCorrect = false;
+              }
+          });
+
+          // Remove any existing success message if not all are correct now
+          const feedbackEl = document.getElementById('exercise-feedback');
+          if (!allCorrect && feedbackEl) {
+              feedbackEl.remove();
+          } else if (allCorrect) {
+              // If checkAnswers is called manually and all are correct, show the success message
+              showFinalSuccessMessage();
+          }
       }
 
       // Attach checkAnswers function to the button click
@@ -1187,16 +1229,12 @@
 
       // Reset button
       document.getElementById('reset-exercise-btn').addEventListener('click', () => {
-        // Clear all input fields
+        // Clear all input fields and reset their styling
         document.querySelectorAll('.blank-input').forEach(input => {
           input.value = '';
-          input.classList.remove(
-            'border-green-500', 'bg-green-50', 'border-red-500', 'bg-red-50',
-            'dark:bg-green-900', 'dark:bg-red-900', 'border-2'
-          );
-          input.style.backgroundColor = '';
+          applyInputStyling(input, false, true); // Reset styling to default/empty
         });
-        
+
         // Reset all word items (remove 'used' class)
         document.querySelectorAll('.word-item').forEach(word => {
           word.classList.remove('used');
