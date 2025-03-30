@@ -1002,7 +1002,8 @@
         segments.forEach((segment, i) => {
           htmlText += segment;
           if (i < segments.length - 1) { // Don't add input after the last segment
-            htmlText += `<input type="text" class="blank-input w-24 px-2 py-1 border rounded mx-1 dark:bg-gray-700" data-index="${i}">`;
+            // Add data-previous-value=""
+            htmlText += `<input type="text" class="blank-input w-24 px-2 py-1 border rounded mx-1 dark:bg-gray-700" data-index="${i}" data-previous-value="">`;
           }
         });
         
@@ -1044,6 +1045,28 @@
         });
       }
 
+      // Helper function to find and update the usage status of a word in the list
+      function updateWordUsage(word, isUsed) {
+        if (!word) return; // Do nothing if word is empty
+
+        const wordItems = document.querySelectorAll('#word-list .word-item');
+        let targetItem = null;
+
+        if (isUsed) {
+          // Find the first *unused* item matching the word
+          targetItem = Array.from(wordItems).find(item => item.textContent === word && !item.classList.contains('used'));
+          if (targetItem) {
+            targetItem.classList.add('used');
+          }
+        } else {
+          // Find the first *used* item matching the word
+          targetItem = Array.from(wordItems).find(item => item.textContent === word && item.classList.contains('used'));
+          if (targetItem) {
+            targetItem.classList.remove('used');
+          }
+        }
+      }
+
       // Helper function to apply styling based on correctness
       function applyInputStyling(input, isCorrect, isEmpty = false) {
         // Reset styles first
@@ -1073,14 +1096,30 @@
           if (!exerciseData || !input) return;
 
           const index = parseInt(input.getAttribute('data-index'));
-          const userAnswer = input.value.trim();
+          const newValue = input.value.trim();
+          const oldValue = input.dataset.previousValue || ""; // Get previous value
           const correctAnswer = exerciseData.answers[index];
 
-          if (userAnswer === '') {
-              // If user clears the input, reset styling to default
-              applyInputStyling(input, false, true); // Treat empty as neither correct nor incorrect for instant feedback
+          // --- Update word usage based on value change ---
+          if (newValue !== oldValue) {
+              // If there was an old value, unmark it
+              if (oldValue) {
+                  updateWordUsage(oldValue, false);
+              }
+              // If there's a new value, mark it as used
+              if (newValue) {
+                  updateWordUsage(newValue, true);
+              }
+              // Update the stored previous value
+              input.dataset.previousValue = newValue;
+          }
+          // --- End word usage update ---
+
+          // Apply styling based on correctness
+          if (newValue === '') {
+              applyInputStyling(input, false, true); // Style for empty
           } else {
-              applyInputStyling(input, userAnswer === correctAnswer);
+              applyInputStyling(input, newValue === correctAnswer); // Style for correct/incorrect
           }
 
           // After providing feedback, check if the whole exercise might be complete
