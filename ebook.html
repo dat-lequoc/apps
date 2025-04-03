@@ -1309,12 +1309,19 @@
         .link-action-url {
             font-size: 0.9rem;
             margin-bottom: 1rem;
+            word-break: break-word; /* Wrap potentially long link text */
+            /* Removed height limits and ellipsis for link text */
+        }
+
+        .link-action-target-url { /* New style for the actual URL */
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
             word-break: break-all; /* Wrap long URLs */
             color: var(--text-muted);
-            max-height: 3.6em; /* Limit height to roughly 3 lines */
+            max-height: 4.8em; /* Limit URL display height */
             overflow: hidden;
             text-overflow: ellipsis;
-            display: -webkit-box;
+            display: -webkit-box; /* Fallback for ellipsis */
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
         }
@@ -1906,6 +1913,13 @@
                         <input type="checkbox" id="markdown-mode-toggle">
                     </div>
                 </div>
+                <div class="settings-section"> <!-- Added Raw Content Toggle Section -->
+                    <div class="settings-title">Content View</div>
+                    <div class="settings-row">
+                        <label for="view-raw-content-toggle">View Raw Content (URLs)</label>
+                        <input type="checkbox" id="view-raw-content-toggle">
+                    </div>
+                </div>
             </div> <!-- End Theme/Display Mode Grid -->
 
             <!-- AI Features Section -->
@@ -2047,6 +2061,7 @@
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
                 markdownModeToggle: document.getElementById('markdown-mode-toggle'), // Added Markdown toggle
+                viewRawContentToggle: document.getElementById('view-raw-content-toggle'), // Added Raw Content toggle
                 cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
                 sourceUrlDisplay: document.getElementById('source-url-display'),      // Added source URL display area in content
                 sourceUrlContentLink: document.getElementById('source-url-content-link'), // Added source URL link in content area
@@ -2075,6 +2090,7 @@
                     chapters: [],
                     currentPosition: 0,
                     sourceUrl: null, // Added to store the original URL
+                    rawContent: null, // Added to store the raw scraped content for the current book
                     currentListId: null // Added to store the list_id of the currently open book
                 },
                 // User settings
@@ -2083,6 +2099,7 @@
                     lineHeight: 1.6,
                     theme: 'dark',
                     markdownModeEnabled: false, // Added Markdown mode setting
+                    viewRawContentEnabled: false, // Added Raw Content view setting
                     speakSelectionEnabled: false // Added Speak Selection setting
                 },
 
@@ -2179,6 +2196,23 @@
                 // Markdown Mode Toggle
                 DOM.markdownModeToggle.addEventListener('change', function() {
                     state.settings.markdownModeEnabled = this.checked;
+                    // Disable raw view if markdown is off, enable markdown if raw is on
+                    if (!this.checked) {
+                        DOM.viewRawContentToggle.checked = false;
+                        state.settings.viewRawContentEnabled = false;
+                    }
+                    displayCurrentChapter(); // Re-render content
+                    saveUserPreferences();
+                });
+
+                // View Raw Content Toggle
+                DOM.viewRawContentToggle.addEventListener('change', function() {
+                    state.settings.viewRawContentEnabled = this.checked;
+                     // Automatically enable Markdown mode if raw view is enabled
+                    if (this.checked) {
+                        DOM.markdownModeToggle.checked = true;
+                        state.settings.markdownModeEnabled = true;
+                    }
                     displayCurrentChapter(); // Re-render content
                     saveUserPreferences();
                 });
@@ -2922,7 +2956,8 @@
                     // --- End change ---
 
                     // Store the original URL
-                    state.bookData.sourceUrl = url; 
+                    state.bookData.sourceUrl = url;
+                    state.bookData.rawContent = response.data.content; // Store raw HTML content in state
 
                     showBook(); // This will now render with Markdown enabled
 
@@ -2964,12 +2999,13 @@
                     }
 
                     if (!response.data || !response.data.markdown) {
-                        throw new Error('No markdown content received from Firecrawl.');
+                        throw new Error('No content received from Firecrawl.');
                     }
-
-                    let finalMarkdownContent = response.data.markdown;
+    
+                    const rawHtmlContent = response.data.content; // Capture raw HTML
+                    let finalMarkdownContent = response.data.markdown; // Initial Markdown
                     const scrapedTitle = (response.data.metadata && response.data.metadata.title) || url;
-
+    
                     // 3. Optionally clean content with AI
                     if (canClean) {
                         showToast(`Cleaning content for "${scrapedTitle}"...`, 3000);
@@ -2985,10 +3021,11 @@
                     // 4. Prepare book data for saving
                     const scrapedBookData = {
                         title: scrapedTitle,
-                        content: finalMarkdownContent, // Store the full markdown
+                        content: finalMarkdownContent, // Store the cleaned/final markdown
+                        raw_content: rawHtmlContent, // Store the raw HTML content
                         file_type: 'url', // Indicate it came from a URL scrape
                         metadata: {
-                            chapters: [{ // Create a single chapter
+                            chapters: [{ // Create a single chapter based on finalMarkdownContent
                                 title: 'Content', // Use a generic title for the single chapter
                                 content: finalMarkdownContent, // Include content here too
                                 startLine: 0,
@@ -3029,9 +3066,8 @@
                         .insert({
                             user_id: session.user.id,
                             title: scrapedBookData.title,
-                            // Avoid saving extremely large content directly if needed,
-                            // but for now, let's assume metadata.chapters.content is sufficient
-                            content: null, // Content is stored in metadata.chapters[0].content
+                            content: null, // Cleaned content is stored in metadata.chapters[0].content
+                            raw_content: scrapedBookData.raw_content, // Save the raw HTML
                             file_type: scrapedBookData.file_type,
                             metadata: scrapedBookData.metadata,
                             last_position: scrapedBookData.last_position,
@@ -3081,7 +3117,8 @@
                         <span>Action for Link:</span>
                         <button type="button" class="link-action-close-btn" aria-label="Close">×</button>
                     </div>
-                    <div class="link-action-url" title="${escapeHTML(url)}">${escapeHTML(linkText)}</div>
+                    <div class="link-action-url" title="Clicked link text">${escapeHTML(linkText)}</div>
+                    <div class="link-action-target-url" title="Target URL">URL: ${escapeHTML(url)}</div> <!-- Added URL display -->
                     <div class="link-action-buttons">
                         <button type="button" class="link-action-btn open">Open Link</button>
                         <button type="button" class="link-action-btn scrape">Scrape & Save</button>
@@ -3159,13 +3196,48 @@
                 
                 // Update chapter title in navbar
                 DOM.bookTitle.textContent = `${state.bookData.title || 'Book'} - ${chapter.title}`;
-    
-                // Check if Markdown mode is enabled
-                if (state.settings.markdownModeEnabled) {
-                    // Render Markdown with basic formatting (headings, links, bold) while preserving line breaks
-                    let processedContent = chapter.content;
 
-                    // Apply heading markdown FIRST (important to do before paragraph/br logic)
+                // Determine which content to display
+                let contentToDisplay = chapter.content; // Default to processed chapter content
+                let isRawHtml = false;
+
+                // Check if raw view is enabled AND raw content exists for this book
+                if (state.settings.viewRawContentEnabled && state.bookData.rawContent) {
+                    contentToDisplay = state.bookData.rawContent;
+                    isRawHtml = true; // Indicate that we are displaying raw HTML
+                    // Ensure Markdown mode is visually checked if raw is enabled
+                    DOM.markdownModeToggle.checked = true;
+                    state.settings.markdownModeEnabled = true;
+                } else {
+                    // If raw view is disabled, ensure the toggle reflects this
+                    DOM.viewRawContentToggle.checked = false;
+                    state.settings.viewRawContentEnabled = false;
+                }
+
+                // Disable raw content toggle if the book doesn't have raw content
+                DOM.viewRawContentToggle.disabled = !state.bookData.rawContent;
+                DOM.viewRawContentToggle.closest('.settings-row').title = !state.bookData.rawContent
+                    ? "Raw content view only available for books added via URL."
+                    : "View the original scraped HTML content.";
+
+
+                // Render content based on mode (Raw HTML or Processed Markdown/HTML)
+                if (isRawHtml) {
+                    // Display raw content as plain text for safety and clarity
+                    const pre = document.createElement('pre');
+                    pre.style.whiteSpace = 'pre-wrap'; // Allow wrapping
+                    pre.style.wordBreak = 'break-all'; // Break long lines
+                    pre.textContent = contentToDisplay;
+                    DOM.contentArea.appendChild(pre);
+                    // Ensure raw view doesn't inherit reader font size/line height directly
+                    DOM.contentArea.style.fontSize = 'inherit'; // Use default browser font size for raw view
+                    DOM.contentArea.style.lineHeight = 'inherit'; // Use default line height
+
+                } else if (state.settings.markdownModeEnabled) {
+                    // Render Markdown content (existing logic)
+                    let processedContent = contentToDisplay; // Use chapter.content here
+
+                     // Apply heading markdown FIRST (important to do before paragraph/br logic)
                     // Match headings at the beginning of a line
                     processedContent = processedContent.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
                     processedContent = processedContent.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
@@ -3258,8 +3330,11 @@
                              DOM.contentArea.appendChild(document.createElement('br'));
                         }
                     });
+                    // Apply reader font size/line height for non-raw views
+                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
+                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
                 } // End of the 'else' block for HTML rendering
-                
+
                 // Initially scroll to top (will be updated if restoring position)
                 DOM.contentArea.scrollTop = 0;
                 
@@ -3433,7 +3508,8 @@
                     content: '',
                     chapters: [],
                     currentPosition: 0,
-                    sourceUrl: null // Reset sourceUrl
+                    sourceUrl: null, // Reset sourceUrl
+                    rawContent: null // Reset rawContent
                 };
                 state.selectedListId = 'all'; // Reset selected list to 'All'
                 state.bookLists = []; // Clear loaded lists
@@ -3989,10 +4065,10 @@
                 libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading books...</div>';
 
                 try {
-                    // Base query
+                    // Base query - Fetch raw_content as well
                     let query = supabase
                         .from('ebooks')
-                        .select('*')
+                        .select('*, raw_content') // Explicitly select raw_content
                         .eq('user_id', session.user.id);
 
                     // Apply list filter
@@ -4398,17 +4474,30 @@
                         timestamp: new Date().getTime()
                     };
                     
-                    // Check if this book already exists
-                    const { data: existingBooks } = await supabase
+                    // Check if this book already exists for this user and list
+                    let existingBookQuery = supabase
                         .from('ebooks')
                         .select('id')
                         .eq('title', state.bookData.title)
-                        .eq('user_id', session.user.id)
-                        .maybeSingle();
-                    
-                    if (existingBooks && existingBooks.id) {
+                        .eq('user_id', session.user.id);
+
+                    // Handle null list_id correctly
+                    if (state.bookData.currentListId === null) {
+                        existingBookQuery = existingBookQuery.is('list_id', null);
+                    } else {
+                        existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId);
+                    }
+
+                    const { data: existingBook, error: existingBookError } = await existingBookQuery.maybeSingle();
+
+                    if (existingBookError) {
+                        console.error("Error checking for existing book:", existingBookError);
+                        throw existingBookError; // Propagate error
+                    }
+
+                    if (existingBook && existingBook.id) {
                         // Update existing book - only update progress-related fields
-                        const { error } = await supabase
+                        const { error: updateError } = await supabase
                             .from('ebooks')
                             .update({
                                 // title: state.bookData.title, // Don't update title on progress save
@@ -4454,6 +4543,7 @@
                     // Set up book data
                     state.bookData.title = book.title;
                     state.bookData.currentListId = book.list_id || null; // Store the list ID
+                    state.bookData.rawContent = book.raw_content || null; // Store raw content
                     DOM.bookTitle.textContent = book.title;
 
                     // Check for chapters in metadata
@@ -5253,6 +5343,7 @@ Use Markdown for formatting (like **bold**).`;
                     lineHeight: state.settings.lineHeight,
                     theme: state.settings.theme,
                     markdownModeEnabled: state.settings.markdownModeEnabled, // Added Markdown mode
+                    viewRawContentEnabled: state.settings.viewRawContentEnabled, // Added Raw Content view
                     translationEnabled: DOM.translationToggle.checked,
                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
                     speakSelectionEnabled: state.settings.speakSelectionEnabled, // Added Speak Selection
@@ -5264,6 +5355,7 @@ Use Markdown for formatting (like **bold**).`;
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
                 localStorage.setItem('ebook-theme', preferences.theme);
                 localStorage.setItem('markdown-mode-enabled', preferences.markdownModeEnabled); // Added Markdown mode
+                localStorage.setItem('view-raw-content-enabled', preferences.viewRawContentEnabled); // Added Raw Content view
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
                 localStorage.setItem('speak-selection-enabled', preferences.speakSelectionEnabled); // Added Speak Selection
@@ -5344,6 +5436,11 @@ Use Markdown for formatting (like **bold**).`;
                 state.settings.markdownModeEnabled = markdownModeEnabled;
                 DOM.markdownModeToggle.checked = markdownModeEnabled;
 
+                // Load Raw Content view setting
+                const viewRawContentEnabled = localStorage.getItem('view-raw-content-enabled') === 'true';
+                state.settings.viewRawContentEnabled = viewRawContentEnabled;
+                DOM.viewRawContentToggle.checked = viewRawContentEnabled;
+
                 // Load Speak Selection setting
                 const speakSelectionEnabled = localStorage.getItem('speak-selection-enabled') === 'true';
                 state.settings.speakSelectionEnabled = speakSelectionEnabled;
@@ -5407,6 +5504,19 @@ Use Markdown for formatting (like **bold**).`;
                         localStorage.setItem('markdown-mode-enabled', prefs.markdownModeEnabled);
                     }
 
+                    // Apply Raw Content view toggle
+                    if (prefs.viewRawContentEnabled !== undefined) {
+                        state.settings.viewRawContentEnabled = prefs.viewRawContentEnabled;
+                        DOM.viewRawContentToggle.checked = prefs.viewRawContentEnabled;
+                        localStorage.setItem('view-raw-content-enabled', prefs.viewRawContentEnabled);
+                         // Ensure markdown mode is also enabled if raw view is enabled from prefs
+                        if (prefs.viewRawContentEnabled) {
+                            state.settings.markdownModeEnabled = true;
+                            DOM.markdownModeToggle.checked = true;
+                            localStorage.setItem('markdown-mode-enabled', true);
+                        }
+                    }
+
                     // Apply Speak Selection toggle
                     if (prefs.speakSelectionEnabled !== undefined) {
                         state.settings.speakSelectionEnabled = prefs.speakSelectionEnabled;
@@ -5432,9 +5542,11 @@ Follow these instructions precisely:
 1.  **Identify and Remove Extraneous Elements:** Eliminate headers, footers, navigation menus, sidebars, advertisements, cookie notices, social media links, comment sections, and other non-essential clutter.
 2.  **Preserve Main Content:** Keep the core article text, including headings (like ##, ###), paragraphs, lists, blockquotes, and code blocks that belong to the main content.
 3.  **Format for Readability:** Ensure paragraphs are well-separated (usually by a single blank line). Maintain the original Markdown formatting for elements like bold (**text**), italics (*text*), and inline code (\`code\`).
-4.  **Link Handling:** Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
+4.  **Link Handling:**
+    *   Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
+    *   **arXiv Citation Correction:** Identify citation links like \`[27](https://arxiv.org/html/some_id_vN#bib.bib27 "")\`. Then, locate the corresponding reference entry (often near the end of the document, associated with \`[27]\`). Extract the *correct* arXiv ID (e.g., \`2408.11824\`) from that reference text (e.g., from "arXiv preprint arXiv:2408.11824, 2024b."). Construct the PDF link using the *extracted* ID (e.g., \`https://arxiv.org/pdf/2408.11824\`). Replace the original citation's URL with this newly constructed PDF link, resulting in \`[27](https://arxiv.org/pdf/2408.11824)\`.
 5.  **Structure:** Try to maintain the logical structure of the article using Markdown headings.
-6.  **Remove Stray Random Characters:** Eliminate isolated backslash characters (\\) or sequences of them (\\\\), especially when they appear on their own lines or between paragraphs/images, automatically format properly the surrounding text.
+6.  **Remove Boilerplate/Noise:** Eliminate repetitive or useless text like "Report issue for preceding element", isolated backslash characters (\\) or sequences of them (\\\\), especially when they appear on their own lines or between paragraphs/images. Ensure surrounding text formatting remains correct.
 7.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
 
 Here is the raw Markdown content:

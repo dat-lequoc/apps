@@ -155,7 +155,8 @@ create table ebooks (
   title text not null,
   author text,
   file_type text not null,
-  content text,
+  content text, -- Stores cleaned/processed content (e.g., Markdown)
+  raw_content text, -- Stores the original raw scraped content (e.g., HTML or raw Markdown)
   metadata jsonb not null default '{}'::jsonb,
   last_position jsonb not null default '{"chapter": 0, "scroll": 0}'::jsonb,
   list_id bigint references book_lists(id) on delete set null, -- Link to book_lists, set null if list is deleted
