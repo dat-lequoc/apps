@@ -4508,12 +4508,12 @@
                                 // list_id is updated via moveBookToList, not typically here
                                 updated_at: new Date()
                             })
-                            .eq('id', existingBooks.id);
-                        
-                        if (error) throw error;
+                            .eq('id', existingBook.id);
+
+                        if (updateError) throw updateError;
                     } else {
                         // Insert new book
-                        const { error } = await supabase
+                        const { error: insertError } = await supabase // Use a different error variable name
                             .from('ebooks')
                             .insert({
                                 user_id: session.user.id,
@@ -4523,12 +4523,11 @@
                                 metadata: metadata,
                                 last_position: lastPosition,
                                 // Use the currentListId from state, which might have been set by AI
-                                list_id: state.bookData.currentListId || null 
+                                list_id: state.bookData.currentListId || null
                             });
-                        
-                        if (error) throw error;
+
+                        if (insertError) throw insertError; // Check the correct error variable
                     }
-                    
                     return true;
                 } catch (error) {
                     console.error('Error saving book:', error);
