@@ -1852,19 +1852,19 @@
         }
 
         /* Chat Panel Styles */
-        #chat-panel {
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(0.9); /* Start slightly scaled down */
-            width: 90%; /* Use percentage for responsiveness */
-            max-width: 800px; /* Increased max-width */
-            height: 85vh; /* Increased height */
-            max-height: 800px; /* Increased max-height */
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            /* flex-direction: column; */ /* Already set by .panel */
-            overflow: hidden; /* Prevent content overflow */
-        }
+        #chat-panel { /* Inherits from .panel */
+             top: 50%;
+             left: 50%;
+             transform: translate(-50%, -50%) scale(0.9); /* Start slightly scaled down */
+             width: 90%; /* Use percentage for responsiveness */
+             max-width: 700px; /* Slightly reduced max-width for better proportions */
+             height: 80vh; /* Slightly reduced height */
+             max-height: 700px; /* Slightly reduced max-height */
+             opacity: 0;
+             transition: transform 0.3s ease, opacity 0.3s ease;
+             overflow: hidden; /* Prevent content overflow */
+             /* display: flex; flex-direction: column; inherited from .panel */
+         }
 
         #chat-panel.visible {
             transform: translate(-50%, -50%) scale(1);
@@ -1873,7 +1873,7 @@
         }
 
         #chat-header {
-            padding: 0.75rem 1rem; /* Reduced padding */
+            padding: 0.6rem 1.1rem; /* Adjusted padding */
             border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
@@ -1909,12 +1909,12 @@
         }
 
         #chat-messages {
-            flex: 1 1 auto; /* Allow message area to grow and shrink */
+            flex: 1 1 auto; /* Allow message area to grow and shrink, taking available space */
             overflow-y: auto;
-            padding: 1rem;
+            padding: 1rem 1.1rem; /* Consistent horizontal padding */
             display: flex;
             flex-direction: column;
-            gap: 0.75rem; /* Space between messages */
+            gap: 0.85rem; /* Slightly increased gap between messages */
             min-height: 0; /* Important for flex scrolling */
             scrollbar-width: thin; /* Firefox */
             scrollbar-color: rgba(155, 155, 155, 0.5) transparent; /* Firefox */
@@ -1927,9 +1927,10 @@
         .chat-message {
             padding: 0.6rem 0.9rem;
             border-radius: 8px;
-            max-width: 85%;
+            max-width: 80%; /* Slightly reduce max width */
             word-wrap: break-word;
             line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow */
         }
 
         .chat-message.user {
@@ -1940,10 +1941,12 @@
         }
 
         .chat-message.assistant {
-            background-color: rgba(255, 255, 255, 0.08); /* Slightly different background */
+            background-color: var(--panel-bg); /* Use panel background for assistant */
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Add subtle border */
             color: var(--text-color);
             align-self: flex-start; /* Align assistant messages to the left */
             border-bottom-left-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow */
         }
 
         /* Style links within assistant messages */
@@ -1962,6 +1965,36 @@
             animation: loading-dots 1.5s infinite;
         }
 
+        /* Suggested Questions Styling */
+        /* Hide suggestions container by default */
+        #chat-suggestions {
+            display: none; /* Initially hidden */
+            padding: 0.25rem 0 0.5rem; /* Match input area horizontal padding (implicitly via parent) */
+            /* border-bottom: 1px solid var(--border-color); */ /* Removed separator */
+            display: flex;
+            flex-wrap: wrap; /* Allow suggestions to wrap */
+            gap: 0.35rem; /* Reduced gap */
+            flex-shrink: 0; /* Prevent shrinking */
+            /* margin-bottom: 0.5rem; */ /* Removed margin, handled by input area padding */
+        }
+
+        .suggestion-chip {
+            padding: 0.2rem 0.6rem; /* Reduced padding */
+            border-radius: 12px; /* Pill shape */
+            font-size: 0.75rem; /* Slightly smaller font */
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.08); /* Subtle background */
+            color: var(--text-muted);
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
+        }
+
+        .suggestion-chip:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-color);
+        }
+
         @keyframes loading-dots {
             0%, 20% { content: '.'; }
             40% { content: '..'; }
@@ -1969,19 +2002,31 @@
         }
 
 
+        /* Chat Input Area - Default (Desktop) */
         #chat-input-area {
+            /* Stack suggestions, input, and button vertically */
+            flex-direction: column;
             display: flex;
-            padding: 0.75rem 1rem;
+            padding: 0.4rem 0.6rem; /* Use smaller mobile padding always */
             border-top: 1px solid var(--border-color);
-            gap: 0.5rem;
-            align-items: flex-end; /* Align items to bottom */
+            gap: 0.5rem; /* Reduced gap */
+            /* align-items: flex-end; */ /* Remove bottom alignment */
+            align-items: stretch; /* Stretch items horizontally */
             flex-shrink: 0; /* Prevent input area from shrinking */
+        }
+
+        /* New row container for input and button */
+        .chat-input-row {
+            display: flex;
+            align-items: flex-end; /* Align button bottom with input */
+            gap: 0.5rem;
+            width: 100%; /* Ensure row takes full width */
         }
 
         #chat-input {
             flex: 1; /* Take available space */
-            padding: 0.6rem 0.8rem;
-            border-radius: 6px;
+            padding: 0.4rem 0.6rem; /* Use smaller mobile padding */
+            border-radius: 4px; /* Slightly less rounded */
             border: 1px solid var(--border-color);
             background-color: var(--input-bg);
             color: var(--text-color);
@@ -1989,15 +2034,19 @@
             font-size: 0.95rem;
             resize: none; /* Disable manual resize */
             line-height: 1.4;
-            max-height: 100px; /* Limit height */
+            min-height: 36px; /* Use smaller mobile height */
+            max-height: 80px; /* Use smaller mobile max-height */
             overflow-y: auto; /* Allow scrolling if needed */
+            /* width: 100%; Removed, flex: 1 handles it */
         }
 
         #chat-send-btn {
-            padding: 0.6rem 1rem; /* Match input padding */
+            padding: 0.4rem 0.8rem; /* Use smaller mobile padding */
             font-size: 0.95rem;
-            height: fit-content; /* Adjust height to content */
-            align-self: flex-end; /* Align button to bottom */
+            height: 36px; /* Use smaller mobile height */
+            /* align-self: flex-end; */ /* Remove bottom alignment */
+            /* align-self: flex-end; Removed, handled by flex row */
+            flex-shrink: 0; /* Prevent button shrinking */
         }
 
 
@@ -2200,7 +2249,7 @@
                 <div class="chat-header-controls"> <!-- New container for controls -->
                     <button type="button" class="icon-btn chat-clear-btn" id="chat-clear-btn" aria-label="Clear Chat" title="Clear Chat History">🗑️</button>
                     <div class="chat-context-toggle">
-                        <input type="checkbox" id="chat-full-doc-toggle" style="width: 16px; height: 16px; vertical-align: middle;">
+                        <input type="checkbox" id="chat-full-doc-toggle" style="width: 16px; height: 16px; vertical-align: middle;" checked>
                         <label for="chat-full-doc-toggle" style="font-size: 0.85rem; vertical-align: middle; cursor: pointer;">Use Full Document</label>
                     </div>
                     <button type="button" class="navbar-btn" id="close-chat-btn" aria-label="Close">✕</button>
@@ -2208,11 +2257,18 @@
             </div>
             <div id="chat-messages">
                 <!-- Chat messages will be populated here -->
-                <div class="chat-message assistant">Hello! Ask me anything about the current chapter (or toggle 'Use Full Document' above).</div>
+                <div class="chat-message assistant">Hello! Ask me anything about the full document (or toggle 'Use Full Document' above to focus on the current chapter).</div>
             </div>
             <div id="chat-input-area">
-                <textarea id="chat-input" placeholder="Type your message..." rows="2"></textarea>
-                <button type="button" id="chat-send-btn" class="button">Send</button>
+                <!-- Suggested Questions Area -->
+                <div id="chat-suggestions">
+                    <!-- Suggested questions will be populated here by JS -->
+                </div>
+                <!-- Input Row -->
+                <div class="chat-input-row">
+                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea> <!-- Default to 1 row -->
+                    <button type="button" id="chat-send-btn" class="button">Send</button>
+                </div>
             </div>
         </div>
     
@@ -2342,7 +2398,8 @@
                 chatInput: document.getElementById('chat-input'),
                 chatSendBtn: document.getElementById('chat-send-btn'),
                 chatClearBtn: document.getElementById('chat-clear-btn'), // Added Clear Chat button
-                chatFullDocToggle: document.getElementById('chat-full-doc-toggle') // Added Full Doc toggle
+                chatFullDocToggle: document.getElementById('chat-full-doc-toggle'), // Added Full Doc toggle
+                chatSuggestions: document.getElementById('chat-suggestions') // Added Suggestions container
             };
 
             // App state
@@ -2386,8 +2443,17 @@
                 lastSelectionRect: null,
                 // Chat state
                 chatHistory: [], // Stores { role: 'user'/'model', parts: [{ text: '...' }] }
-                chatUseFullDocument: false // Added state for full document context
+                chatUseFullDocument: true // Default to using the full document context
             };
+
+            // Suggested chat questions
+            const initialSuggestedQuestions = [
+                "Summarize this.",
+                "Key points?",
+                "Explain the main idea.",
+                // "List new concepts.", // Removed for brevity
+                // "Translate a sentence to Vietnamese." // Removed for brevity
+            ];
 
             // Initialize the app
             function init() {
@@ -2543,36 +2609,53 @@
                 DOM.chatFullDocToggle.addEventListener('change', (e) => { // Listener for full doc toggle
                     state.chatUseFullDocument = e.target.checked;
                     // Optionally add a message indicating context change
-                    displayChatMessage('assistant', `Context switched to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`);
+                    // Display a less intrusive message or none at all on toggle
+                    // displayChatMessage('assistant', `Context switched to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}.`);
+                    showToast(`Chat context set to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`, 2000);
+                    // Don't render suggestions on context switch, wait for AI response
                 });
+                DOM.chatSuggestions.addEventListener('click', handleSuggestionClick); // Listener for suggestion clicks
             }
 
-            // Handle clicks outside of specific elements (like dropdowns)
-            function handleGlobalClick(event) {
-                // Close move-to-list dropdowns
-                const openDropdowns = document.querySelectorAll('.move-list-dropdown.visible');
-                openDropdowns.forEach(dropdown => {
-                    // Check if the click was outside the dropdown and its corresponding button
-                    const moveButton = dropdown.previousElementSibling; // Assumes button is right before dropdown
-                    if (!dropdown.contains(event.target) && !moveButton.contains(event.target)) {
-                        dropdown.classList.remove('visible');
-                    }
-                });
+            // Handle clicks outside of specific elements (like dropdowns, chat panel)
+             function handleGlobalClick(event) {
+                 // Close move-to-list dropdowns
+                 const openDropdowns = document.querySelectorAll('.move-list-dropdown.visible');
+                 openDropdowns.forEach(dropdown => {
+                     const moveButton = dropdown.closest('.library-item-actions')?.querySelector('.library-item-move');
+                     if (moveButton && !dropdown.contains(event.target) && !moveButton.contains(event.target)) {
+                         dropdown.classList.remove('visible');
+                     }
+                 });
 
-                // Cancel list creation if clicking outside the input/button
-                // Check remains the same as DOM.createListGroup is the direct container
-                if (state.isCreatingList && !DOM.createListGroup.contains(event.target)) {
-                    // Only cancel if the click wasn't on the create button itself (which toggles)
-                    if (!DOM.createListBtn.contains(event.target)) {
-                        cancelListCreation();
-                    }
-                }
+                 // Cancel list creation if clicking outside the input/button
+                 if (state.isCreatingList && !DOM.createListGroup.contains(event.target)) {
+                     if (!DOM.createListBtn.contains(event.target)) {
+                         cancelListCreation();
+                     }
+                 }
 
-                // Close chat panel if visible and click is outside it
-                if (DOM.chatPanel.classList.contains('visible') && !DOM.chatPanel.contains(event.target) && !DOM.chatBtn.contains(event.target)) {
+                 // Close chat panel if visible and click is outside it AND not on the chat button
+                 if (DOM.chatPanel.classList.contains('visible') &&
+                     !DOM.chatPanel.contains(event.target) &&
+                     !DOM.chatBtn.contains(event.target)) {
                      closeChatPanel();
-                }
-            }
+                 }
+
+                 // Close settings panel if visible and click is outside it AND not on settings button
+                 if (DOM.settingsPanel.classList.contains('visible') &&
+                     !DOM.settingsPanel.contains(event.target) &&
+                     !DOM.settingsBtn.contains(event.target)) {
+                     closeSettingsPanel();
+                 }
+
+                 // Close TOC panel if visible and click is outside it AND not on TOC button
+                 if (DOM.tocPanel.classList.contains('visible') &&
+                     !DOM.tocPanel.contains(event.target) &&
+                     !DOM.tocBtn.contains(event.target)) {
+                     closeTocPanel();
+                 }
+             }
 
             // Handle keyboard shortcuts
             function handleKeyPress(e) {
@@ -2649,7 +2732,7 @@
                 // C - toggle chat panel
                 if (e.key === 'c' && !e.ctrlKey && !e.metaKey) {
                     // Only toggle if a book is open (reader is visible)
-                    if (DOM.welcomeScreen.style.display === 'none') {
+                    if (DOM.readerContainer.offsetParent !== null) { // Check if reader is visible
                         toggleChatPanel();
                         e.preventDefault();
                     }
@@ -3444,6 +3527,60 @@
                  setTimeout(removeToast, 15000);
             }
 
+            // --- Suggested Questions Functions ---
+            function renderSuggestedQuestions(questions = []) {
+                DOM.chatSuggestions.innerHTML = ''; // Clear existing suggestions
+
+                if (questions && questions.length > 0) {
+                    DOM.chatSuggestions.style.display = 'flex'; // Show the container
+                    questions.forEach(question => {
+                    const chip = document.createElement('button');
+                    chip.className = 'suggestion-chip';
+                    chip.textContent = question;
+                    chip.type = 'button'; // Ensure it doesn't submit forms
+                    DOM.chatSuggestions.appendChild(chip);
+                });
+                } else {
+                    DOM.chatSuggestions.style.display = 'none'; // Hide the container if no questions
+                }
+            }
+
+            function handleSuggestionClick(event) {
+                const clickedChip = event.target.closest('.suggestion-chip');
+                if (!clickedChip) return; // Ignore clicks outside chips
+
+                const question = clickedChip.textContent;
+                // Option 1: Fill input and send
+                // DOM.chatInput.value = question;
+                // handleSendMessage();
+
+                // Option 2: Send directly without filling input (more seamless)
+                sendSuggestedQuestion(question);
+            }
+
+            // Sends a suggested question directly, bypassing the input field visually
+            function sendSuggestedQuestion(question) {
+                 // Check for API key
+                if (!state.userApiSettings || !state.userApiSettings.api_key) {
+                    displayChatMessage('assistant', 'Sorry, the Gemini API key is not configured. Please set it up in the main dashboard.');
+                    return;
+                }
+
+                // Display user message (the suggestion)
+                displayChatMessage('user', question);
+                state.chatHistory.push({ role: 'user', parts: [{ text: question }] });
+                // Don't clear input as we didn't use it
+                DOM.chatInput.focus(); // Keep focus on input
+
+                // Display temporary loading message for assistant
+                const loadingElement = displayChatMessage('assistant', '', true);
+                DOM.chatSendBtn.disabled = true; // Disable send button while waiting
+
+                // Call the core logic (similar to handleSendMessage but without reading from input)
+                processAndSendChat(question, loadingElement);
+            }
+            // --- End Suggested Questions Functions ---
+
             // Book display functions
             function showBook() {
                 // Hide welcome screen
@@ -4022,18 +4159,30 @@ JSON Output:
             // --- End AI Cleanup Modal Functions ---
 
             function toggleChatPanel() {
-                const isVisible = DOM.chatPanel.classList.toggle('visible');
-                // DOM.overlay.classList.toggle('visible', isVisible); // Don't use main overlay for chat
+                const willBeVisible = !DOM.chatPanel.classList.contains('visible');
+                DOM.chatPanel.classList.toggle('visible', willBeVisible);
+
+                // Close other panels when opening chat
                 DOM.tocPanel.classList.remove('visible');
                 DOM.settingsPanel.classList.remove('visible');
-                if (isVisible) {
+                DOM.overlay.classList.remove('visible'); // Ensure overlay is hidden if others were open
+
+                if (willBeVisible) {
+                    // Show initial suggestions only if chat history is empty/just the greeting
+                    if (state.chatHistory.length <= 1) {
+                        renderSuggestedQuestions(initialSuggestedQuestions);
+                    } else {
+                        renderSuggestedQuestions([]); // Clear suggestions if history exists
+                    }
                     DOM.chatInput.focus(); // Focus input when opened
+                } else {
+                    renderSuggestedQuestions([]); // Clear suggestions when closing
                 }
             }
 
             function closeChatPanel() {
                 DOM.chatPanel.classList.remove('visible');
-                // DOM.overlay.classList.remove('visible'); // Overlay wasn't shown by chat panel
+                renderSuggestedQuestions([]); // Clear suggestions when closing
             }
 
             function closeAllPanels() {
@@ -4041,6 +4190,8 @@ JSON Output:
                 DOM.settingsPanel.classList.remove('visible');
                 DOM.chatPanel.classList.remove('visible'); // Close chat panel too
                 DOM.overlay.classList.remove('visible');
+                // Hide suggestions when closing all panels
+                renderSuggestedQuestions([]);
             }
             
             function goToHome() {
@@ -5210,8 +5361,9 @@ JSON Output:
                 // Show toast notification about restoring position
                 showToast('Restoring reading position...', 1500);
                 
-                // Use requestAnimationFrame to ensure content is rendered
-                requestAnimationFrame(() => {
+
+                // Use setTimeout with a small delay to allow rendering AND ensure smooth scroll works
+                setTimeout(() => {
                     // Check if position information is fresh enough (within last 90 days)
                     const isPositionRecent = lastPosition.timestamp && 
                         (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
@@ -5328,14 +5480,6 @@ JSON Output:
 
             // --- Chat Functions ---
 
-            function clearChat() {
-                state.chatHistory = []; // Clear history state
-                DOM.chatMessages.innerHTML = ''; // Clear UI
-                // Add the initial greeting back
-                displayChatMessage('assistant', "Chat cleared. Ask me anything about the " + (state.chatUseFullDocument ? "document." : "current chapter."));
-                DOM.chatInput.focus();
-            }
-
             function displayChatMessage(sender, message, isLoading = false) {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('chat-message', sender); // sender is 'user' or 'assistant'
@@ -5366,6 +5510,19 @@ JSON Output:
                 return messageElement; // Return the element for potential updates (like removing loading)
             }
 
+            function clearChat() {
+                state.chatHistory = []; // Clear history state
+                DOM.chatMessages.innerHTML = ''; // Clear UI
+                // Add the initial greeting back, reflecting the current context setting
+                const initialGreeting = state.chatUseFullDocument
+                    ? "Chat cleared. Ask me anything about the full document."
+                    : "Chat cleared. Ask me anything about the current chapter.";
+                displayChatMessage('assistant', initialGreeting);
+                // Show initial suggestions after clearing
+                renderSuggestedQuestions(initialSuggestedQuestions);
+                DOM.chatInput.focus();
+            }
+
             async function handleSendMessage() {
                 const userMessage = DOM.chatInput.value.trim();
                 if (!userMessage) return;
@@ -5379,18 +5536,23 @@ JSON Output:
                 // Display user message
                 displayChatMessage('user', userMessage);
                 state.chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
-                DOM.chatInput.value = ''; // Clear input
+                DOM.chatInput.value = ''; // Clear input after sending
                 DOM.chatInput.focus();
 
                 // Display temporary loading message for assistant
                 const loadingElement = displayChatMessage('assistant', '', true);
                 DOM.chatSendBtn.disabled = true; // Disable send button while waiting
+                renderSuggestedQuestions([]); // Clear suggestions while waiting for response
 
+                // Call the core processing and sending logic
+                processAndSendChat(userMessage, loadingElement);
+            }
+
+            async function processAndSendChat(userMessage, loadingElement) {
                 try {
                     // --- Prepare Context (Chapter or Full Document) ---
                     let contextContent = "";
                     let contextSource = "";
-                    const maxContextLength = 8000; // Increased max length slightly for full doc
 
                     if (state.chatUseFullDocument) {
                         contextSource = "the full document";
@@ -5402,67 +5564,102 @@ JSON Output:
                         contextContent = currentChapter ? currentChapter.content : "No chapter content available.";
                     }
 
-                    // --- Context is no longer truncated ---
-                    // const truncatedContext = contextContent.length > maxContextLength
-                    //     ? contextContent.substring(0, maxContextLength) + "...\n[Content Truncated]"
-                    //     : contextContent;
-                    const fullContext = contextContent; // Use the full content directly
+                    // Limit context length to avoid exceeding API limits (adjust as needed)
+                    const maxContextLength = 15000; // Example limit, adjust based on model
+                    const fullContext = contextContent.length > maxContextLength 
+                        ? contextContent.substring(0, maxContextLength) + "\n... [Context Truncated]" 
+                        : contextContent;
                     // --- End Context Preparation ---
 
-
-                    // Limit chat history sent
-                    const historyToSend = state.chatHistory.slice(-6); // Send last 6 messages (3 user, 3 model)
+                    // Limit chat history sent (ensure it doesn't exceed model limits)
+                    const historyToSend = state.chatHistory.slice(-10); // Send last 10 messages (5 pairs)
 
                     // Construct the prompt
                     const language = localStorage.getItem('speech-language') || 'en-US'; // Get target language
                     const languageName = language.startsWith('fr') ? 'French' : 'English'; // Basic language name detection
 
-                    // --- Updated System Prompt ---
+                    // --- Updated System Prompt with Suggestion Instruction ---
                     const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).
-Use the provided context to answer questions, summarize, translate, explain concepts, or perform other tasks related to the text.
-Be concise and helpful. Remember the user is likely learning ${languageName}, so explain concepts clearly and simply if needed.
-Use Markdown for formatting (like **bold**).`;
+Your primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.
+Be concise and accurate. 
+Use Markdown for formatting (like **bold**).
+Remember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.
+
+**IMPORTANT - Follow-up Questions:**
+At the VERY END of your response, provide **up to 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.
+Format these questions EXACTLY like this, with no extra text before or after the block:
+[SUGGESTIONS]
+1. Explore the next section
+2. What is the main argument in section X?
+3. Can you explain the term Y mentioned earlier?
+[/SUGGESTIONS]`;
                     // --- End Updated System Prompt ---
 
                     // Combine system prompt, history, context, and latest user message
-                    // Note: Gemini API expects history in { role: 'user'/'model', parts: [{ text: '...' }] } format
                     const requestPayload = {
                         contents: [
-                            // Start with the system instruction (as user role, Gemini doesn't have explicit system role yet)
+                            // Start with the system instruction
                             { role: 'user', parts: [{ text: systemPrompt }] },
-                            { role: 'model', parts: [{ text: "Understood. I'm ready to help with the chapter content." }] }, // Priming response
-                            // Add chat history
-                            ...historyToSend.slice(0, -1), // Add all history except the last user message
-                            // Add context before the final user question - Use fullContext and update text
+                            { role: 'model', parts: [{ text: "Understood. I will focus on exploring and explaining the provided text and suggest concrete follow-up questions based on the content." }] }, // Priming response
+                            // Add chat history (excluding the last user message)
+                            ...historyToSend.slice(0, -1),
+                            // Add context before the final user question
                             { role: 'user', parts: [{ text: `Here is the full context from ${contextSource}:\n\n---\n${fullContext}\n---\n\nNow, please answer my question:` }] },
                             { role: 'model', parts: [{ text: "Okay, I have the context. What is your question?" }] }, // Acknowledge context
                             // Add the actual last user message
                             historyToSend[historyToSend.length - 1]
-                        ],
-                        // Optional: Add safety settings or generation config if needed
-                        // generationConfig: { ... },
-                        // safetySettings: [ ... ]
+                        ]
                     };
 
-
-                    // Call Gemini API (using a modified request function if needed, or adapt the payload)
+                    // Call Gemini API
                     const response = await geminiChatRequest(
                         state.userApiSettings.api_key,
-                        requestPayload.contents, // Send the structured contents
+                        requestPayload.contents,
                         state.userApiSettings.model
                     );
 
-                    // Remove loading indicator from the temporary message
-                    loadingElement.remove(); // Remove the placeholder entirely
+                    // Remove loading indicator
+                    loadingElement.remove();
+
+                    let assistantResponseText = 'Sorry, I could not generate a response.';
+                    let extractedSuggestions = [];
 
                     if (response.error) {
-                        displayChatMessage('assistant', `Sorry, there was an error: ${response.error.message}`);
-                        state.chatHistory.push({ role: 'model', parts: [{ text: `Error: ${response.error.message}` }] });
+                        assistantResponseText = `Sorry, there was an error: ${response.error.message}`;
                     } else {
-                        const assistantResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
-                        displayChatMessage('assistant', assistantResponse);
-                        state.chatHistory.push({ role: 'model', parts: [{ text: assistantResponse }] });
+                        const rawResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+                        // --- Extract Suggestions and Clean Response ---
+                        const suggestionBlockRegex = /^\s*\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/m;
+                        const match = rawResponse.match(suggestionBlockRegex);
+
+                        if (match && match[1]) {
+                            const questionsText = match[1].trim();
+                            extractedSuggestions = questionsText.split('\n')
+                                .map(q => q.trim().replace(/^\d+\.\s*/, '')) // Remove leading numbers/bullets
+                                .filter(q => q.length > 0);
+
+                            // Remove the suggestion block from the response
+                            assistantResponseText = rawResponse.replace(suggestionBlockRegex, '').trim();
+                        } else {
+                            // No suggestion block found, use raw response and add default "Continue"
+                            assistantResponseText = rawResponse.trim();
+                            // No suggestions extracted, keep extractedSuggestions empty
+                        }
+                        // --- End Extraction ---
+
+                        // Ensure we have some text to display
+                        if (!assistantResponseText) {
+                             assistantResponseText = "Okay, I've processed that. What would you like to explore next?"; // Adjusted default prompt
+                        }
                     }
+
+                    // Display the cleaned assistant message
+                    displayChatMessage('assistant', assistantResponseText);
+                    // Store the *cleaned* response in history
+                    state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] }); // Use 'assistant' role consistently
+                    // Render the *extracted* suggestions (which now always include "Continue")
+                    renderSuggestedQuestions(extractedSuggestions);
 
                 } catch (error) {
                     console.error('Error handling chat message:', error);
@@ -5470,14 +5667,13 @@ Use Markdown for formatting (like **bold**).`;
                     displayChatMessage('assistant', 'An unexpected error occurred while processing your request.');
                     state.chatHistory.push({ role: 'model', parts: [{ text: `Unexpected Error: ${error.message}` }] });
                 } finally {
-                     DOM.chatSendBtn.disabled = false; // Re-enable send button
-                     // Keep chat history trimmed if it gets too long
-                     if (state.chatHistory.length > 20) {
-                         state.chatHistory = state.chatHistory.slice(-20);
-                     }
+                    DOM.chatSendBtn.disabled = false; // Re-enable send button
+                    // Keep chat history trimmed
+                    if (state.chatHistory.length > 20) {
+                        state.chatHistory = state.chatHistory.slice(-20);
+                    }
                 }
             }
-
 
             // --- End Chat Functions ---
 
