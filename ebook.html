@@ -83,6 +83,7 @@
             --panel-shadow: var(--dark-panel-shadow);
             --highlight-color: var(--dark-highlight);
             --input-bg: rgba(255, 255, 255, 0.05); /* Added for input backgrounds */
+            --modal-backdrop-color: rgba(0, 0, 0, 0.6);
             --text-muted: rgba(224, 224, 224, 0.7);
         }
 
@@ -242,6 +243,8 @@
             padding: 0.4rem 0.8rem;
             font-size: 0.9rem;
             min-width: 40px; /* Ensure minimum width */
+            height: 34px; /* Match input height */
+            line-height: 1; /* Adjust line height */
             text-align: center;
         }
 
@@ -334,6 +337,17 @@
 
         #create-list-btn {
             /* padding, font-size, min-width, text-align */ /* Keep existing styles */
+        }
+
+        /* AI Cleanup Button */
+        #ai-cleanup-btn {
+            padding: 0.4rem; /* Adjust padding for icon */
+            font-size: 1.1rem; /* Icon size */
+            min-width: 34px; /* Square button */
+            width: 34px;
+            height: 34px;
+            line-height: 1;
+            margin-left: 0.5rem; /* Space from create button */
         }
 
         /* Library List Styling */
@@ -436,11 +450,16 @@
         }
         
         .library-item-details {
+            display: flex; /* Use flexbox for details */
+            flex-direction: column; /* Stack title/meta/progress vertically */
+            display: flex; /* Use flexbox for details */
+            flex-direction: column; /* Stack title/meta/progress vertically */
             flex: 1;
             min-width: 0; /* Allow text truncation */
         }
         
         .library-item-title {
+            display: inline; /* Allow badge to sit next to it */
             font-weight: 500;
             margin-bottom: 0.25rem;
             white-space: nowrap;
@@ -448,6 +467,79 @@
             text-overflow: ellipsis;
         }
         
+
+        .library-item-list-badge {
+            font-size: 0.65rem; /* Smaller font size */
+            padding: 0.1rem 0.4rem; /* Smaller padding */
+            border-radius: 8px; /* Pill shape */
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle background */
+            color: var(--text-muted); /* Muted text color */
+            margin-left: 0.5rem; /* Space from title */
+            display: inline-block; /* Allow inline display */
+            vertical-align: middle; /* Align with title text */
+            white-space: nowrap;
+            max-width: 80px; /* Limit width */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        /* Apply colors to the small library item badges */
+        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #137333; } /* Darker Green */
+        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #b06000; } /* Darker Yellow/Orange */
+        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #a50e0e; } /* Darker Red */
+        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #1a73e8; } /* Darker Blue */
+        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #6a1b9a; } /* Darker Purple */
+
+        /* Ensure sufficient contrast in light theme for small badges */
+        body.light-theme .library-item-list-badge[data-color-index="0"] { color: #0d652d; }
+        body.light-theme .library-item-list-badge[data-color-index="1"] { color: #995200; }
+        body.light-theme .library-item-list-badge[data-color-index="2"] { color: #940a0a; }
+        body.light-theme .library-item-list-badge[data-color-index="3"] { color: #0b57d0; }
+        body.light-theme .library-item-list-badge[data-color-index="4"] { color: #58117a; }
+
+        /* Adjust title container to accommodate badge */
+        .library-item-title-container {
+            display: flex;
+            align-items: center; /* Vertically align title and badge */
+            margin-bottom: 0.25rem;
+        }
+
+        .library-item-list-badge {
+            font-size: 0.65rem; /* Smaller font size */
+            padding: 0.1rem 0.4rem; /* Smaller padding */
+            border-radius: 8px; /* Pill shape */
+            background-color: rgba(255, 255, 255, 0.1); /* Subtle background */
+            color: var(--text-muted); /* Muted text color */
+            margin-left: 0.5rem; /* Space from title */
+            display: inline-block; /* Allow inline display */
+            vertical-align: middle; /* Align with title text */
+            white-space: nowrap;
+            max-width: 80px; /* Limit width */
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        /* Apply colors to the small library item badges */
+        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #137333; } /* Darker Green */
+        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #b06000; } /* Darker Yellow/Orange */
+        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #a50e0e; } /* Darker Red */
+        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #1a73e8; } /* Darker Blue */
+        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #6a1b9a; } /* Darker Purple */
+
+        /* Ensure sufficient contrast in light theme for small badges */
+        body.light-theme .library-item-list-badge[data-color-index="0"] { color: #0d652d; }
+        body.light-theme .library-item-list-badge[data-color-index="1"] { color: #995200; }
+        body.light-theme .library-item-list-badge[data-color-index="2"] { color: #940a0a; }
+        body.light-theme .library-item-list-badge[data-color-index="3"] { color: #0b57d0; }
+        body.light-theme .library-item-list-badge[data-color-index="4"] { color: #58117a; }
+
+        /* Adjust title container to accommodate badge */
+        .library-item-title-container {
+            display: flex;
+            align-items: center; /* Vertically align title and badge */
+            margin-bottom: 0.25rem;
+        }
+
         .library-item-meta {
             font-size: 0.75rem;
             color: rgba(var(--text-color), 0.7);
@@ -1356,6 +1448,152 @@
             background-color: #3367d6; /* Darker blue on hover */
         }
 
+        /* AI Cleanup Modal Styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--modal-backdrop-color);
+            z-index: 999;
+            display: none; /* Hidden by default */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-backdrop.visible {
+            display: block;
+            opacity: 1;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background-color: var(--panel-bg);
+            color: var(--text-color);
+            border-radius: var(--panel-radius);
+            box-shadow: 0 8px 25px var(--panel-shadow);
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            border: 1px solid var(--border-color);
+            overflow: hidden; /* Prevent content spill */
+        }
+
+        .modal.visible {
+            display: flex;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        .modal-header {
+            padding: 0.8rem 1.2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+
+        .modal-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 0.2rem;
+            line-height: 1;
+        }
+
+        .modal-body {
+            padding: 1rem 1.2rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            font-size: 0.9rem;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(155, 155, 155, 0.5) transparent;
+        }
+        .modal-body::-webkit-scrollbar { width: 6px; }
+        .modal-body::-webkit-scrollbar-track { background: transparent; }
+        .modal-body::-webkit-scrollbar-thumb { background-color: rgba(155, 155, 155, 0.5); border-radius: 3px; }
+
+        .modal-body p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+
+        .cleanup-item {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .cleanup-item:last-child {
+            border-bottom: none;
+        }
+
+        .cleanup-item input[type="checkbox"] {
+            margin-right: 0.8rem;
+            flex-shrink: 0;
+            width: 18px; /* Consistent checkbox size */
+            height: 18px;
+        }
+
+        .cleanup-item-details {
+            flex-grow: 1;
+            min-width: 0; /* Allow truncation */
+        }
+
+        .cleanup-item-title {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.1rem;
+        }
+
+        .cleanup-item-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modal-footer {
+            padding: 0.8rem 1.2rem;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .modal-footer .button {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+        }
+
+        .modal-footer .button.danger {
+            background-color: var(--danger-color);
+        }
+        .modal-footer .button.danger:hover {
+            background-color: #c5221f; /* Darker red */
+        }
+
         /* Line height control */
         .line-height-controls {
             display: flex;
@@ -1827,6 +2065,7 @@
                         <div id="create-list-group"> <!-- Moved here -->
                             <input type="text" id="new-list-name" placeholder="New list name..." />
                             <button type="button" id="create-list-btn" class="button">+</button>
+                            <button type="button" id="ai-cleanup-btn" class="button icon-btn" title="AI Library Cleanup" aria-label="AI Library Cleanup" style="display: none;">🧹</button> <!-- Initially hidden -->
                         </div>
                     </div>
                     <div id="library-list">
@@ -2000,6 +2239,23 @@
         <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;"> <!-- Standard practice -->
     </div>
 
+    <!-- AI Cleanup Modal -->
+    <div id="ai-cleanup-backdrop" class="modal-backdrop"></div>
+    <div id="ai-cleanup-modal" class="modal">
+        <div class="modal-header">
+            <h3>AI Cleanup Suggestions</h3>
+            <button type="button" id="ai-cleanup-close-btn" class="modal-close-btn" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body" id="ai-cleanup-list">
+            <p>Loading suggestions...</p>
+            <!-- Suggested items will be populated here -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="ai-cleanup-cancel-btn" class="button">Cancel</button>
+            <button type="button" id="ai-cleanup-confirm-btn" class="button danger">Delete Selected</button>
+        </div>
+    </div>
+
     <script>
         // App Modules
         const EbookApp = (function() {
@@ -2070,6 +2326,14 @@
                 createListBtn: document.getElementById('create-list-btn'),       // Added create list button
                 newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
                 createListGroup: document.getElementById('create-list-group'), // Added create list group
+                aiCleanupBtn: document.getElementById('ai-cleanup-btn'),         // Added AI Cleanup button
+                // AI Cleanup Modal elements
+                aiCleanupModal: document.getElementById('ai-cleanup-modal'),
+                aiCleanupBackdrop: document.getElementById('ai-cleanup-backdrop'),
+                aiCleanupList: document.getElementById('ai-cleanup-list'),
+                aiCleanupCloseBtn: document.getElementById('ai-cleanup-close-btn'),
+                aiCleanupCancelBtn: document.getElementById('ai-cleanup-cancel-btn'),
+                aiCleanupConfirmBtn: document.getElementById('ai-cleanup-confirm-btn'),
                 // Chat elements
                 chatBtn: document.getElementById('chat-btn'),
                 chatPanel: document.getElementById('chat-panel'),
@@ -2118,6 +2382,7 @@
                 // Event handling
                 touchStartY: 0,
                 touchEndY: 0,
+                isAiCleanupModalOpen: false, // Flag for AI cleanup modal state
                 lastSelectionRect: null,
                 // Chat state
                 chatHistory: [], // Stores { role: 'user'/'model', parts: [{ text: '...' }] }
@@ -2253,6 +2518,13 @@
                 DOM.listBadgeContainer.addEventListener('click', handleListBadgeClick); // Added
                 DOM.createListBtn.addEventListener('click', toggleCreateListInput); // Modified
 
+                // AI Cleanup listeners
+                DOM.aiCleanupBtn.addEventListener('click', showAiCleanupModal);
+                DOM.aiCleanupCloseBtn.addEventListener('click', hideAiCleanupModal);
+                DOM.aiCleanupCancelBtn.addEventListener('click', hideAiCleanupModal);
+                DOM.aiCleanupConfirmBtn.addEventListener('click', handleAiCleanupConfirm);
+                DOM.aiCleanupBackdrop.addEventListener('click', hideAiCleanupModal);
+
                 // Global document events
                 document.addEventListener('keydown', handleKeyPress);
                 document.addEventListener('selectionchange', debounce(handleTextSelection, 300));
@@ -2290,7 +2562,10 @@
                 // Cancel list creation if clicking outside the input/button
                 // Check remains the same as DOM.createListGroup is the direct container
                 if (state.isCreatingList && !DOM.createListGroup.contains(event.target)) {
-                    cancelListCreation();
+                    // Only cancel if the click wasn't on the create button itself (which toggles)
+                    if (!DOM.createListBtn.contains(event.target)) {
+                        cancelListCreation();
+                    }
                 }
 
                 // Close chat panel if visible and click is outside it
@@ -2321,8 +2596,13 @@
                 // Escape - close panels or cancel list creation
                 if (e.key === 'Escape') {
                     if (state.isCreatingList) {
+                        // If creating list, Escape cancels that first
                         cancelListCreation();
+                    } else if (state.isAiCleanupModalOpen) {
+                        // If AI cleanup modal is open, Escape closes it
+                        hideAiCleanupModal();
                     } else {
+                        // Otherwise, close regular panels (TOC, Settings, Chat)
                         closeAllPanels();
                     }
                     e.preventDefault();
@@ -3193,9 +3473,18 @@
                 if (!chapter) return;
                 
                 DOM.contentArea.innerHTML = ''; // Clear previous content
-                
-                // Update chapter title in navbar
-                DOM.bookTitle.textContent = `${state.bookData.title || 'Book'} - ${chapter.title}`;
+
+                // Update chapter title in navbar, making it clickable if sourceUrl exists
+                const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title}`;
+                if (state.bookData.sourceUrl) {
+                    // Use escapeHTML for both the URL and the text content, set color to primary blue
+                    DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`;
+                    DOM.bookTitle.style.cursor = 'pointer'; // Add pointer cursor
+                } else {
+                    // Ensure content is escaped even when not a link
+                    DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText);
+                    DOM.bookTitle.style.cursor = 'default'; // Reset cursor
+                }
 
                 // Determine which content to display
                 let contentToDisplay = chapter.content; // Default to processed chapter content
@@ -3471,6 +3760,266 @@
                 DOM.settingsPanel.classList.remove('visible');
                 DOM.overlay.classList.remove('visible');
             }
+
+            // --- AI Cleanup Modal Functions ---
+            function showAiCleanupModal() {
+                // 1. Check prerequisites (logged in, API key)
+                if (!state.session) {
+                    showToast("Please sign in to use AI features.", 3000);
+                    return;
+                }
+                if (!state.userApiSettings || !state.userApiSettings.api_key) {
+                    showToast("Gemini API key needed for AI Cleanup. Configure in dashboard.", 4000);
+                    return;
+                }
+
+                // 2. Show modal and backdrop, set loading state
+                DOM.aiCleanupList.innerHTML = '<p>Loading suggestions...</p>'; // Show loading message
+                DOM.aiCleanupModal.classList.add('visible');
+                DOM.aiCleanupBackdrop.classList.add('visible');
+                state.isAiCleanupModalOpen = true;
+                DOM.aiCleanupConfirmBtn.disabled = true; // Disable confirm button initially
+                DOM.aiCleanupConfirmBtn.classList.add('loading'); // Add loading state to confirm button
+
+                // 3. Fetch all books and generate suggestions
+                fetchAllUserBooks()
+                    .then(allBooks => {
+                        if (!allBooks || allBooks.length === 0) {
+                            DOM.aiCleanupList.innerHTML = '<p>Your library is empty. Nothing to clean up!</p>';
+                            DOM.aiCleanupConfirmBtn.disabled = true; // Keep disabled
+                            DOM.aiCleanupConfirmBtn.classList.remove('loading');
+                            return;
+                        }
+                        return generateCleanupSuggestions(allBooks);
+                    })
+                    .then(suggestedBooks => {
+                        if (suggestedBooks) { // Check if suggestions were generated
+                            populateAiCleanupModal(suggestedBooks);
+                        }
+                        // Loading state is removed inside populate or if no books/suggestions
+                    })
+                    .catch(error => {
+                        console.error("Error during AI Cleanup:", error);
+                        DOM.aiCleanupList.innerHTML = `<p>Error generating suggestions: ${error.message}</p>`;
+                        DOM.aiCleanupConfirmBtn.disabled = true;
+                        DOM.aiCleanupConfirmBtn.classList.remove('loading');
+                    });
+            }
+
+            function hideAiCleanupModal() {
+                DOM.aiCleanupModal.classList.remove('visible');
+                DOM.aiCleanupBackdrop.classList.remove('visible');
+                state.isAiCleanupModalOpen = false;
+            }
+
+            async function fetchAllUserBooks() {
+                if (!state.session) return [];
+
+                try {
+                    const { data: books, error } = await supabase
+                        .from('ebooks')
+                        .select('id, title, file_type, metadata, last_position, updated_at') // Select necessary fields
+                        .eq('user_id', state.session.user.id)
+                        .order('updated_at', { ascending: true }); // Oldest first might be useful for LLM
+
+                    if (error) throw error;
+                    return books || [];
+                } catch (error) {
+                    console.error("Error fetching all user books:", error);
+                    showToast("Could not fetch library for cleanup.", 3000);
+                    return []; // Return empty on error
+                }
+            }
+
+            async function generateCleanupSuggestions(books) {
+                // Get current date in YYYY-MM-DD format
+                const today = new Date().toISOString().split('T')[0];
+
+                // Format book data for the prompt
+                const bookDataForPrompt = books.map(book => {
+                    const progress = calculateOverallProgress(book);
+                    const lastRead = book.last_position?.timestamp
+                        ? new Date(book.last_position.timestamp).toISOString().split('T')[0] // YYYY-MM-DD
+                        : new Date(book.updated_at).toISOString().split('T')[0]; // Fallback to updated_at
+                    return {
+                        id: book.id,
+                        title: book.title.substring(0, 80), // Limit title length
+                        progress: progress,
+                        last_read: lastRead
+                    };
+                });
+
+                // Limit the number of books sent to the LLM to avoid overly large prompts
+                const maxBooksInPrompt = 150;
+                const booksToSend = bookDataForPrompt.slice(0, maxBooksInPrompt);
+
+                // Updated prompt with new criteria and current date
+                const prompt = `
+Analyze the following list of ebooks from a user's library. Identify books that are strong candidates for deletion based on these criteria:
+
+Today's date is: ${today}
+
+1.  **Old & Unread:** Books last read over 1 year ago (before ${today.substring(0, 4)}-${today.substring(5, 7)}-${today.substring(8)}) AND have less than 5% progress.
+2.  **Fully Read:** Books with 98% or more progress.
+3.  **Likely Test/Temporary Items:** Books with very short titles (e.g., "test", "untitled", "url", or just a raw URL) that haven't been read recently (e.g., last read > 3 months ago).
+4.  **Duplicates:** Books with identical or very similar titles where one has significantly less progress or hasn't been read for much longer. Prioritize keeping the one with more progress or more recent activity.
+5.  **Old News:** Books whose titles clearly indicate they are news articles (e.g., contain "News", "Daily", "Update") and were last read more than 1 week ago (before ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}).
+
+**Constraint:** Do NOT suggest deleting items last read within the last 7 days (i.e., on or after ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}), regardless of other criteria, unless they are clearly fully read (>=98% progress).
+
+Here is the list of books (id, title, progress percentage, last read date YYYY-MM-DD):
+---
+${JSON.stringify(booksToSend, null, 2)}
+---
+
+Return ONLY a JSON array containing the integer IDs of the books you suggest for deletion based *strictly* on the criteria above. Do not include any explanations or other text. Ensure the constraint about recent items is respected.
+
+Example Output: [123, 456, 789]
+
+JSON Output:
+`;
+                try {
+                    const response = await geminiSingleRequest(
+                        state.userApiSettings.api_key,
+                        prompt,
+                        state.userApiSettings.model // Use the configured model
+                    );
+
+                    if (response.error) {
+                        throw new Error(response.error.message);
+                    }
+
+                    const resultText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+                    let suggestedIds = [];
+
+                    // Attempt to parse the JSON response
+                    try {
+                        const jsonMatch = resultText.match(/\[[\s\S]*\]/); // Find the array part
+                        if (jsonMatch) {
+                            suggestedIds = JSON.parse(jsonMatch[0]);
+                            // Ensure all IDs are numbers
+                            suggestedIds = suggestedIds.map(id => Number(id)).filter(id => !isNaN(id));
+                        } else {
+                            console.warn("AI did not return a valid JSON array for cleanup suggestions.", resultText);
+                        }
+                    } catch (jsonError) {
+                        console.error('Error parsing cleanup suggestions JSON:', jsonError, resultText);
+                        throw new Error("AI returned invalid format for suggestions.");
+                    }
+
+                    // Filter the original full book list based on suggested IDs
+                    const suggestedBooks = books.filter(book => suggestedIds.includes(book.id));
+                    return suggestedBooks;
+
+                } catch (error) {
+                    console.error('Error generating cleanup suggestions:', error);
+                    throw error; // Re-throw to be caught by the caller
+                }
+            }
+
+            function populateAiCleanupModal(suggestedBooks) {
+                DOM.aiCleanupList.innerHTML = ''; // Clear loading/previous content
+
+                if (!suggestedBooks || suggestedBooks.length === 0) {
+                    DOM.aiCleanupList.innerHTML = '<p>AI didn\'t find any items matching the cleanup criteria. Your library looks tidy!</p>';
+                    DOM.aiCleanupConfirmBtn.disabled = true; // Keep confirm disabled
+                    DOM.aiCleanupConfirmBtn.classList.remove('loading');
+                    return;
+                }
+
+                const introText = document.createElement('p');
+                introText.textContent = `AI suggests removing the following ${suggestedBooks.length} items. Uncheck any you want to keep:`;
+                DOM.aiCleanupList.appendChild(introText);
+
+                suggestedBooks.forEach(book => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'cleanup-item';
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = true; // Default to selected
+                    checkbox.value = book.id;
+                    checkbox.id = `cleanup-book-${book.id}`;
+
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'cleanup-item-details';
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'cleanup-item-title';
+                    titleDiv.textContent = book.title;
+                    titleDiv.title = book.title; // Show full title on hover
+
+                    const metaDiv = document.createElement('div');
+                    metaDiv.className = 'cleanup-item-meta';
+                    const progress = calculateOverallProgress(book);
+                    const lastRead = book.last_position?.timestamp
+                        ? `Last read: ${new Date(book.last_position.timestamp).toLocaleDateString()}`
+                        : `Added: ${new Date(book.updated_at).toLocaleDateString()}`;
+                    metaDiv.textContent = `Progress: ${progress}% • ${lastRead}`;
+
+                    detailsDiv.appendChild(titleDiv);
+                    detailsDiv.appendChild(metaDiv);
+
+                    // Use a label for better accessibility
+                    const label = document.createElement('label');
+                    label.htmlFor = checkbox.id;
+                    label.style.display = 'flex'; // Make label contain checkbox and details
+                    label.style.alignItems = 'center';
+                    label.style.width = '100%';
+                    label.style.cursor = 'pointer';
+                    label.appendChild(checkbox);
+                    label.appendChild(detailsDiv);
+
+                    itemDiv.appendChild(label);
+                    DOM.aiCleanupList.appendChild(itemDiv);
+                });
+
+                // Enable the confirm button now that items are loaded
+                DOM.aiCleanupConfirmBtn.disabled = false;
+                DOM.aiCleanupConfirmBtn.classList.remove('loading');
+            }
+
+            async function handleAiCleanupConfirm() {
+                const checkboxes = DOM.aiCleanupList.querySelectorAll('input[type="checkbox"]:checked');
+                const idsToDelete = Array.from(checkboxes).map(cb => parseInt(cb.value, 10));
+
+                if (idsToDelete.length === 0) {
+                    showToast("No items selected for deletion.", 2000);
+                    hideAiCleanupModal();
+                    return;
+                }
+
+                if (!confirm(`Are you sure you want to permanently delete ${idsToDelete.length} selected item(s)?`)) {
+                    return;
+                }
+
+                // Show loading state on button
+                DOM.aiCleanupConfirmBtn.disabled = true;
+                DOM.aiCleanupConfirmBtn.classList.add('loading');
+                showToast(`Deleting ${idsToDelete.length} items...`, 3000);
+
+                try {
+                    // Use Supabase bulk delete
+                    const { error } = await supabase
+                        .from('ebooks')
+                        .delete()
+                        .in('id', idsToDelete); // Use 'in' for bulk deletion
+
+                    if (error) throw error;
+
+                    showToast(`Successfully deleted ${idsToDelete.length} items.`, 3000);
+                    hideAiCleanupModal();
+                    loadUserLibrary(); // Refresh the library view
+
+                } catch (error) {
+                    console.error("Error deleting books:", error);
+                    showToast(`Error deleting items: ${error.message}`, 4000);
+                    // Re-enable button on error
+                    DOM.aiCleanupConfirmBtn.disabled = false;
+                    DOM.aiCleanupConfirmBtn.classList.remove('loading');
+                }
+            }
+            // --- End AI Cleanup Modal Functions ---
 
             function toggleChatPanel() {
                 const isVisible = DOM.chatPanel.classList.toggle('visible');
@@ -3904,6 +4453,7 @@
                 const { data: { session } } = await supabase.auth.getSession();
                 state.session = session;
                 
+
                 if (!session) {
                     // Redirect to index.html if not logged in
                     window.location.href = 'index.html';
@@ -3915,6 +4465,7 @@
                         <p>Signed in as ${session.user.email}</p>
                     `;
                     
+
                     // Load user's library and lists
                     DOM.librarySection.style.display = 'block';
                     fetchBookLists().then(() => { // Fetch lists first
@@ -3929,6 +4480,9 @@
                 let canUseAi = false;
                 let canUseFirecrawl = false;
 
+                // Default AI Cleanup button to hidden
+                DOM.aiCleanupBtn.style.display = 'none';
+
                 if (state.userApiSettings) {
                     // Gemini Status
                     if (state.userApiSettings.api_key && state.userApiSettings.model) {
@@ -3939,11 +4493,13 @@
                             </div>`;
                         canUseAi = true;
                     } else {
-                         apiStatusHtml += `
+                        // This is the case where Gemini is NOT configured
+                        apiStatusHtml += `
                             <div class="api-status-item">
                                 <span class="status-icon">❌</span>
                                 <span class="status-text">Gemini API not configured. <a href="index.html" target="_blank">Set up</a>.</span>
                             </div>`;
+                        // canUseAi remains false
                     }
 
                     // Firecrawl Status
@@ -3981,26 +4537,36 @@
                     showToast("Error displaying AI status: UI element missing.");
                 }
 
-
                 // Enable/disable features based on keys
-                DOM.translationToggle.disabled = !canUseAi; // Disable translation toggle if no Gemini key
-                DOM.chatBtn.disabled = !canUseAi; // Disable chat button if no Gemini key
-                DOM.processUrlBtn.disabled = !canUseFirecrawl; // Disable URL button if no Firecrawl key
+                DOM.translationToggle.disabled = !canUseAi;
+                DOM.chatBtn.disabled = !canUseAi;
+                DOM.processUrlBtn.disabled = !canUseFirecrawl;
+                DOM.aiCleanupBtn.disabled = !canUseAi; // Disable button if AI cannot be used
 
                 // Add tooltip or visual cue for disabled buttons
-                 if (!canUseAi) {
+                if (!canUseAi) {
                     DOM.chatBtn.style.opacity = "0.5";
                     DOM.chatBtn.style.cursor = "not-allowed";
                     DOM.chatBtn.title = "Gemini API key needed for chat. Set it up in the main dashboard.";
-                    DOM.translationToggle.closest('.settings-row').title = "Gemini API key needed for translation."; // Add tooltip to parent row
+                    DOM.translationToggle.closest('.settings-row').title = "Gemini API key needed for translation.";
                     DOM.translationToggle.style.cursor = "not-allowed";
-                 } else {
+                    DOM.aiCleanupBtn.style.opacity = "0.5"; // Keep disabled style
+                    DOM.aiCleanupBtn.style.cursor = "not-allowed";
+                    DOM.aiCleanupBtn.title = "Gemini API key needed for AI Cleanup. Set it up in the main dashboard.";
+                } else {
+                    // AI is usable, enable related features
+                    DOM.aiCleanupBtn.style.display = 'inline-flex'; // Show the button
+                    DOM.aiCleanupBtn.disabled = false;
+                    DOM.aiCleanupBtn.style.opacity = "1";
+                    DOM.aiCleanupBtn.style.cursor = "pointer";
+                    DOM.aiCleanupBtn.title = "AI Library Cleanup";
+
                     DOM.chatBtn.style.opacity = "1";
                     DOM.chatBtn.style.cursor = "pointer";
                     DOM.chatBtn.title = "Chat with AI about this chapter";
                     DOM.translationToggle.closest('.settings-row').title = "";
                     DOM.translationToggle.style.cursor = "pointer";
-                 }
+                }
 
                 if (!canUseFirecrawl) {
                     DOM.urlInputContainer.title = "Firecrawl API key needed. Set it up in the main dashboard.";
@@ -4011,7 +4577,7 @@
                     DOM.processUrlBtn.style.opacity = "1";
                     DOM.processUrlBtn.style.cursor = "pointer";
                 }
-                // Removed summarizeBtn display logic from checkAuthAndLoadApiSettings
+                // Tooltip for AI Cleanup button is handled within the canUseAi block now
             }
 
             // Get the user's Gemini API settings from Supabase
@@ -4059,11 +4625,14 @@
             // --- Library functions ---
             async function loadUserLibrary() {
                 const { data: { session } } = await supabase.auth.getSession();
-                if (!session) return;
+                if (!session) return;                
                 
                 const libraryList = document.getElementById('library-list');
                 libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading books...</div>';
-
+                // Create a map for quick list name lookup
+                // Also store the index for color mapping
+                const listInfoMap = new Map(state.bookLists.map((list, index) => [list.id, { name: list.name, index: index }]));
+                const badgeColors = 5; // Number of colors defined in CSS (0 to 4)
                 try {
                     // Base query - Fetch raw_content as well
                     let query = supabase
@@ -4091,29 +4660,43 @@
                         throw error;
                     }
 
-                    // Removed update to DOM.currentListName as the element is deleted
-
                     if (!books || books.length === 0) {
                         libraryList.innerHTML = `<div style="text-align: center; padding: 20px;">This list is empty</div>`;
                         return;
                     }
-
                     // Display books
                     libraryList.innerHTML = '';
                     books.forEach(book => {
                         const date = new Date(book.updated_at).toLocaleDateString();
                         const progress = calculateOverallProgress(book);
                         
+
+                        const listInfo = book.list_id ? listInfoMap.get(book.list_id) : null;
+                        const listName = listInfo ? listInfo.name : null;
+
+                        // Prepare list badge HTML - Now shown for all views
+                        let listBadgeHtml = '';
+                        if (listName) {
+                            // Calculate color index (custom lists start color index from 1)
+                            const colorIndex = (listInfo.index + 1) % badgeColors;
+                            listBadgeHtml = `<span class="library-item-list-badge" data-color-index="${colorIndex}" title="List: ${escapeHTML(listName)}">${escapeHTML(listName)}</span>`;
+                        } else {
+                            // Show 'Unlisted' badge if the book has no list_id
+                            // No color index for 'Unlisted'
+                            listBadgeHtml = `<span class="library-item-list-badge" title="Unlisted">Unlisted</span>`;
+                        }
+
                         const item = document.createElement('div');
                         item.className = 'library-item';
+                        // Add the badge HTML to the title container
                         item.innerHTML = `
                             <div class="library-item-details">
-                                <div class="library-item-title">${escapeHTML(book.title)}</div>
+                                <div class="library-item-title-container">
+                                    <div class="library-item-title">${escapeHTML(book.title)}</div>
+                                    ${listBadgeHtml} <!-- Add the badge here -->
+                                </div>
                                 <div class="library-item-meta">
                                     ${book.file_type.toUpperCase()} • Last read: ${date} • ${progress}% complete
-                                </div>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar" style="width: ${progress}%"></div>
                                 </div>
                             </div>
                             <div class="library-item-actions" style="position: relative;"> <!-- Added relative positioning -->
@@ -4121,19 +4704,26 @@
                                 <button class="library-item-move" data-id="${book.id}" data-current-list-id="${book.list_id || ''}" style="display: none;">Move</button>
                                 <div class="move-list-dropdown">
                                     <!-- Dropdown options populated by JS -->
-                                </div>
                                 <button class="library-item-delete" data-id="${book.id}">×</button>
                             </div>
                         `;
+
+                        // Add progress bar separately to ensure it's below title/meta
+                        const progressBarContainer = document.createElement('div');
+                        progressBarContainer.className = 'progress-bar-container';
+                        progressBarContainer.innerHTML = `<div class="progress-bar" style="width: ${progress}%"></div>`;
+                        item.querySelector('.library-item-details').appendChild(progressBarContainer);
+
                         
                         // Add click event to open the book
                         item.addEventListener('click', (event) => {
-                            // Don't open if the delete button was clicked
-                            if (event.target.classList.contains('library-item-delete')) {
+                            // Don't open if delete, move button, or badge was clicked
+                            if (event.target.closest('.library-item-delete, .library-item-move, .library-item-list-badge')) {
                                 return;
                             }
                             loadBookFromLibrary(book);
                         });
+
                         
                         libraryList.appendChild(item);
 
@@ -4211,7 +4801,7 @@
             // Render the list badges
             function renderListBadges() {
                 DOM.listBadgeContainer.innerHTML = ''; // Clear existing badges
-                const badgeColors = 5; // Number of colors defined in CSS
+                const badgeColors = 5; // Number of colors defined in CSS (0 to 4)
 
                 // Helper function to create a badge
                 const createBadge = (text, listId, isSpecial = false, colorIndex = -1) => {
@@ -4236,14 +4826,16 @@
                 };
 
                 // Add 'All' badge
-                DOM.listBadgeContainer.appendChild(createBadge('All', 'all', true));
+                // Assign color index 0 to the 'All' badge
+                DOM.listBadgeContainer.appendChild(createBadge('All', 'all', false, 0));
 
                 // Add 'Unlisted' badge
                 DOM.listBadgeContainer.appendChild(createBadge('Unlisted', null, true));
 
                 // Add badges for each list
                 state.bookLists.forEach((list, index) => {
-                    DOM.listBadgeContainer.appendChild(createBadge(list.name, list.id, false, index));
+                    // Start custom list colors from index 1 to avoid conflict with 'All'
+                    DOM.listBadgeContainer.appendChild(createBadge(list.name, list.id, false, index + 1));
                 });
             }
 

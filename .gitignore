@@ -2,3 +2,5 @@
 .aider*
 **/.prompts/
 **/__pycache__/
+
+.env
