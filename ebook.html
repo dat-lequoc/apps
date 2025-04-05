@@ -3259,6 +3259,8 @@
                     }
 
                     let finalMarkdownContent = response.data.markdown;
+                    // Initialize cleanedHtmlContent with the raw HTML from Firecrawl
+                    let cleanedHtmlContent = response.data.content; 
 
                     // --- AI Cleaning (with fallback) ---
                     if (DOM.cleanUrlContentToggle.checked) {
@@ -3270,10 +3272,10 @@
 
                         // --- Try cleaning with default model, then fallbacks ---
                         let cleaningSuccess = false;
-                        let cleanedHtmlContent = response.data.content; // Start with raw HTML
+                        // cleanedHtmlContent is already initialized above
                         try {
                             modelUsedForCleaning = defaultModel; // Start with default
-                            // Pass raw HTML (response.data.content) to the cleaning function
+                            // Pass raw HTML (response.data.content) to the cleaning function, update cleanedHtmlContent
                             cleanedHtmlContent = await cleanContentWithAI(response.data.content, modelUsedForCleaning);
                             showToast(`AI cleaning complete (Model: ${modelUsedForCleaning}).`, 2000);
                             cleaningSuccess = true;
