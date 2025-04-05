@@ -3766,8 +3766,6 @@
                 DOM.viewRawContentToggle.closest('.settings-row').title = !state.bookData.rawContent
                     ? "Raw content view only available for books added via URL."
                     : "View the original scraped HTML content.";
-
-
                 // Render content based on mode (Raw HTML or Processed Markdown/HTML)
                 if (isRawHtml) {
                     // Display raw content as plain text for safety and clarity
@@ -3789,42 +3787,7 @@
                     DOM.contentArea.style.whiteSpace = 'normal';
                     DOM.contentArea.style.wordWrap = 'break-word';
 
-                    /* // Old Markdown rendering logic - REMOVED
-                    let processedContent = contentToDisplay;
 
-                    // Apply heading markdown FIRST (important to do before paragraph/br logic)
-                    // Match headings at the beginning of a line
-                    processedContent = processedContent.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
-                    processedContent = processedContent.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
-                    processedContent = processedContent.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
-                    processedContent = processedContent.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-                    processedContent = processedContent.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-                    processedContent = processedContent.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-
-                    // Apply [link text](url) markdown -> <a> tags
-                    // Added rel="noopener noreferrer" for security
-                    processedContent = processedContent.replace(/\[(.*?)\]\((.*?)\)/g, (match, text, url) => {
-                        const safeUrl = url.trim().replace(/"/g, '&quot;'); // Escape quotes in URL
-                        // Basic check for common protocols or relative/anchor paths
-                        if (safeUrl.startsWith('http:') || safeUrl.startsWith('https:') || safeUrl.startsWith('/') || safeUrl.startsWith('#')) {
-                             // Escape HTML entities in link text to prevent XSS if text contains HTML chars
-                             // We will apply bold *after* this, so don't escape the asterisks here yet.
-                             const escapedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                             return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${escapedText}</a>`;
-                        }
-                        // If URL looks unsafe or not standard, just display the escaped text
-                        return text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-                    });
-
-                    // Apply **bold** markdown -> <strong> tags SECOND
-                    // Using a non-greedy match for content inside **
-                    // This will now correctly apply bold inside the already created <a> tags or anywhere else.
-                    processedContent = processedContent.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-                    // Replace newline characters with <br> tags to preserve line breaks
-                    processedContent = processedContent.replace(/\n/g, '<br>');
-
-                    */
 
                 } else {
                     // Original simple text/HTML rendering logic (fallback if not using processed content)
