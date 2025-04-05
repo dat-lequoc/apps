@@ -2229,10 +2229,10 @@
                 </div>
 
                 <div class="settings-section">
-                    <div class="settings-title">Display Mode</div>
+                    <div class="settings-title">Content Processing</div>
                     <div class="settings-row">
-                        <label for="markdown-mode-toggle">Markdown Mode</label>
-                        <input type="checkbox" id="markdown-mode-toggle">
+                        <label for="use-processed-content-toggle">Use AI Processed Content (HTML)</label>
+                        <input type="checkbox" id="use-processed-content-toggle">
                     </div>
                 </div>
                 <div class="settings-section"> <!-- Added Raw Content Toggle Section -->
@@ -2407,7 +2407,7 @@
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
-                markdownModeToggle: document.getElementById('markdown-mode-toggle'), // Added Markdown toggle
+                useProcessedContentToggle: document.getElementById('use-processed-content-toggle'), // Renamed from markdown-mode-toggle
                 viewRawContentToggle: document.getElementById('view-raw-content-toggle'), // Added Raw Content toggle
                 cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
                 sourceUrlDisplay: document.getElementById('source-url-display'),      // Added source URL display area in content
@@ -2454,7 +2454,7 @@
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
-                    markdownModeEnabled: false, // Added Markdown mode setting
+                    useProcessedContent: false, // Replaced markdownModeEnabled
                     // selectedUrlModel removed, hardcoded to 'gemini-2.0-flash-thinking-exp-01-21'
                     viewRawContentEnabled: false, // Added Raw Content view setting
                     speakSelectionEnabled: false // Added Speak Selection setting
@@ -2560,10 +2560,10 @@
                     });
                 });
 
-                // Markdown Mode Toggle
-                DOM.markdownModeToggle.addEventListener('change', function() {
-                    state.settings.markdownModeEnabled = this.checked;
-                    // Disable raw view if markdown is off, enable markdown if raw is on
+                // Use Processed Content Toggle (formerly Markdown Mode)
+                DOM.useProcessedContentToggle.addEventListener('change', function() {
+                    state.settings.useProcessedContent = this.checked;
+                    // Disable raw view if processed content is off, enable processed if raw is on
                     if (!this.checked) {
                         DOM.viewRawContentToggle.checked = false;
                         state.settings.viewRawContentEnabled = false;
@@ -2575,10 +2575,10 @@
                 // View Raw Content Toggle
                 DOM.viewRawContentToggle.addEventListener('change', function() {
                     state.settings.viewRawContentEnabled = this.checked;
-                     // Automatically enable Markdown mode if raw view is enabled
+                     // Automatically enable Processed Content view if raw view is enabled
                     if (this.checked) {
-                        DOM.markdownModeToggle.checked = true;
-                        state.settings.markdownModeEnabled = true;
+                        DOM.useProcessedContentToggle.checked = true;
+                        state.settings.useProcessedContent = true;
                     }
                     displayCurrentChapter(); // Re-render content
                     saveUserPreferences();
@@ -3270,9 +3270,11 @@
 
                         // --- Try cleaning with default model, then fallbacks ---
                         let cleaningSuccess = false;
+                        let cleanedHtmlContent = response.data.content; // Start with raw HTML
                         try {
                             modelUsedForCleaning = defaultModel; // Start with default
-                            finalMarkdownContent = await cleanMarkdownWithAI(finalMarkdownContent, modelUsedForCleaning);
+                            // Pass raw HTML (response.data.content) to the cleaning function
+                            cleanedHtmlContent = await cleanContentWithAI(response.data.content, modelUsedForCleaning);
                             showToast(`AI cleaning complete (Model: ${modelUsedForCleaning}).`, 2000);
                             cleaningSuccess = true;
                         } catch (aiError) {
@@ -3282,7 +3284,8 @@
                             for (const fallback of fallbackModels) {
                                 try {
                                     modelUsedForCleaning = fallback; // Update model being used
-                                    finalMarkdownContent = await cleanMarkdownWithAI(finalMarkdownContent, modelUsedForCleaning);
+                                    // Pass raw HTML (response.data.content) to the cleaning function
+                                    cleanedHtmlContent = await cleanContentWithAI(response.data.content, modelUsedForCleaning);
                                     showToast(`AI cleaning complete (Fallback: ${modelUsedForCleaning}).`, 2000);
                                     cleaningSuccess = true;
                                     break; // Success, exit loop
@@ -3308,7 +3311,8 @@
                     modelUsedForTitle = defaultModel; // Use default model for this task
 
                     try {
-                        titleCategoryResult = await generateTitleAndCategory(finalMarkdownContent, modelUsedForTitle);
+                        // Use MARKDOWN content for title/category generation
+                        titleCategoryResult = await generateTitleAndCategory(state.bookData.content, modelUsedForTitle);
                         showToast(`Title/Category generated (Model: ${modelUsedForTitle}).`, 2000);
                     } catch (error) {
                         console.warn(`Model ${modelUsedForTitle} failed for title/category: ${error.message}. Trying fallbacks...`);
@@ -3317,7 +3321,8 @@
                         for (const fallback of fallbackModels) {
                             try {
                                 modelUsedForTitle = fallback; // Update model being used
-                                titleCategoryResult = await generateTitleAndCategory(finalMarkdownContent, modelUsedForTitle);
+                                // Use MARKDOWN content for title/category generation
+                                titleCategoryResult = await generateTitleAndCategory(state.bookData.content, modelUsedForTitle);
                                 console.log(`Fallback model ${modelUsedForTitle} succeeded for title/category.`);
                                 showToast(`Title/Category generated (Fallback: ${modelUsedForTitle}).`, 2000);
                                 break; // Success, exit loop
@@ -3356,11 +3361,22 @@
                     }
                     // --- END: AI Title and Category Generation ---
 
-                    // Process markdown into chapters (simple split for now, could be improved)
-                    // Treat major headings (##) as chapter breaks
-                    const lines = finalMarkdownContent.split('\n');
+                    // Create a single chapter containing the processed HTML content
+                    // The display logic will handle showing this HTML directly
+                    let chapters = [{
+                        title: state.bookData.title || 'Content',
+                        // Store the processed HTML content here for display
+                        content: state.bookData.processedHtmlContent,
+                        // Store the original markdown as well, maybe for metadata or alternative views
+                        markdownContent: state.bookData.content,
+                        startLine: 0, // Not really applicable for HTML blob
+                        endLine: 1    // Not really applicable
+                    }];
+
+                    /* // Old chapter splitting logic based on Markdown - REMOVED
+                    const lines = state.bookData.content.split('\n'); // Use markdown content for splitting
                     let chapters = [];
-                    let currentChapterContent = [];
+                    let currentChapterContent = []; // Stores markdown lines
                     let currentChapterTitle = state.bookData.title || 'Chapter 1';
                     let chapterIndex = 1;
 
@@ -3405,11 +3421,13 @@
                         });
                     }
 
+                    */
+
                     state.bookData.chapters = chapters;
 
-                    // --- Auto-enable Markdown mode for URL content ---
-                    state.settings.markdownModeEnabled = true;
-                    DOM.markdownModeToggle.checked = true;
+                    // --- Auto-enable Processed Content mode for URL content ---
+                    state.settings.useProcessedContent = true;
+                    DOM.useProcessedContentToggle.checked = true;
                     // --- End change ---
 
                     // Store the original URL
@@ -3755,11 +3773,19 @@
                     DOM.contentArea.style.fontSize = 'inherit'; // Use default browser font size for raw view
                     DOM.contentArea.style.lineHeight = 'inherit'; // Use default line height
 
-                } else if (state.settings.markdownModeEnabled) {
-                    // Render Markdown content (existing logic)
-                    let processedContent = contentToDisplay; // Use chapter.content here
+                } else if (state.settings.useProcessedContent) {
+                    // Directly insert the pre-processed HTML content
+                    // Assumes chapter.content now holds the cleaned HTML
+                    DOM.contentArea.innerHTML = contentToDisplay;
 
-                     // Apply heading markdown FIRST (important to do before paragraph/br logic)
+                    // Ensure wrapping works correctly, overriding potential inherited styles
+                    DOM.contentArea.style.whiteSpace = 'normal';
+                    DOM.contentArea.style.wordWrap = 'break-word';
+
+                    /* // Old Markdown rendering logic - REMOVED
+                    let processedContent = contentToDisplay;
+
+                    // Apply heading markdown FIRST (important to do before paragraph/br logic)
                     // Match headings at the beginning of a line
                     processedContent = processedContent.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
                     processedContent = processedContent.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
@@ -3791,16 +3817,12 @@
                     // Replace newline characters with <br> tags to preserve line breaks
                     processedContent = processedContent.replace(/\n/g, '<br>');
 
-                    // Set the innerHTML. Assumes the original markdown source is relatively safe
-                    // or that the potential harm from unescaped HTML (outside links/bold) is acceptable.
-                    DOM.contentArea.innerHTML = processedContent;
-
-                    // Ensure wrapping works correctly, overriding potential inherited styles
-                    DOM.contentArea.style.whiteSpace = 'normal';
-                    DOM.contentArea.style.wordWrap = 'break-word';
+                    */
 
                 } else {
-                    // Original HTML rendering logic
+                    // Original simple text/HTML rendering logic (fallback if not using processed content)
+                    // This part might need review if chapter.content could be complex HTML
+                    // For now, assume it's simple text or basic HTML from TXT/EPUB
                     const lines = chapter.content.split('\n');
                     let currentElement = null;
 
@@ -5296,15 +5318,16 @@ JSON Output:
                                 title: chapter.title,
                                 startLine: chapter.startLine,
                                 endLine: chapter.endLine,
-                                content: chapter.content // Include content for better offline experience
+                                content: chapter.content, // This might be HTML or Markdown depending on source
+                                markdownContent: chapter.markdownContent, // Store original markdown if available
+                                processedHtmlContent: chapter.content // If it's a URL book, content IS processed HTML
                             };
                         }),
-                        // --- Save Markdown mode preference ---
-                        markdownModeEnabled: state.settings.markdownModeEnabled,
+                        // --- Save Processed Content mode preference ---
+                        useProcessedContent: state.settings.useProcessedContent, // Renamed from markdownModeEnabled
                         // --- End change ---
                         sourceUrl: state.bookData.sourceUrl // Save the source URL
                     };
-                    
                     // Use enhanced position data if available, otherwise create basic position
                     const lastPosition = state.lastPosition || {
                         chapter: state.bookData.currentPosition,
@@ -6321,10 +6344,10 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 const speechLanguage = localStorage.getItem('speech-language') || 'en-US';
                 DOM.speechLanguage.value = speechLanguage;
 
-                // Load Markdown mode setting
-                const markdownModeEnabled = localStorage.getItem('markdown-mode-enabled') === 'true';
-                state.settings.markdownModeEnabled = markdownModeEnabled;
-                DOM.markdownModeToggle.checked = markdownModeEnabled;
+                // Load Processed Content mode setting
+                const useProcessedContentEnabled = localStorage.getItem('use-processed-content-enabled') === 'true';
+                state.settings.useProcessedContent = useProcessedContentEnabled;
+                DOM.useProcessedContentToggle.checked = useProcessedContentEnabled;
 
                 // Load Raw Content view setting
                 const viewRawContentEnabled = localStorage.getItem('view-raw-content-enabled') === 'true';
@@ -6389,11 +6412,11 @@ Format these questions EXACTLY like this, with no extra text before or after the
 
                     // Apply selected URL model from server removed
 
-                    // Apply Markdown mode
-                    if (prefs.markdownModeEnabled !== undefined) {
-                        state.settings.markdownModeEnabled = prefs.markdownModeEnabled;
-                        DOM.markdownModeToggle.checked = prefs.markdownModeEnabled;
-                        localStorage.setItem('markdown-mode-enabled', prefs.markdownModeEnabled);
+                    // Apply Processed Content mode
+                    if (prefs.useProcessedContent !== undefined) {
+                        state.settings.useProcessedContent = prefs.useProcessedContent;
+                        DOM.useProcessedContentToggle.checked = prefs.useProcessedContent;
+                        localStorage.setItem('use-processed-content-enabled', prefs.useProcessedContent);
                     }
 
                     // Apply Raw Content view toggle
@@ -6420,33 +6443,33 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 }
             }
 
-            // Clean Markdown using Gemini AI (accepts model name)
-            async function cleanMarkdownWithAI(rawMarkdown, modelName) {
+            // Clean HTML content using Gemini AI (accepts model name)
+            async function cleanContentWithAI(rawHtml, modelName) {
                 // Now has access to 'state'
                 if (!state.userApiSettings || !state.userApiSettings.api_key) {
                     throw new Error("Gemini API key not available.");
                 }
-            
+
                 const prompt = `
-You are an expert text processing AI. Your task is to clean up the following Markdown content, which was scraped from a webpage. Focus on extracting the main article content and improving its readability for an ebook reader.
+You are an expert HTML processing AI. Your task is to clean up the following raw HTML content, which was scraped from a webpage. Focus on extracting the main article content and returning it as clean, semantic HTML suitable for an ebook reader.
 
 Follow these instructions precisely:
-1.  **Identify and Remove Extraneous Elements:** Eliminate headers, footers, navigation menus, sidebars, advertisements, cookie notices, social media links, comment sections, and other non-essential clutter.
-2.  **Preserve Main Content:** Keep the core article text, including headings (like ##, ###), paragraphs, lists, blockquotes, and code blocks that belong to the main content.
-3.  **Format for Readability:** Ensure paragraphs are well-separated (usually by a single blank line). Maintain the original Markdown formatting for elements like bold (**text**), italics (*text*), and inline code (\`code\`).
+1.  **Identify and Remove Extraneous Elements:** Eliminate elements like <header>, <footer>, <nav>, <aside>, ads, cookie notices, social media widgets, comment sections, <script>, <style>, <link rel="stylesheet">, and other non-essential clutter. Remove unnecessary attributes like 'class', 'id' (unless essential for structure like footnotes), 'style', event handlers (onclick, etc.). Keep essential attributes like 'href' for <a> tags and 'src' for <img> tags.
+2.  **Preserve Main Content:** Keep the core article content, including headings (<h1>-<h6>), paragraphs (<p>), lists (<ul>, <ol>, <li>), blockquotes (<blockquote>), tables (<table>, <thead>, <tbody>, <tr>, <th>, <td>), code blocks (<pre>, <code>), and images (<img>) that belong to the main content. Ensure images have valid 'src' attributes.
+3.  **Format for Readability:** Ensure proper HTML structure. Use <p> tags for paragraphs. Use appropriate heading levels. Ensure lists are correctly structured.
 4.  **Link Handling:**
-    *   Keep relevant inline links within the main article body. Remove lists of navigation links or footer links.
-    *   **arXiv Citation Correction:** Identify citation links like \`[2024b](https://arxiv.org/pdf/some_id_vN#bib.bib27 "")\`. Then, locate the corresponding reference entry (often near the end of the document, associated with \`[27]\`) as the tag is "bib.bib27". Extract the *correct* arXiv ID (e.g., \`2408.11824\`) from that reference text (e.g., from "arXiv preprint arXiv:2408.11824, 2024b."). Construct the PDF link using the *extracted* ID (e.g., \`https://arxiv.org/pdf/2408.11824\`). Replace the original citation's URL with this newly constructed PDF link, resulting in \`[2024b](https://arxiv.org/pdf/2408.11824)\` instead of \`[2024b](https://arxiv.org/pdf/some_id_vN#bib.bib27 "")\`.
-5.  **Structure:** Try to maintain the logical structure of the article using Markdown headings.
-6.  **Remove Boilerplate/Noise:** Eliminate repetitive or useless text like "Report issue for preceding element", isolated backslash characters (\\) or sequences of them (\\\\), especially when they appear on their own lines or between paragraphs/images. Ensure surrounding text formatting remains correct.
-7.  **Output:** Return *only* the cleaned Markdown content. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned content:").
+    *   Keep relevant inline links (<a> tags) within the main article body. Remove lists of navigation links or footer links. Ensure 'href' attributes are preserved. Add 'target="_blank"' and 'rel="noopener noreferrer"' to all external links.
+    *   **arXiv Citation Correction:** Identify citation links like \`<a href="https://arxiv.org/pdf/some_id_vN#bib.bib27">2024b</a>\`. Locate the corresponding reference entry (often near the end, associated with \`[27]\` or similar). Extract the *correct* arXiv ID (e.g., \`2408.11824\`) from that reference text. Construct the correct PDF link (e.g., \`https://arxiv.org/pdf/2408.11824\`). Replace the original citation link's 'href' with this newly constructed PDF link.
+5.  **Structure:** Maintain the logical structure of the article using semantic HTML tags.
+6.  **Remove Boilerplate/Noise:** Eliminate repetitive text like "Report issue for preceding element", etc.
+7.  **Output:** Return *only* the cleaned HTML content, starting with the first relevant tag (e.g., <h1> or <p>) and ending with the last relevant tag. Do *not* include <!DOCTYPE>, <html>, <head>, or <body> tags. Do not include any introductory phrases, explanations, or apologies (e.g., do not start with "Here is the cleaned HTML:").
 
-Here is the raw Markdown content:
+Here is the raw HTML content:
 ---
-${rawMarkdown}
+${rawHtml}
 ---
-Cleaned Markdown Output:`;
-                
+Cleaned HTML Output:`;
+
                 // Use the configured model, or potentially default to 'gemini-2.0-flash' if appropriate
                 const modelToUse = modelName || state.userApiSettings.model || 'gemini-2.0-flash';
 
