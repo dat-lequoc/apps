@@ -3359,8 +3359,11 @@
                                 console.log(`Fallback model ${modelUsedForTitle} succeeded for title/category.`);
                                 showToast(`Title/Category generated (Fallback: ${modelUsedForTitle}).`, 2000);
                                 break; // Success, exit loop
-                            } catch (fallbackError) {
-                    }
+                            } catch (fallbackError) { // <-- This is the catch block
+                                console.warn(`Fallback model ${modelUsedForTitle} failed for title/category: ${fallbackError.message}`);
+                            } // <-- Added missing closing brace for the inner try block
+                        } // <-- This closes the for loop
+                    } // <-- This closes the else block
                     // If AI generation was skipped or failed, titleCategoryResult will hold {null, null}
 
                     const { generatedTitle, listId } = titleCategoryResult;
