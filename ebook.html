@@ -3296,16 +3296,23 @@
                         }
 
                         if (!cleaningSuccess) {
-                            showToast(`All AI cleaning attempts failed. Using raw scraped content.`, 3000);
-                            // Keep finalMarkdownContent as the original scraped markdown
+                            showToast(`All AI cleaning attempts failed. Using raw scraped HTML.`, 3000);
+                            // cleanedHtmlContent remains the original raw HTML
                         }
                         // --- End AI Cleaning with Fallback ---
+                    } else {
+                         // If cleaning was skipped, use the raw HTML content
+                         cleanedHtmlContent = response.data.content;
                     }
-                    // If cleaning was skipped, finalMarkdownContent remains the raw scraped markdown
 
-                    state.bookData.content = finalMarkdownContent; // Store final markdown (raw or cleaned)
+                    // Store the final HTML (cleaned or raw)
+                    state.bookData.processedHtmlContent = cleanedHtmlContent;
+                    // Store the raw markdown as fallback/alternative view if needed later
+                    state.bookData.content = response.data.markdown;
+
 
                     // --- START: AI Title and Category Generation (with fallback) ---
+                    // Generate title/category based on the MARKDOWN content for better semantic understanding
                     showToast('Generating title & category with AI...', 3000);
                     let titleCategoryResult = { generatedTitle: null, listId: null };
                     modelUsedForTitle = defaultModel; // Use default model for this task
@@ -5440,15 +5447,18 @@ JSON Output:
                     else {
                         throw new Error('Book content not available');
                     }
+                    // Store the processed HTML if available from metadata (for URL-loaded books)
+                    state.bookData.processedHtmlContent = book.metadata?.chapters?.[0]?.processedHtmlContent || null;
 
-                    // --- Restore Markdown mode preference ---
-                    if (book.metadata && book.metadata.markdownModeEnabled !== undefined) {
-                        state.settings.markdownModeEnabled = book.metadata.markdownModeEnabled;
+
+                    // --- Restore Processed Content mode preference ---
+                    if (book.metadata && book.metadata.useProcessedContent !== undefined) {
+                        state.settings.useProcessedContent = book.metadata.useProcessedContent;
                     } else {
                         // Default for older books or if not set
-                        state.settings.markdownModeEnabled = false;
+                        state.settings.useProcessedContent = false; // Default to not using processed content unless explicitly set
                     }
-                    DOM.markdownModeToggle.checked = state.settings.markdownModeEnabled;
+                    DOM.useProcessedContentToggle.checked = state.settings.useProcessedContent;
                     // --- End change ---
 
                     // Save last position data for restoration after render
