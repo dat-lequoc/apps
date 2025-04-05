@@ -6460,6 +6460,7 @@ Cleaned HTML Output:`;
                 }
             
                 const cleanedContent = response?.candidates?.[0]?.content?.parts?.[0]?.text;
+                console.log(cleanedContent);
             
                 if (!cleanedContent) {
                     throw new Error('AI returned no content.');
