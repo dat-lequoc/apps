@@ -295,19 +295,20 @@
             font-weight: 500;
         }
 
-        /* Badge Colors (Example cycle) - Using darker text colors for better contrast */
-        .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.2); border-color: rgba(52, 168, 83, 0.4); color: #137333; } /* Darker Green */
-        .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.2); border-color: rgba(251, 188, 5, 0.4); color: #b06000; } /* Darker Yellow/Orange */
-        .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.2); border-color: rgba(234, 67, 53, 0.4); color: #a50e0e; } /* Darker Red */
-        .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.2); border-color: rgba(66, 133, 244, 0.4); color: #1a73e8; } /* Darker Blue */
-        .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.2); border-color: rgba(156, 39, 176, 0.4); color: #6a1b9a; } /* Darker Purple */
+        /* Badge Colors (Example cycle) - Enhanced Contrast */
+        /* Dark Theme Text Colors (Brighter) */
+        .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.2); border-color: rgba(52, 168, 83, 0.4); color: #6fbf73; } /* Brighter Green Text */
+        .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.2); border-color: rgba(251, 188, 5, 0.4); color: #fdd663; } /* Brighter Yellow Text */
+        .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.2); border-color: rgba(234, 67, 53, 0.4); color: #f28b82; } /* Brighter Red Text */
+        .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.2); border-color: rgba(66, 133, 244, 0.4); color: #8ab4f8; } /* Brighter Blue Text */
+        .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.2); border-color: rgba(156, 39, 176, 0.4); color: #c58af9; } /* Brighter Purple Text */
 
-        /* Ensure sufficient contrast in light theme */
-        body.light-theme .list-badge[data-color-index="0"] { color: #0d652d; }
-        body.light-theme .list-badge[data-color-index="1"] { color: #995200; }
-        body.light-theme .list-badge[data-color-index="2"] { color: #940a0a; }
-        body.light-theme .list-badge[data-color-index="3"] { color: #0b57d0; }
-        body.light-theme .list-badge[data-color-index="4"] { color: #58117a; }
+        /* Ensure sufficient contrast in light theme - Using Darker Text & Lighter Backgrounds */
+        body.light-theme .list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.1); border-color: rgba(52, 168, 83, 0.2); color: #0d652d; } /* Dark Green Text */
+        body.light-theme .list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.1); border-color: rgba(251, 188, 5, 0.2); color: #995200; } /* Dark Yellow/Orange Text */
+        body.light-theme .list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.1); border-color: rgba(234, 67, 53, 0.2); color: #940a0a; } /* Dark Red Text */
+        body.light-theme .list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.1); border-color: rgba(66, 133, 244, 0.2); color: #0b57d0; } /* Dark Blue Text */
+        body.light-theme .list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.1); border-color: rgba(156, 39, 176, 0.2); color: #58117a; } /* Dark Purple Text */
 
         .list-badge.active[data-color-index="0"],
         .list-badge.active[data-color-index="1"],
@@ -487,19 +488,20 @@
             text-overflow: ellipsis;
             flex-shrink: 0; /* Prevent shrinking */
         }
-        /* Apply colors to the small library item badges */
-        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #137333; } /* Darker Green */
-        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #b06000; } /* Darker Yellow/Orange */
-        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #a50e0e; } /* Darker Red */
-        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #1a73e8; } /* Darker Blue */
-        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #6a1b9a; } /* Darker Purple */
+        /* Apply colors to the small library item badges - Enhanced Contrast */
+        /* Dark Theme Text Colors */
+        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #6fbf73; } /* Brighter Green Text */
+        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #fdd663; } /* Brighter Yellow Text */
+        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #f28b82; } /* Brighter Red Text */
+        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #8ab4f8; } /* Brighter Blue Text */
+        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #c58af9; } /* Brighter Purple Text */
 
-        /* Ensure sufficient contrast in light theme for small badges */
-        body.light-theme .library-item-list-badge[data-color-index="0"] { color: #0d652d; }
-        body.light-theme .library-item-list-badge[data-color-index="1"] { color: #995200; }
-        body.light-theme .library-item-list-badge[data-color-index="2"] { color: #940a0a; }
-        body.light-theme .library-item-list-badge[data-color-index="3"] { color: #0b57d0; }
-        body.light-theme .library-item-list-badge[data-color-index="4"] { color: #58117a; }
+        /* Ensure sufficient contrast in light theme for small badges - Using Darker Text */
+        body.light-theme .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.1); border-color: rgba(52, 168, 83, 0.2); color: #0d652d; } /* Dark Green Text */
+        body.light-theme .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.1); border-color: rgba(251, 188, 5, 0.2); color: #995200; } /* Dark Yellow/Orange Text */
+        body.light-theme .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.1); border-color: rgba(234, 67, 53, 0.2); color: #940a0a; } /* Dark Red Text */
+        body.light-theme .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.1); border-color: rgba(66, 133, 244, 0.2); color: #0b57d0; } /* Dark Blue Text */
+        body.light-theme .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.1); border-color: rgba(156, 39, 176, 0.2); color: #58117a; } /* Dark Purple Text */
 
         /* Adjust title container to accommodate badge */
         .library-item-title-container {
@@ -523,19 +525,20 @@
             text-overflow: ellipsis;
             flex-shrink: 0; /* Prevent shrinking */
         }
-        /* Apply colors to the small library item badges */
-        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #137333; } /* Darker Green */
-        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #b06000; } /* Darker Yellow/Orange */
-        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #a50e0e; } /* Darker Red */
-        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #1a73e8; } /* Darker Blue */
-        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #6a1b9a; } /* Darker Purple */
+        /* Apply colors to the small library item badges - Enhanced Contrast */
+        /* Dark Theme Text Colors */
+        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #6fbf73; } /* Brighter Green Text */
+        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #fdd663; } /* Brighter Yellow Text */
+        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #f28b82; } /* Brighter Red Text */
+        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #8ab4f8; } /* Brighter Blue Text */
+        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #c58af9; } /* Brighter Purple Text */
 
-        /* Ensure sufficient contrast in light theme for small badges */
-        body.light-theme .library-item-list-badge[data-color-index="0"] { color: #0d652d; }
-        body.light-theme .library-item-list-badge[data-color-index="1"] { color: #995200; }
-        body.light-theme .library-item-list-badge[data-color-index="2"] { color: #940a0a; }
-        body.light-theme .library-item-list-badge[data-color-index="3"] { color: #0b57d0; }
-        body.light-theme .library-item-list-badge[data-color-index="4"] { color: #58117a; }
+        /* Ensure sufficient contrast in light theme for small badges - Using Darker Text */
+        body.light-theme .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.1); border-color: rgba(52, 168, 83, 0.2); color: #0d652d; } /* Dark Green Text */
+        body.light-theme .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.1); border-color: rgba(251, 188, 5, 0.2); color: #995200; } /* Dark Yellow/Orange Text */
+        body.light-theme .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.1); border-color: rgba(234, 67, 53, 0.2); color: #940a0a; } /* Dark Red Text */
+        body.light-theme .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.1); border-color: rgba(66, 133, 244, 0.2); color: #0b57d0; } /* Dark Blue Text */
+        body.light-theme .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.1); border-color: rgba(156, 39, 176, 0.2); color: #58117a; } /* Dark Purple Text */
 
         /* Adjust title container to accommodate badge */
         .library-item-title-container {
@@ -1955,7 +1958,7 @@
         .chat-message {
             padding: 0.6rem 0.9rem;
             border-radius: 8px;
-            max-width: 80%; /* Slightly reduce max width */
+            max-width: 80%; /* Default max width for messages */
             word-wrap: break-word;
             line-height: 1.5;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow */
@@ -1975,6 +1978,7 @@
             align-self: flex-start; /* Align assistant messages to the left */
             border-bottom-left-radius: 2px;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1); /* Subtle shadow */
+            max-width: 100%; /* Override default max-width for assistant messages */
         }
 
         /* Style links within assistant messages */
@@ -2287,7 +2291,7 @@
             </div>
             <div id="chat-messages">
                 <!-- Chat messages will be populated here -->
-                <div class="chat-message assistant">Hello! Ask me anything about the full document (or toggle 'Use Full Document' above to focus on the current chapter).</div>
+                <div class="chat-message assistant">Hello! Ask me anything about the full document <br> (or toggle 'Use Full Document' above to focus on the current chapter).</div>
             </div>
             <div id="chat-input-area">
                 <!-- Suggested Questions Area -->
@@ -5674,7 +5678,7 @@ JSON Output:
                     const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).
 Your primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.
 Be concise and accurate. 
-Use Markdown for formatting (like **bold**).
+Use Markdown for formatting (like **bold**). Use new lines for paragraphs, bullet points, if applicable to make it easier to read.
 Remember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.
 
 **IMPORTANT - Follow-up Questions:**
