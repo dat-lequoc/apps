@@ -2108,11 +2108,7 @@
                             <button type="button" id="process-url-btn" class="button">Read URL</button>
                         </div>
                     </div>
-                    <!-- AI Cleaning Toggle -->
-                    <div class="settings-row" style="justify-content: flex-start; gap: 0.5rem; margin-top: 0.5rem;">
-                        <input type="checkbox" id="clean-url-content-toggle" checked>
-                        <label for="clean-url-content-toggle" style="font-size: 0.9rem; color: var(--text-muted);">Clean & Extract Main Article (AI)</label>
-                    </div>
+                    <!-- AI Cleaning Toggle Removed -->
 
                     <!-- Text Input Group (Initially hidden) -->
                     <div id="toggle-text-input-container">
@@ -2229,10 +2225,10 @@
                 </div>
 
                 <div class="settings-section">
-                    <div class="settings-title">Content Processing</div>
+                    <div class="settings-title">Content View (URLs)</div> <!-- Updated Title -->
                     <div class="settings-row">
-                        <label for="use-processed-content-toggle">Use AI Processed Content (HTML)</label>
-                        <input type="checkbox" id="use-processed-content-toggle">
+                        <label for="prefer-html-view-toggle">Prefer HTML View</label> <!-- Updated Label & For -->
+                        <input type="checkbox" id="prefer-html-view-toggle"> <!-- Updated ID -->
                     </div>
                 </div>
                 <div class="settings-section"> <!-- Added Raw Content Toggle Section -->
@@ -2407,9 +2403,9 @@
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
-                useProcessedContentToggle: document.getElementById('use-processed-content-toggle'), // Renamed from markdown-mode-toggle
+                preferHtmlViewToggle: document.getElementById('prefer-html-view-toggle'), // Renamed from use-processed-content-toggle
                 viewRawContentToggle: document.getElementById('view-raw-content-toggle'), // Added Raw Content toggle
-                cleanUrlContentToggle: document.getElementById('clean-url-content-toggle'), // Added URL cleaning toggle
+                // cleanUrlContentToggle removed
                 sourceUrlDisplay: document.getElementById('source-url-display'),      // Added source URL display area in content
                 sourceUrlContentLink: document.getElementById('source-url-content-link'), // Added source URL link in content area
                 // listFilter: document.getElementById('list-filter'), // Removed list filter dropdown
@@ -2454,7 +2450,7 @@
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
-                    useProcessedContent: false, // Replaced markdownModeEnabled
+                    preferHtmlView: false, // Renamed from useProcessedContent
                     // selectedUrlModel removed, hardcoded to 'gemini-2.0-flash-thinking-exp-01-21'
                     viewRawContentEnabled: false, // Added Raw Content view setting
                     speakSelectionEnabled: false // Added Speak Selection setting
@@ -2559,11 +2555,11 @@
                         saveUserPreferences();
                     });
                 });
-
-                // Use Processed Content Toggle (formerly Markdown Mode)
-                DOM.useProcessedContentToggle.addEventListener('change', function() {
-                    state.settings.useProcessedContent = this.checked;
-                    // Disable raw view if processed content is off, enable processed if raw is on
+                
+                // Prefer HTML View Toggle (formerly Use Processed Content)
+                DOM.preferHtmlViewToggle.addEventListener('change', function() {
+                    state.settings.preferHtmlView = this.checked;
+                    // If HTML view is turned off, also turn off raw view
                     if (!this.checked) {
                         DOM.viewRawContentToggle.checked = false;
                         state.settings.viewRawContentEnabled = false;
@@ -2575,10 +2571,10 @@
                 // View Raw Content Toggle
                 DOM.viewRawContentToggle.addEventListener('change', function() {
                     state.settings.viewRawContentEnabled = this.checked;
-                     // Automatically enable Processed Content view if raw view is enabled
+                     // Automatically enable HTML view if raw view is enabled
                     if (this.checked) {
-                        DOM.useProcessedContentToggle.checked = true;
-                        state.settings.useProcessedContent = true;
+                        DOM.preferHtmlViewToggle.checked = true;
+                        state.settings.preferHtmlView = true;
                     }
                     displayCurrentChapter(); // Re-render content
                     saveUserPreferences();
@@ -3194,17 +3190,66 @@
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${apiKey}`
                         },
-                        body: JSON.stringify({ url: url })
+                        body: JSON.stringify({
+                            url: url,
+                            pageOptions: {
+                                onlyMainContent: false // Ensure we get full HTML if needed
+                            },
+                            extractorOptions: {
+                                extractionSchema: 'markdown' // Still useful for metadata/fallback
+                            },
+                            crawlerOptions: {
+                                returnOnlyUrls: false
+                            }
+                        })
                     });
 
+                    // Fetch HTML content separately using Firecrawl's scrape endpoint
+                    // Note: This assumes your API key allows multiple calls or you adjust logic
+                    // Alternatively, if Firecrawl API allows requesting both in one call, adjust above.
+                    // For now, let's assume we need a second call or the first call returns both.
+                    // Let's modify the first call to request both formats if possible.
+                    const scrapeResponse = await fetch('https://api.firecrawl.dev/v0/scrape', {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'Authorization': `Bearer ${apiKey}`
+                         },
+                         body: JSON.stringify({
+                             url: url,
+                             pageOptions: {
+                                onlyMainContent: false // Get full HTML
+                             }
+                         })
+                     });
+
+                    if (!scrapeResponse.ok) {
+                        const errorData = await scrapeResponse.json();
+                        throw new Error(errorData.error || `Firecrawl HTML scrape failed with status ${scrapeResponse.status}`);
+                    }
+                    const scrapeData = await scrapeResponse.json();
+                    const htmlContent = scrapeData.data?.content; // Get the raw HTML
+
+                    // Check the original markdown response as well for metadata/fallback
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.error || `Firecrawl API request failed with status ${response.status}`);
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Firecrawl Markdown request failed with status ${response.status}`);
                     }
-                    
-                    return await response.json();
+                    const markdownData = await response.json();
+
+                    // Combine results: prioritize HTML, use Markdown for metadata/fallback
+                    return {
+                        success: true, // Assume success if HTML fetch worked
+                        data: {
+                            content: htmlContent || '', // Raw HTML
+                            markdown: markdownData.data?.markdown || '', // Markdown fallback
+                            metadata: markdownData.data?.metadata || scrapeData.data?.metadata || {} // Merge metadata
+                        }
+                    };
+
                 } catch (error) {
-                    console.error('Error calling Firecrawl API:', error);
+                    console.error('Error calling Firecrawl API:', error); // Log combined error
                     // More detailed error logging
                     console.error('Error details during Firecrawl API call:', error);
                     return { error: { message: error.message || 'Failed to connect to Firecrawl API' } };
@@ -3256,76 +3301,55 @@
 
                     if (!response.data || !response.data.markdown) {
                         throw new Error('No markdown content received from Firecrawl.');
+                        throw new Error('No HTML content received from Firecrawl.');
+                    }
+                    if (!response.data || !response.data.markdown) {
+                        console.warn('No markdown content received from Firecrawl. Title generation might be less accurate.');
+                        // Proceed without markdown if necessary
                     }
 
-                    let finalMarkdownContent = response.data.markdown;
-                    // Initialize cleanedHtmlContent with the raw HTML from Firecrawl
-                    let cleanedHtmlContent = response.data.content; 
+                    // Store the raw HTML directly
+                    const rawHtmlContent = response.data.content;
+                    const rawMarkdownContent = response.data.markdown || ''; // Use markdown or empty string
 
-                    // --- AI Cleaning (with fallback) ---
-                    if (DOM.cleanUrlContentToggle.checked) {
-                        showToast('Cleaning content with AI...', 3000);
-                        // Ensure Gemini API is available
-                        if (!state.userApiSettings || !state.userApiSettings.api_key) {
-                            throw new Error('Gemini API key not configured. Cannot clean content.');
-                        }
+                    // Store HTML for display and raw view
+                    state.bookData.processedHtmlContent = rawHtmlContent;
+                    state.bookData.rawContent = rawHtmlContent; // Raw view now shows the same HTML
+                    // Store markdown as fallback/metadata source
+                    state.bookData.content = rawMarkdownContent;
 
-                        // --- Try cleaning with default model, then fallbacks ---
-                        let cleaningSuccess = false;
-                        // cleanedHtmlContent is already initialized above
-                        try {
-                            modelUsedForCleaning = defaultModel; // Start with default
-                            // Pass raw HTML (response.data.content) to the cleaning function, update cleanedHtmlContent
-                            cleanedHtmlContent = await cleanContentWithAI(response.data.content, modelUsedForCleaning);
-                            showToast(`AI cleaning complete (Model: ${modelUsedForCleaning}).`, 2000);
-                            cleaningSuccess = true;
-                        } catch (aiError) {
-                            console.warn(`Model ${modelUsedForCleaning} failed for cleaning: ${aiError.message}. Trying fallbacks...`);
-                            showToast(`Model ${modelUsedForCleaning} failed cleaning. Trying fallbacks...`, 2500);
-
-                            for (const fallback of fallbackModels) {
-                                try {
-                                    modelUsedForCleaning = fallback; // Update model being used
-                                    // Pass raw HTML (response.data.content) to the cleaning function
-                                    cleanedHtmlContent = await cleanContentWithAI(response.data.content, modelUsedForCleaning);
-                                    showToast(`AI cleaning complete (Fallback: ${modelUsedForCleaning}).`, 2000);
-                                    cleaningSuccess = true;
-                                    break; // Success, exit loop
-                                } catch (fallbackError) {
-                                    console.warn(`Fallback model ${modelUsedForCleaning} failed for cleaning: ${fallbackError.message}`);
-                                }
-                            }
-                        }
-
-                        if (!cleaningSuccess) {
-                            showToast(`All AI cleaning attempts failed. Using raw scraped HTML.`, 3000);
-                            // cleanedHtmlContent remains the original raw HTML
-                        }
-                        // --- End AI Cleaning with Fallback ---
-                    } else {
-                         // If cleaning was skipped, use the raw HTML content
-                         cleanedHtmlContent = response.data.content;
-                    }
-
-                    // Store the final HTML (cleaned or raw)
-                    state.bookData.processedHtmlContent = cleanedHtmlContent;
-                    // Store the raw markdown as fallback/alternative view if needed later
-                    state.bookData.content = response.data.markdown;
-
-
-                    // --- START: AI Title and Category Generation (with fallback) ---
-                    // Generate title/category based on the MARKDOWN content for better semantic understanding
+                    // --- AI Title and Category Generation (using Markdown if available) ---
+                    // Generate title/category based on the MARKDOWN content (if available) for better semantic understanding
                     showToast('Generating title & category with AI...', 3000);
                     let titleCategoryResult = { generatedTitle: null, listId: null };
                     modelUsedForTitle = defaultModel; // Use default model for this task
 
-                    try {
-                        // Use MARKDOWN content for title/category generation
-                        titleCategoryResult = await generateTitleAndCategory(state.bookData.content, modelUsedForTitle);
-                        showToast(`Title/Category generated (Model: ${modelUsedForTitle}).`, 2000);
-                    } catch (error) {
-                        console.warn(`Model ${modelUsedForTitle} failed for title/category: ${error.message}. Trying fallbacks...`);
-                        showToast(`Model ${modelUsedForTitle} failed title/cat. Trying fallbacks...`, 2500);
+                    // Only attempt AI title/category if markdown content exists
+                    if (state.bookData.content) {
+                        showToast('Generating title & category with AI...', 3000);
+                        try {
+                            // Use MARKDOWN content for title/category generation
+                            titleCategoryResult = await generateTitleAndCategory(state.bookData.content, modelUsedForTitle);
+                            showToast(`Title/Category generated (Model: ${modelUsedForTitle}).`, 2000);
+                        } catch (error) {
+                            console.warn(`Model ${modelUsedForTitle} failed for title/category: ${error.message}. Trying fallbacks...`);
+                            showToast(`Model ${modelUsedForTitle} failed title/cat. Trying fallbacks...`, 2500);
+                            // Try fallback models
+                            for (const fallback of fallbackModels) {
+                                try {
+                                    modelUsedForTitle = fallback; // Update model being used
+                                    // Use MARKDOWN content for title/category generation
+                                    titleCategoryResult = await generateTitleAndCategory(state.bookData.content, modelUsedForTitle);
+                                    console.log(`Fallback model ${modelUsedForTitle} succeeded for title/category.`);
+                                    showToast(`Title/Category generated (Fallback: ${modelUsedForTitle}).`, 2000);
+                                    break; // Success, exit loop
+                                } catch (fallbackError) {
+                                    console.warn(`Fallback model ${modelUsedForTitle} failed for title/category: ${fallbackError.message}`);
+                                }
+                            }
+                        }
+                    } else {
+                        showToast('Skipping AI title/category generation (no markdown content).', 2000);
                         // Try fallback models
                         for (const fallback of fallbackModels) {
                             try {
@@ -3336,11 +3360,8 @@
                                 showToast(`Title/Category generated (Fallback: ${modelUsedForTitle}).`, 2000);
                                 break; // Success, exit loop
                             } catch (fallbackError) {
-                                console.warn(`Fallback model ${modelUsedForTitle} failed for title/category: ${fallbackError.message}`);
-                            }
-                        }
                     }
-                    // If all models failed, titleCategoryResult will still hold the last failure's default {null, null}
+                    // If AI generation was skipped or failed, titleCategoryResult will hold {null, null}
 
                     const { generatedTitle, listId } = titleCategoryResult;
 
@@ -3370,16 +3391,13 @@
                     }
                     // --- END: AI Title and Category Generation ---
 
-                    // Create a single chapter containing the processed HTML content
-                    // The display logic will handle showing this HTML directly
+                    // Create a single chapter containing the HTML and Markdown content
                     let chapters = [{
                         title: state.bookData.title || 'Content',
-                        // Store the processed HTML content here for display
-                        content: state.bookData.processedHtmlContent,
-                        // Store the original markdown as well, maybe for metadata or alternative views
-                        markdownContent: state.bookData.content,
-                        startLine: 0, // Not really applicable for HTML blob
-                        endLine: 1    // Not really applicable
+                        content: state.bookData.processedHtmlContent, // Store the HTML content
+                        markdownContent: state.bookData.content,      // Store the Markdown content
+                        startLine: 0, // Not applicable for HTML blob
+                        endLine: 1    // Not applicable
                     }];
 
                     /* // Old chapter splitting logic based on Markdown - REMOVED
@@ -3434,9 +3452,9 @@
 
                     state.bookData.chapters = chapters;
 
-                    // --- Auto-enable Processed Content mode for URL content ---
-                    state.settings.useProcessedContent = true;
-                    DOM.useProcessedContentToggle.checked = true;
+                    // --- Auto-enable HTML View mode for URL content ---
+                    state.settings.preferHtmlView = true;
+                    DOM.preferHtmlViewToggle.checked = true;
                     // --- End change ---
 
                     // Store the original URL
@@ -3487,37 +3505,28 @@
                     if (!response.data || !response.data.markdown) {
                         throw new Error('No content received from Firecrawl.');
                     }
-    
+
                     const rawHtmlContent = response.data.content; // Capture raw HTML
-                    let markdownContent = response.data.markdown; // Initial Markdown
+                    const markdownContent = response.data.markdown || ''; // Capture Markdown or empty string
                     const scrapedTitle = (response.data.metadata && response.data.metadata.title) || url;
-    
-                    // 3. Optionally clean content with AI
-                    if (canClean) {
-                        showToast(`Cleaning content for "${scrapedTitle}"...`, 3000);
-                        try {
-                            finalMarkdownContent = await cleanMarkdownWithAI(finalMarkdownContent);
-                            showToast('AI cleaning complete.', 2000);
-                        } catch (aiError) {
-                            console.error('AI Cleaning Error:', aiError);
-                            showToast(`AI cleaning failed: ${aiError.message}. Saving raw content.`, 3000);
-                        }
-                    }
+
+                    // 3. AI Cleaning step removed
 
                     // 4. Prepare book data for saving
                     const scrapedBookData = {
                         title: scrapedTitle,
-                        content: markdownContent, // Store the cleaned/final markdown
+                        content: markdownContent, // Store the Markdown content (for potential future use/search)
                         raw_content: rawHtmlContent, // Store the raw HTML content
                         file_type: 'url', // Indicate it came from a URL scrape
                         metadata: {
-                            chapters: [{ // Create a single chapter based on finalMarkdownContent
-                                title: 'Content', // Use a generic title for the single chapter
-                                content: markdownContent, // Include content here too
+                            chapters: [{ // Create a single chapter
+                                title: 'Content', // Use a generic title
+                                content: rawHtmlContent, // Store HTML content for display
+                                markdownContent: markdownContent, // Store Markdown content as well
                                 startLine: 0,
-                                endLine: markdownContent.split('\n').length
+                                endLine: 1 // Not really applicable
                             }],
-                            markdownModeEnabled: true // Always enable markdown for scraped content
+                            preferHtmlView: true // Default to HTML view for scraped content
                         },
                         last_position: { // Default starting position
                             chapter: 0,
@@ -3737,87 +3746,62 @@
                 // Update chapter title in navbar, making it clickable if sourceUrl exists
                 const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title}`;
                 if (state.bookData.sourceUrl) {
-                    // Use escapeHTML for both the URL and the text content, set color to primary blue
                     DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`;
-                    DOM.bookTitle.style.cursor = 'pointer'; // Add pointer cursor
+                    DOM.bookTitle.style.cursor = 'pointer';
                 } else {
-                    // Ensure content is escaped even when not a link
                     DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText);
-                    DOM.bookTitle.style.cursor = 'default'; // Reset cursor
+                    DOM.bookTitle.style.cursor = 'default';
                 }
 
-                // Determine which content to display
-                let contentToDisplay = chapter.content; // Default to processed chapter content
-                let isRawHtml = false;
-
-                // Check if raw view is enabled AND raw content exists for this book
-                if (state.settings.viewRawContentEnabled && state.bookData.rawContent) {
-                    contentToDisplay = state.bookData.rawContent;
-                    isRawHtml = true; // Indicate that we are displaying raw HTML
-                    // Ensure Markdown mode is visually checked if raw is enabled
-                    DOM.markdownModeToggle.checked = true;
-                    state.settings.markdownModeEnabled = true;
-                } else {
-                    // If raw view is disabled, ensure the toggle reflects this
-                    DOM.viewRawContentToggle.checked = false;
-                    state.settings.viewRawContentEnabled = false;
-                }
-
-                // Disable raw content toggle if the book doesn't have raw content
+                // Disable raw content toggle if the book doesn't have raw content (HTML from Firecrawl)
                 DOM.viewRawContentToggle.disabled = !state.bookData.rawContent;
                 DOM.viewRawContentToggle.closest('.settings-row').title = !state.bookData.rawContent
                     ? "Raw content view only available for books added via URL."
                     : "View the original scraped HTML content.";
-                // Render content based on mode (Raw HTML or Processed Markdown/HTML)
-                if (isRawHtml) {
-                    // Display raw content as plain text for safety and clarity
+
+                // --- Simplified Rendering Logic ---
+                if (state.settings.viewRawContentEnabled && state.bookData.rawContent) {
+                    // Display raw HTML content as plain text
                     const pre = document.createElement('pre');
-                    pre.style.whiteSpace = 'pre-wrap'; // Allow wrapping
-                    pre.style.wordBreak = 'break-all'; // Break long lines
-                    pre.textContent = contentToDisplay;
+                    pre.style.whiteSpace = 'pre-wrap';
+                    pre.style.wordBreak = 'break-all';
+                    pre.textContent = state.bookData.rawContent; // Use rawContent which holds the HTML
                     DOM.contentArea.appendChild(pre);
-                    // Ensure raw view doesn't inherit reader font size/line height directly
-                    DOM.contentArea.style.fontSize = 'inherit'; // Use default browser font size for raw view
-                    DOM.contentArea.style.lineHeight = 'inherit'; // Use default line height
+                    // Reset reader styles for raw view
+                    DOM.contentArea.style.fontSize = 'inherit';
+                    DOM.contentArea.style.lineHeight = 'inherit';
 
-                } else if (state.settings.useProcessedContent) {
-                    // Directly insert the pre-processed HTML content
-                    // Assumes chapter.content now holds the cleaned HTML
-                    DOM.contentArea.innerHTML = contentToDisplay;
-
-                    // Ensure wrapping works correctly, overriding potential inherited styles
+                } else if (state.settings.preferHtmlView && chapter.content) {
+                    // Display the fetched HTML content directly
+                    DOM.contentArea.innerHTML = chapter.content; // chapter.content holds the HTML
+                    // Apply reader styles
+                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
+                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
+                    // Ensure wrapping works correctly
                     DOM.contentArea.style.whiteSpace = 'normal';
                     DOM.contentArea.style.wordWrap = 'break-word';
 
-
-
-                } else {
-                    // Original simple text/HTML rendering logic (fallback if not using processed content)
-                    // This part might need review if chapter.content could be complex HTML
-                    // For now, assume it's simple text or basic HTML from TXT/EPUB
-                    const lines = chapter.content.split('\n');
+                } else if (chapter.markdownContent) {
+                    // Fallback: Render Markdown content if HTML view is off or HTML content is missing
+                    const lines = chapter.markdownContent.split('\n');
                     let currentElement = null;
 
                     lines.forEach((line, index) => {
-                        // ... (keep existing HTML rendering logic here) ...
                         const trimmedLine = line.trim();
-
-                        if (trimmedLine.startsWith('# ')) { // H1
+                        // Basic Markdown to HTML conversion (same as before)
+                        if (trimmedLine.startsWith('# ')) {
                             const h = document.createElement('h1');
                             h.textContent = trimmedLine.substring(2).trim();
-                            DOM.contentArea.appendChild(h);
-                            currentElement = null;
-                        } else if (trimmedLine.startsWith('## ')) { // H2
+                            DOM.contentArea.appendChild(h); currentElement = null;
+                        } else if (trimmedLine.startsWith('## ')) {
                             const h = document.createElement('h2');
                             h.textContent = trimmedLine.substring(3).trim();
-                            DOM.contentArea.appendChild(h);
-                            currentElement = null;
-                        } else if (trimmedLine.startsWith('### ')) { // H3
+                            DOM.contentArea.appendChild(h); currentElement = null;
+                        } else if (trimmedLine.startsWith('### ')) {
                             const h = document.createElement('h3');
                             h.textContent = trimmedLine.substring(4).trim();
-                            DOM.contentArea.appendChild(h);
-                            currentElement = null;
-                        } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) { // List item
+                            DOM.contentArea.appendChild(h); currentElement = null;
+                        } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
                             if (!currentElement || currentElement.tagName !== 'UL') {
                                 currentElement = document.createElement('ul');
                                 DOM.contentArea.appendChild(currentElement);
@@ -3825,31 +3809,31 @@
                             const li = document.createElement('li');
                             li.textContent = trimmedLine.substring(2).trim();
                             currentElement.appendChild(li);
-                        } else if (trimmedLine === '---' || trimmedLine === '***') { // Horizontal rule
-                            DOM.contentArea.appendChild(document.createElement('hr'));
-                            currentElement = null;
-                        } else if (trimmedLine) { // Paragraph
+                        } else if (trimmedLine === '---' || trimmedLine === '***') {
+                            DOM.contentArea.appendChild(document.createElement('hr')); currentElement = null;
+                        } else if (trimmedLine) {
                             const p = document.createElement('p');
-                            // Basic inline markdown (bold, italic) - could be expanded
                             let processedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
                             processedLine = processedLine.replace(/\*(.*?)\*/g, '<em>$1</em>');
-                            p.innerHTML = processedLine; // Use innerHTML for basic formatting
-                            p.setAttribute('data-p-index', index); // Add index for position tracking
-                            DOM.contentArea.appendChild(p);
-                            currentElement = null;
+                            p.innerHTML = processedLine;
+                            p.setAttribute('data-p-index', index);
+                            DOM.contentArea.appendChild(p); currentElement = null;
                         } else if (currentElement && currentElement.tagName === 'P') {
-                             // Add extra space after a paragraph if followed by a blank line
-                             DOM.contentArea.appendChild(document.createElement('br'));
-                             currentElement = null;
+                            DOM.contentArea.appendChild(document.createElement('br')); currentElement = null;
                         } else if (!currentElement) {
-                             // Add single break for consecutive blank lines outside paragraphs/lists
-                             DOM.contentArea.appendChild(document.createElement('br'));
+                            DOM.contentArea.appendChild(document.createElement('br'));
                         }
                     });
-                    // Apply reader font size/line height for non-raw views
+                    // Apply reader styles
                     DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
                     DOM.contentArea.style.lineHeight = state.settings.lineHeight;
-                } // End of the 'else' block for HTML rendering
+                } else {
+                    // Ultimate fallback if no content available
+                    DOM.contentArea.innerHTML = '<p>Content not available.</p>';
+                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
+                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
+                }
+                // --- End Simplified Rendering Logic ---
 
                 // Initially scroll to top (will be updated if restoring position)
                 DOM.contentArea.scrollTop = 0;
@@ -5290,13 +5274,13 @@ JSON Output:
                                 title: chapter.title,
                                 startLine: chapter.startLine,
                                 endLine: chapter.endLine,
-                                content: chapter.content, // This might be HTML or Markdown depending on source
-                                markdownContent: chapter.markdownContent, // Store original markdown if available
-                                processedHtmlContent: chapter.content // If it's a URL book, content IS processed HTML
+                                content: chapter.content, // Store HTML content
+                                markdownContent: chapter.markdownContent // Store Markdown content
+                                // processedHtmlContent removed as chapter.content is now the HTML
                             };
                         }),
-                        // --- Save Processed Content mode preference ---
-                        useProcessedContent: state.settings.useProcessedContent, // Renamed from markdownModeEnabled
+                        // --- Save Prefer HTML View mode preference ---
+                        preferHtmlView: state.settings.preferHtmlView, // Renamed from useProcessedContent
                         // --- End change ---
                         sourceUrl: state.bookData.sourceUrl // Save the source URL
                     };
@@ -5413,17 +5397,17 @@ JSON Output:
                         throw new Error('Book content not available');
                     }
                     // Store the processed HTML if available from metadata (for URL-loaded books)
-                    state.bookData.processedHtmlContent = book.metadata?.chapters?.[0]?.processedHtmlContent || null;
+                    // state.bookData.processedHtmlContent removed as chapter.content holds the HTML
 
 
-                    // --- Restore Processed Content mode preference ---
-                    if (book.metadata && book.metadata.useProcessedContent !== undefined) {
-                        state.settings.useProcessedContent = book.metadata.useProcessedContent;
+                    // --- Restore Prefer HTML View mode preference ---
+                    if (book.metadata && book.metadata.preferHtmlView !== undefined) {
+                        state.settings.preferHtmlView = book.metadata.preferHtmlView;
                     } else {
-                        // Default for older books or if not set
-                        state.settings.useProcessedContent = false; // Default to not using processed content unless explicitly set
+                        // Default for older books or if not set (default to true for URL types)
+                        state.settings.preferHtmlView = (book.file_type === 'url');
                     }
-                    DOM.useProcessedContentToggle.checked = state.settings.useProcessedContent;
+                    DOM.preferHtmlViewToggle.checked = state.settings.preferHtmlView;
                     // --- End change ---
 
                     // Save last position data for restoration after render
@@ -6224,7 +6208,7 @@ Format these questions EXACTLY like this, with no extra text before or after the
                     lineHeight: state.settings.lineHeight,
                     theme: state.settings.theme,
                     // selectedUrlModel removed
-                    markdownModeEnabled: state.settings.markdownModeEnabled, // Added Markdown mode
+                    preferHtmlView: state.settings.preferHtmlView, // Renamed from markdownModeEnabled/useProcessedContent
                     viewRawContentEnabled: state.settings.viewRawContentEnabled, // Added Raw Content view
                     translationEnabled: DOM.translationToggle.checked,
                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
@@ -6237,8 +6221,8 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
                 localStorage.setItem('ebook-theme', preferences.theme);
                 // localStorage selected-url-model removed
-                // --- Save Processed Content mode preference ---
-                localStorage.setItem('use-processed-content-enabled', preferences.useProcessedContent); // Renamed from markdown-mode-enabled
+                // --- Save Prefer HTML View mode preference ---
+                localStorage.setItem('prefer-html-view-enabled', preferences.preferHtmlView); // Renamed key
                 localStorage.setItem('view-raw-content-enabled', preferences.viewRawContentEnabled); // Added Raw Content view
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
@@ -6320,10 +6304,10 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 const speechLanguage = localStorage.getItem('speech-language') || 'en-US';
                 DOM.speechLanguage.value = speechLanguage;
 
-                // Load Processed Content mode setting
-                const useProcessedContentEnabled = localStorage.getItem('use-processed-content-enabled') === 'true';
-                state.settings.useProcessedContent = useProcessedContentEnabled;
-                DOM.useProcessedContentToggle.checked = useProcessedContentEnabled;
+                // Load Prefer HTML View mode setting
+                const preferHtmlViewEnabled = localStorage.getItem('prefer-html-view-enabled') === 'true';
+                state.settings.preferHtmlView = preferHtmlViewEnabled;
+                DOM.preferHtmlViewToggle.checked = preferHtmlViewEnabled;
 
                 // Load Raw Content view setting
                 const viewRawContentEnabled = localStorage.getItem('view-raw-content-enabled') === 'true';
@@ -6388,11 +6372,11 @@ Format these questions EXACTLY like this, with no extra text before or after the
 
                     // Apply selected URL model from server removed
 
-                    // Apply Processed Content mode
-                    if (prefs.useProcessedContent !== undefined) {
-                        state.settings.useProcessedContent = prefs.useProcessedContent;
-                        DOM.useProcessedContentToggle.checked = prefs.useProcessedContent;
-                        localStorage.setItem('use-processed-content-enabled', prefs.useProcessedContent);
+                    // Apply Prefer HTML View mode
+                    if (prefs.preferHtmlView !== undefined) {
+                        state.settings.preferHtmlView = prefs.preferHtmlView;
+                        DOM.preferHtmlViewToggle.checked = prefs.preferHtmlView;
+                        localStorage.setItem('prefer-html-view-enabled', prefs.preferHtmlView);
                     }
 
                     // Apply Raw Content view toggle
@@ -6400,11 +6384,11 @@ Format these questions EXACTLY like this, with no extra text before or after the
                         state.settings.viewRawContentEnabled = prefs.viewRawContentEnabled;
                         DOM.viewRawContentToggle.checked = prefs.viewRawContentEnabled;
                         localStorage.setItem('view-raw-content-enabled', prefs.viewRawContentEnabled);
-                         // Ensure markdown mode is also enabled if raw view is enabled from prefs
+                         // Ensure HTML view is also enabled if raw view is enabled from prefs
                         if (prefs.viewRawContentEnabled) {
-                            state.settings.markdownModeEnabled = true;
-                            DOM.markdownModeToggle.checked = true;
-                            localStorage.setItem('markdown-mode-enabled', true);
+                            state.settings.preferHtmlView = true;
+                            DOM.preferHtmlViewToggle.checked = true;
+                            localStorage.setItem('prefer-html-view-enabled', true);
                         }
                     }
 
@@ -6419,7 +6403,8 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 }
             }
 
-            // Clean HTML content using Gemini AI (accepts model name)
+            // Clean HTML content using Gemini AI (accepts model name) - FUNCTION REMOVED
+            /*
             async function cleanContentWithAI(rawHtml, modelName) {
                 // Now has access to 'state'
                 if (!state.userApiSettings || !state.userApiSettings.api_key) {
@@ -6468,6 +6453,7 @@ Cleaned HTML Output:`;
             
                 return cleanedContent.trim();
             }
+            */
 
             // Generate Title and Category using AI (accepts model name)
             async function generateTitleAndCategory(content, modelName) {
@@ -6597,15 +6583,30 @@ Actual Output JSON:
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${apiKey}`
                         },
-                        body: JSON.stringify({ url: url })
+                        body: JSON.stringify({
+                             url: url,
+                             pageOptions: {
+                                 onlyMainContent: false // Ensure we get full HTML
+                             },
+                             // Request both markdown and html if the API supports it in one call
+                             // Otherwise, rely on the logic in processUrlInput which makes two calls
+                             // Assuming the API call structure used in processUrlInput is correct
+                         })
                     });
+
+                    // The logic in processUrlInput already handles fetching both formats.
+                    // This function might just need to return the combined response.
+                    // Let's simplify this function assuming processUrlInput handles the dual fetch.
 
                     if (!response.ok) {
                         const errorData = await response.json();
+                        // Distinguish between HTML and Markdown fetch errors if needed
                         throw new Error(errorData.error || `Firecrawl API request failed with status ${response.status}`);
                     }
 
+                    // Return the parsed JSON which should contain both formats if fetched correctly
                     return await response.json();
+
                 } catch (error) {
                     console.error('Error calling Firecrawl API:', error);
                     // More detailed error logging
@@ -6614,7 +6615,6 @@ Actual Output JSON:
                 }
             }
 
-            
             // Return public API
             return {
                 init
