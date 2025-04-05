@@ -3233,7 +3233,7 @@
                     // Check the original markdown response as well for metadata/fallback
                     if (!response.ok) {
                         const errorData = await response.json();
-                        const errorData = await response.json();
+                        // const errorData = await response.json(); // Removed duplicate declaration
                         throw new Error(errorData.error || `Firecrawl Markdown request failed with status ${response.status}`);
                     }
                     const markdownData = await response.json();
