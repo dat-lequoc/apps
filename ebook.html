@@ -6272,7 +6272,8 @@ Format these questions EXACTLY like this, with no extra text before or after the
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
                 localStorage.setItem('ebook-theme', preferences.theme);
                 // localStorage selected-url-model removed
-                localStorage.setItem('markdown-mode-enabled', preferences.markdownModeEnabled); // Added Markdown mode
+                // --- Save Processed Content mode preference ---
+                localStorage.setItem('use-processed-content-enabled', preferences.useProcessedContent); // Renamed from markdown-mode-enabled
                 localStorage.setItem('view-raw-content-enabled', preferences.viewRawContentEnabled); // Added Raw Content view
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
