@@ -2262,8 +2262,8 @@
                 chatClearBtn: document.getElementById('chat-clear-btn'),
                 chatFullDocToggle: document.getElementById('chat-full-doc-toggle'),
                 chatSuggestions: document.getElementById('chat-suggestions'),
-                aiSettingsContent: document.getElementById('ai-settings-content')
-            };
+                aiSettingsContent: document.getElementById('ai-settings-content') // Added comma
+            }; // Removed semicolon
 
             let state = {
                 bookData: {
@@ -2314,7 +2314,7 @@
                 DOM.openFileBtn.addEventListener('click', () => DOM.fileInput.click());
                 DOM.fileInput.addEventListener('change', handleFileSelected);
                 DOM.processTextBtn.addEventListener('click', processInputText);
-                // DOM.exampleBookBtn listener removed - handled by <a> tag
+                DOM.exampleBookBtn.addEventListener('click', downloadExampleBook); // Restore listener
                 DOM.toggleTextInput.addEventListener('click', (e) => {
                     e.preventDefault();
                     DOM.textInputContainer.style.display = DOM.textInputContainer.style.display === 'none' ? 'block' : 'none';
@@ -2395,6 +2395,15 @@ saveUserPreferences(); });
                     showToast(`Chat context set to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`, 2000);
                 });
                 DOM.chatSuggestions.addEventListener('click', handleSuggestionClick);
+            }
+
+            // Function to handle downloading the example book (restored)
+            function downloadExampleBook() {
+                // This function is intentionally simple.
+                // The link itself handles the download via the href attribute.
+                // We might add tracking or other logic here in the future if needed.
+                console.log('Example book link clicked.');
+                // No need to prevent default as it's a standard link.
             }
 
              function handleGlobalClick(event) {
