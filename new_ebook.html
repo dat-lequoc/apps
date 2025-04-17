@@ -89,8 +89,7 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
-'Helvetica Neue', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             line-height: 1.6;
             color: var(--text-color);
             background-color: var(--bg-color);
@@ -1997,9 +1996,7 @@
 
                     <div class="example-book-section">
                         <p>Don't have an ebook? Try our example:</p>
-                        <a id="example-book-btn" class="button success-button"
-href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank"
-rel="noopener">Download Sample Book</a>
+                        <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
                     </div>
                 </div>
 
@@ -2190,8 +2187,7 @@ rel="noopener">Download Sample Book</a>
     <script>
         const EbookApp = (function() {
             const supabaseUrl = 'https://iioxqphxakvhhtyvdhrh.supabase.co';
-            const supabaseAnonKey =
-'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
+            const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb3hxcGh4YWt2aGh0eXZkaHJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg4MzQ5MjAsImV4cCI6MjA1NDQxMDkyMH0.7I2CaBH1DyiRYEtzunIM5-l3GaWYT15Mly39jW-ga5Q';
             const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
             const DOM = {
@@ -2569,8 +2565,7 @@ saveUserPreferences(); });
                     });
                     const contentPromises = spineItems.map(item => {
                         const fullPath = rootDir + item.href;
-                        return zip.file(fullPath).async('text').then(content => ({ id: item.id, content, href: item.href })).catch(error => { console.error(`Error loading ${fullPath}:`, error); return { id: item.id, content: `[Error
-loading content: ${error.message}]`, href: item.href }; });
+                        return zip.file(fullPath).async('text').then(content => ({ id: item.id, content, href: item.href })).catch(error => { console.error(`Error loading ${fullPath}:`, error); return { id: item.id, content: `[Error loading content: ${error.message}]`, href: item.href }; });
                     });
                     const chaptersContent = await Promise.all(contentPromises);
                     state.bookData.chapters = [];
@@ -2579,8 +2574,7 @@ loading content: ${error.message}]`, href: item.href }; });
                         let title = `Chapter ${index + 1}`;
                         const headingElements = htmlDoc.querySelectorAll('h1, h2, h3, h4');
                         if (headingElements.length > 0) { title = headingElements[0].textContent.trim(); }
-                        else { const filename = chapter.href.split('/').pop().replace(/\.[^/.]+$/, ""); if (filename && !filename.startsWith('chapter') && !/^\d+$/.test(filename)) { title = filename.replace(/[-_]/g, '
-').replace(/\b\w/g, c => c.toUpperCase()); } }
+                        else { const filename = chapter.href.split('/').pop().replace(/\.[^/.]+$/, ""); if (filename && !filename.startsWith('chapter') && !/^\d+$/.test(filename)) { title = filename.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()); } }
                         let textContent = '';
                         const contentElements = htmlDoc.querySelectorAll('body *');
                         contentElements.forEach(element => {
@@ -2590,8 +2584,7 @@ loading content: ${error.message}]`, href: item.href }; });
                             else if (element.tagName === 'BR') { textContent += '\n'; }
                             else if (element.tagName === 'HR') { textContent += '\n* * *\n\n'; }
                             else if (element.tagName === 'BLOCKQUOTE') { if (element.textContent.trim()) textContent += '> ' + element.textContent.trim().replace(/\n/g, '\n> ') + '\n\n'; }
-                            else if (element.tagName === 'UL' || element.tagName === 'OL') { const listItems = element.querySelectorAll('li'); listItems.forEach((li, liIndex) => { const prefix = element.tagName === 'OL' ? `${liIndex +
-1}. ` : '- '; if (li.textContent.trim()) textContent += prefix + li.textContent.trim() + '\n'; }); textContent += '\n'; }
+                            else if (element.tagName === 'UL' || element.tagName === 'OL') { const listItems = element.querySelectorAll('li'); listItems.forEach((li, liIndex) => { const prefix = element.tagName === 'OL' ? `${liIndex + 1}. ` : '- '; if (li.textContent.trim()) textContent += prefix + li.textContent.trim() + '\n'; }); textContent += '\n'; }
                             else if (element.tagName === 'DIV' && element.children.length === 0 && element.textContent.trim()) { textContent += element.textContent.trim() + '\n\n'; }
                         });
                         if (textContent.trim() === '') { const body = htmlDoc.querySelector('body'); if (body) { textContent = body.textContent.trim().replace(/\s+/g, ' ').replace(/\.\s+/g, '.\n\n'); } }
@@ -2692,10 +2685,8 @@ reader app.", startLine: 0, endLine: 2 }];
                     }
 
                     const { generatedTitle, listId } = titleCategoryResult;
-                    if (generatedTitle) { state.bookData.title = generatedTitle; DOM.bookTitle.textContent =
-state.bookData.title; showToast(`AI generated title: "${generatedTitle}"`, 3000); }
-                    else { if (response.data.metadata && response.data.metadata.title) { state.bookData.title = response.data.metadata.title; DOM.bookTitle.textContent = state.bookData.title; } showToast('Could not generate AI title,
-using default.', 2000); }
+                    if (generatedTitle) { state.bookData.title = generatedTitle; DOM.bookTitle.textContent = state.bookData.title; showToast(`AI generated title: "${generatedTitle}"`, 3000); }
+                    else { if (response.data.metadata && response.data.metadata.title) { state.bookData.title = response.data.metadata.title; DOM.bookTitle.textContent = state.bookData.title; } showToast('Could not generate AI title, using default.', 2000); }
 
                     state.bookData.currentListId = listId;
                     if (listId !== null) { const listName = state.bookLists.find(l => l.id === listId)?.name || 'Unknown List'; showToast(`Categorized into: "${listName}"`, 3000); console.log("Categorized into: ", listName); }
@@ -2745,11 +2736,9 @@ using default.', 2000); }
                 if (!session) { console.error('Cannot save scraped book: User not logged in.'); showToast('Please sign in to save scraped content.', 4000); return false; }
                 try {
                     const { error } = await supabase.from('ebooks').insert({
-                        user_id: session.user.id, title: scrapedBookData.title, content: null, raw_content: scrapedBookData.raw_content,
-                        file_type: scrapedBookData.file_type, metadata: scrapedBookData.metadata, last_position: scrapedBookData.last_position, list_id: targetListId
+                        user_id: session.user.id, title: scrapedBookData.title, content: null, raw_content: scrapedBookData.raw_content, file_type: scrapedBookData.file_type, metadata: scrapedBookData.metadata, last_position: scrapedBookData.last_position, list_id: targetListId
                     });
-                    if (error) { if (error.code === '23505') { console.warn(`Book with title "${scrapedBookData.title}" already exists. Skipping save.`); showToast(`Book "${scrapedBookData.title}" already in library.`, 3000); return
-true; } else { throw error; } }
+                    if (error) { if (error.code === '23505') { console.warn(`Book with title "${scrapedBookData.title}" already exists. Skipping save.`); showToast(`Book "${scrapedBookData.title}" already in library.`, 3000); return true; } else { throw error; } }
                     console.log(`Successfully saved scraped book: "${scrapedBookData.title}"`);
                     showToast(`"${scrapedBookData.title}" saved to library!`, 3000);
                     if (DOM.welcomeScreen.style.display !== 'none') { loadUserLibrary(); }
@@ -2971,18 +2960,10 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
 
             async function generateCleanupSuggestions(books) {
                 const today = new Date().toISOString().split('T')[0];
-                const bookDataForPrompt = books.map(book => ({ id: book.id, title: book.title.substring(0, 80), progress: calculateOverallProgress(book), last_read: book.last_position?.timestamp ? new
-Date(book.last_position.timestamp).toISOString().split('T')[0] : new Date(book.updated_at).toISOString().split('T')[0] }));
+                const bookDataForPrompt = books.map(book => ({ id: book.id, title: book.title.substring(0, 80), progress: calculateOverallProgress(book), last_read: book.last_position?.timestamp ? new Date(book.last_position.timestamp).toISOString().split('T')[0] : new Date(book.updated_at).toISOString().split('T')[0] }));
                 const maxBooksInPrompt = 150;
                 const booksToSend = bookDataForPrompt.slice(0, maxBooksInPrompt);
-                const prompt = `Analyze the following list of ebooks from a user's library. Identify books that are strong candidates for deletion based on these criteria:\n\nToday's date is: ${today}\n\n1.  **Old & Unread:** Books
-last read over 1 year ago (before ${today.substring(0, 4)}-${today.substring(5, 7)}-${today.substring(8)}) AND have less than 5% progress.\n2.  **Fully Read:** Books with 98% or more progress.\n3.  **Likely Test/Temporary Items:**
-Books with very short titles (e.g., "test", "untitled", "url", or just a raw URL) that haven't been read recently (e.g., last read > 3 months ago).\n4.  **Duplicates:** Books with identical or very similar titles where one has
-significantly less progress or hasn't been read for much longer. Prioritize keeping the one with more progress or more recent activity.\n5.  **Old News:** Books whose titles clearly indicate they are news articles (e.g., contain
-"News", "Daily", "Update") and were last read more than 1 week ago (before ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}).\n\n**Constraint:** Do NOT suggest deleting items last read within the last 7
-days (i.e., on or after ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}), regardless of other criteria, unless they are clearly fully read (>=98% progress).\n\nHere is the list of books (id, title,
-progress percentage, last read date YYYY-MM-DD):\n---\n${JSON.stringify(booksToSend, null, 2)}\n---\n\nReturn ONLY a JSON array containing the integer IDs of the books you suggest for deletion based *strictly* on the criteria above. Do
-not include any explanations or other text. Ensure the constraint about recent items is respected.\n\nExample Output: [123, 456, 789]\n\nJSON Output:`;
+                const prompt = `Analyze the following list of ebooks from a user's library. Identify books that are strong candidates for deletion based on these criteria:\n\nToday's date is: ${today}\n\n1.  **Old & Unread:** Books last read over 1 year ago (before ${today.substring(0, 4)}-${today.substring(5, 7)}-${today.substring(8)}) AND have less than 5% progress.\n2.  **Fully Read:** Books with 98% or more progress.\n3.  **Likely Test/Temporary Items:** Books with very short titles (e.g., "test", "untitled", "url", or just a raw URL) that haven't been read recently (e.g., last read > 3 months ago).\n4.  **Duplicates:** Books with identical or very similar titles where one has significantly less progress or hasn't been read for much longer. Prioritize keeping the one with more progress or more recent activity.\n5.  **Old News:** Books whose titles clearly indicate they are news articles (e.g., contain "News", "Daily", "Update") and were last read more than 1 week ago (before ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}).\n\n**Constraint:** Do NOT suggest deleting items last read within the last 7 days (i.e., on or after ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}), regardless of other criteria, unless they are clearly fully read (>=98% progress).\n\nHere is the list of books (id, title, progress percentage, last read date YYYY-MM-DD):\n---\n${JSON.stringify(booksToSend, null, 2)}\n---\n\nReturn ONLY a JSON array containing the integer IDs of the books you suggest for deletion based *strictly* on the criteria above. Do not include any explanations or other text. Ensure the constraint about recent items is respected.\n\nExample Output: [123, 456, 789]\n\nJSON Output:`;
                 try {
                     const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, state.userApiSettings.model);
                     if (response.error) throw new Error(response.error.message);
@@ -2999,8 +2980,7 @@ not include any explanations or other text. Ensure the constraint about recent i
 
             function populateAiCleanupModal(suggestedBooks) {
                 DOM.aiCleanupList.innerHTML = '';
-                if (!suggestedBooks || suggestedBooks.length === 0) { DOM.aiCleanupList.innerHTML = '<p>AI didn\'t find any items matching the cleanup criteria. Your library looks tidy!</p>'; DOM.aiCleanupConfirmBtn.disabled = true;
-DOM.aiCleanupConfirmBtn.classList.remove('loading'); return; }
+                if (!suggestedBooks || suggestedBooks.length === 0) { DOM.aiCleanupList.innerHTML = '<p>AI didn\'t find any items matching the cleanup criteria. Your library looks tidy!</p>'; DOM.aiCleanupConfirmBtn.disabled = true; DOM.aiCleanupConfirmBtn.classList.remove('loading'); return; }
                 const introText = document.createElement('p');
                 introText.textContent = `AI suggests removing the following ${suggestedBooks.length} items. Uncheck any you want to keep:`;
                 DOM.aiCleanupList.appendChild(introText);
@@ -3009,11 +2989,9 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); return; }
                     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = true; checkbox.value = book.id; checkbox.id = `cleanup-book-${book.id}`;
                     const detailsDiv = document.createElement('div'); detailsDiv.className = 'cleanup-item-details';
                     const titleDiv = document.createElement('div'); titleDiv.className = 'cleanup-item-title'; titleDiv.textContent = book.title; titleDiv.title = book.title;
-                    const metaDiv = document.createElement('div'); metaDiv.className = 'cleanup-item-meta'; const progress = calculateOverallProgress(book); const lastRead = book.last_position?.timestamp ? `Last read: ${new
-Date(book.last_position.timestamp).toLocaleDateString()}` : `Added: ${new Date(book.updated_at).toLocaleDateString()}`; metaDiv.textContent = `Progress: ${progress}% • ${lastRead}`;
+                    const metaDiv = document.createElement('div'); metaDiv.className = 'cleanup-item-meta'; const progress = calculateOverallProgress(book); const lastRead = book.last_position?.timestamp ? `Last read: ${new Date(book.last_position.timestamp).toLocaleDateString()}` : `Added: ${new Date(book.updated_at).toLocaleDateString()}`; metaDiv.textContent = `Progress: ${progress}% • ${lastRead}`;
                     detailsDiv.appendChild(titleDiv); detailsDiv.appendChild(metaDiv);
-                    const label = document.createElement('label'); label.htmlFor = checkbox.id; label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.width = '100%'; label.style.cursor = 'pointer';
-label.appendChild(checkbox); label.appendChild(detailsDiv);
+                    const label = document.createElement('label'); label.htmlFor = checkbox.id; label.style.display = 'flex'; label.style.alignItems = 'center'; label.style.width = '100%'; label.style.cursor = 'pointer'; label.appendChild(checkbox); label.appendChild(detailsDiv);
                     itemDiv.appendChild(label); DOM.aiCleanupList.appendChild(itemDiv);
                 });
                 DOM.aiCleanupConfirmBtn.disabled = false;
@@ -3034,8 +3012,7 @@ label.appendChild(checkbox); label.appendChild(detailsDiv);
                     showToast(`Successfully deleted ${idsToDelete.length} items.`, 3000);
                     hideAiCleanupModal();
                     loadUserLibrary();
-                } catch (error) { console.error("Error deleting books:", error); showToast(`Error deleting items: ${error.message}`, 4000); DOM.aiCleanupConfirmBtn.disabled = false; DOM.aiCleanupConfirmBtn.classList.remove('loading');
-}
+                } catch (error) { console.error("Error deleting books:", error); showToast(`Error deleting items: ${error.message}`, 4000); DOM.aiCleanupConfirmBtn.disabled = false; DOM.aiCleanupConfirmBtn.classList.remove('loading'); }
             }
 
             function toggleChatPanel() {
@@ -3130,19 +3107,13 @@ popupWidth - 10); }
                 requestAnimationFrame(() => { popup.classList.add('visible'); });
             }
 
-            function decreaseFontSize() { if (state.settings.fontSize > 70) { state.settings.fontSize -= 10;
-updateFontSize(); } else { showToast('Minimum font size reached'); } }
-            function increaseFontSize() { if (state.settings.fontSize < 200) { state.settings.fontSize += 10;
-updateFontSize(); } else { showToast('Maximum font size reached'); } }
+            function decreaseFontSize() { if (state.settings.fontSize > 70) { state.settings.fontSize -= 10; updateFontSize(); } else { showToast('Minimum font size reached'); } }
+            function increaseFontSize() { if (state.settings.fontSize < 200) { state.settings.fontSize += 10; updateFontSize(); } else { showToast('Maximum font size reached'); } }
             function updateFontSize() { DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`; DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-font-size', state.settings.fontSize); }
-            function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height
-reached'); } }
-            function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height
-reached'); } }
-            function updateLineHeight() { DOM.contentArea.style.lineHeight = state.settings.lineHeight; DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-line-height', state.settings.lineHeight);
-}
-            function setTheme(theme) { document.body.classList.remove('light-theme', 'sepia-theme', 'dark-theme'); document.body.classList.add(`${theme}-theme`); DOM.themeOptions.forEach(option => { option.classList.remove('active');
-if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
+            function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height reached'); } }
+            function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
+            function updateLineHeight() { DOM.contentArea.style.lineHeight = state.settings.lineHeight; DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-line-height', state.settings.lineHeight); }
+            function setTheme(theme) { document.body.classList.remove('light-theme', 'sepia-theme', 'dark-theme'); document.body.classList.add(`${theme}-theme`); DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
 
             function updateProgressBar() {
                 if (!state.bookData.chapters.length) return;
@@ -3158,8 +3129,7 @@ if (option.getAttribute('data-theme') === theme) option.classList.add('active');
             }
 
             function saveReadingProgress() {
-                const currentPosition = { chapter: state.bookData.currentPosition, percentComplete: calculatePercentageComplete(), scroll: DOM.contentArea.scrollTop || 0, viewportHeight: DOM.contentArea.clientHeight, contentHeight:
-DOM.contentArea.scrollHeight, timestamp: new Date().getTime(), textAnchor: findVisibleTextAnchor() };
+                const currentPosition = { chapter: state.bookData.currentPosition, percentComplete: calculatePercentageComplete(), scroll: DOM.contentArea.scrollTop || 0, viewportHeight: DOM.contentArea.clientHeight, contentHeight: DOM.contentArea.scrollHeight, timestamp: new Date().getTime(), textAnchor: findVisibleTextAnchor() };
                 state.lastPosition = currentPosition;
                 saveBookToLibrary();
             }
@@ -3208,30 +3178,23 @@ state.debounceTimers[functionName] = setTimeout(() => { func.apply(context, args
                 DOM.aiCleanupBtn.style.display = 'none';
 
                 if (state.userApiSettings) {
-                    if (state.userApiSettings.api_key && state.userApiSettings.model) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Gemini API configured (Model:
-${escapeHTML(state.userApiSettings.model)})</span></div>`; canUseAi = true; }
+                    if (state.userApiSettings.api_key && state.userApiSettings.model) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Gemini API configured (Model: ${escapeHTML(state.userApiSettings.model)})</span></div>`; canUseAi = true; }
                     else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Gemini API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`; }
-                    if (state.userApiSettings.firecrawl_api_key) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Firecrawl API configured</span></div>`; canUseFirecrawl =
-true; }
+                    if (state.userApiSettings.firecrawl_api_key) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Firecrawl API configured</span></div>`; canUseFirecrawl = true; }
                     else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Firecrawl API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`; }
-                } else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">⚠️</span><span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI
-features.</span></div>`; }
+                } else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">⚠️</span><span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI features.</span></div>`; }
                 apiStatusHtml += '</div>';
 
                 if (DOM.aiSettingsContent) { DOM.aiSettingsContent.innerHTML = apiStatusHtml; }
-                else { console.error("Error: Could not find the #ai-settings-content element in the DOM.");
-showToast("Error displaying AI status: UI element missing."); }
+                else { console.error("Error: Could not find the #ai-settings-content element in the DOM."); showToast("Error displaying AI status: UI element missing."); }
 
                 DOM.translationToggle.disabled = !canUseAi;
                 DOM.chatBtn.disabled = !canUseAi;
                 DOM.processUrlBtn.disabled = !canUseFirecrawl;
                 DOM.aiCleanupBtn.disabled = !canUseAi;
 
-                if (!canUseAi) { DOM.chatBtn.style.opacity = "0.5"; DOM.chatBtn.style.cursor = "not-allowed"; DOM.chatBtn.title = "Gemini API key needed for chat. Set it up in the main dashboard.";
-DOM.translationToggle.closest('.settings-row').title = "Gemini API key needed for translation."; DOM.translationToggle.style.cursor = "not-allowed"; DOM.aiCleanupBtn.style.opacity = "0.5"; DOM.aiCleanupBtn.style.cursor = "not-allowed";
-DOM.aiCleanupBtn.title = "Gemini API key needed for AI Cleanup. Set it up in the main dashboard."; }
-                else { DOM.aiCleanupBtn.style.display = 'inline-flex'; DOM.aiCleanupBtn.disabled = false; DOM.aiCleanupBtn.style.opacity = "1"; DOM.aiCleanupBtn.style.cursor = "pointer"; DOM.aiCleanupBtn.title = "AI Library Cleanup";
-DOM.chatBtn.style.opacity = "1"; DOM.chatBtn.style.cursor = "pointer"; DOM.chatBtn.title = "Chat with AI about this chapter"; DOM.translationToggle.closest('.settings-row').title = ""; DOM.translationToggle.style.cursor = "pointer"; }
+                if (!canUseAi) { DOM.chatBtn.style.opacity = "0.5"; DOM.chatBtn.style.cursor = "not-allowed"; DOM.chatBtn.title = "Gemini API key needed for chat. Set it up in the main dashboard."; DOM.translationToggle.closest('.settings-row').title = "Gemini API key needed for translation."; DOM.translationToggle.style.cursor = "not-allowed"; DOM.aiCleanupBtn.style.opacity = "0.5"; DOM.aiCleanupBtn.style.cursor = "not-allowed"; DOM.aiCleanupBtn.title = "Gemini API key needed for AI Cleanup. Set it up in the main dashboard."; }
+                else { DOM.aiCleanupBtn.style.display = 'inline-flex'; DOM.aiCleanupBtn.disabled = false; DOM.aiCleanupBtn.style.opacity = "1"; DOM.aiCleanupBtn.style.cursor = "pointer"; DOM.aiCleanupBtn.title = "AI Library Cleanup"; DOM.chatBtn.style.opacity = "1"; DOM.chatBtn.style.cursor = "pointer"; DOM.chatBtn.title = "Chat with AI about this chapter"; DOM.translationToggle.closest('.settings-row').title = ""; DOM.translationToggle.style.cursor = "pointer"; }
                 if (!canUseFirecrawl) { DOM.urlInputContainer.title = "Firecrawl API key needed. Set it up in the main dashboard."; DOM.processUrlBtn.style.opacity = "0.5"; DOM.processUrlBtn.style.cursor = "not-allowed"; }
                 else { DOM.urlInputContainer.title = ""; DOM.processUrlBtn.style.opacity = "1"; DOM.processUrlBtn.style.cursor = "pointer"; }
             }
@@ -3274,15 +3237,11 @@ DOM.chatBtn.style.opacity = "1"; DOM.chatBtn.style.cursor = "pointer"; DOM.chatB
                         const listInfo = book.list_id ? listInfoMap.get(book.list_id) : null;
                         const listName = listInfo ? listInfo.name : null;
                         let listBadgeHtml = '';
-                        if (listName) { const colorIndex = (listInfo.index + 1) % badgeColors; listBadgeHtml = `<span class="library-item-list-badge" data-color-index="${colorIndex}" title="List:
-${escapeHTML(listName)}">${escapeHTML(listName)}</span>`; }
+                        if (listName) { const colorIndex = (listInfo.index + 1) % badgeColors; listBadgeHtml = `<span class="library-item-list-badge" data-color-index="${colorIndex}" title="List: ${escapeHTML(listName)}">${escapeHTML(listName)}</span>`; }
                         else { listBadgeHtml = `<span class="library-item-list-badge" title="Unlisted">Unlisted</span>`; }
                         const item = document.createElement('div'); item.className = 'library-item';
-                        item.innerHTML = `<div class="library-item-details"><div class="library-item-title-container"><div class="library-item-title">${escapeHTML(book.title)}</div>${listBadgeHtml}</div><div
-class="library-item-meta">${book.file_type.toUpperCase()} • Last read: ${date} • ${progress}% complete</div></div><div class="library-item-actions" style="position: relative;"><button class="library-item-move" data-id="${book.id}"
-data-current-list-id="${book.list_id || ''}" style="display: none;">Move</button><div class="move-list-dropdown"></div><button class="library-item-delete" data-id="${book.id}">×</button></div>`;
-                        const progressBarContainer = document.createElement('div'); progressBarContainer.className = 'progress-bar-container'; progressBarContainer.innerHTML = `<div class="progress-bar" style="width:
-${progress}%"></div>`; item.querySelector('.library-item-details').appendChild(progressBarContainer);
+                        item.innerHTML = `<div class="library-item-details"><div class="library-item-title-container"><div class="library-item-title">${escapeHTML(book.title)}</div>${listBadgeHtml}</div><div class="library-item-meta">${book.file_type.toUpperCase()} • Last read: ${date} • ${progress}% complete</div></div><div class="library-item-actions" style="position: relative;"><button class="library-item-move" data-id="${book.id}" data-current-list-id="${book.list_id || ''}" style="display: none;">Move</button><div class="move-list-dropdown"></div><button class="library-item-delete" data-id="${book.id}">×</button></div>`;
+                        const progressBarContainer = document.createElement('div'); progressBarContainer.className = 'progress-bar-container'; progressBarContainer.innerHTML = `<div class="progress-bar" style="width: ${progress}%"></div>`; item.querySelector('.library-item-details').appendChild(progressBarContainer);
                         item.addEventListener('click', (event) => { if (event.target.closest('.library-item-delete, .library-item-move, .library-item-list-badge')) return; loadBookFromLibrary(book); });
                         libraryList.appendChild(item);
                         const moveButton = item.querySelector('.library-item-move');
@@ -3293,13 +3252,11 @@ ${progress}%"></div>`; item.querySelector('.library-item-details').appendChild(p
                                 event.stopPropagation();
                                 document.querySelectorAll('.move-list-dropdown.visible').forEach(dd => { if (dd !== dropdownContainer) dd.classList.remove('visible'); });
                                 const isVisible = dropdownContainer.classList.toggle('visible');
-                                if (isVisible) { const bookId = moveButton.getAttribute('data-id'); const currentListId = moveButton.getAttribute('data-current-list-id') || null; renderMoveToListDropdown(dropdownContainer, bookId,
-currentListId); }
+                                if (isVisible) { const bookId = moveButton.getAttribute('data-id'); const currentListId = moveButton.getAttribute('data-current-list-id') || null; renderMoveToListDropdown(dropdownContainer, bookId, currentListId); }
                             });
                         }
                     });
-                    document.querySelectorAll('.library-item-delete').forEach(button => { button.addEventListener('click', async (event) => { event.stopPropagation(); const bookId = button.getAttribute('data-id'); if (confirm('Remove
-this book from your library?')) await deleteBookFromLibrary(bookId); }); });
+                    document.querySelectorAll('.library-item-delete').forEach(button => { button.addEventListener('click', async (event) => { event.stopPropagation(); const bookId = button.getAttribute('data-id'); if (confirm('Remove this book from your library?')) await deleteBookFromLibrary(bookId); }); });
                 } catch (error) { console.error('Error loading library:', error); libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Error loading library</div>'; }
             }
 
@@ -3326,8 +3283,7 @@ this book from your library?')) await deleteBookFromLibrary(bookId); }); });
                 };
                 DOM.listBadgeContainer.appendChild(createBadge('All', 'all', false, 0));
                 DOM.listBadgeContainer.appendChild(createBadge('Unlisted', null, true));
-                state.bookLists.forEach((list, index) => { DOM.listBadgeContainer.appendChild(createBadge(list.name,
-list.id, false, index + 1)); });
+                state.bookLists.forEach((list, index) => { DOM.listBadgeContainer.appendChild(createBadge(list.name, list.id, false, index + 1)); });
             }
 
             function handleListBadgeClick(event) {
@@ -3335,8 +3291,7 @@ list.id, false, index + 1)); });
                 if (!clickedBadge || clickedBadge.classList.contains('active')) return;
                 const selectedValue = clickedBadge.getAttribute('data-list-id');
                 state.selectedListId = selectedValue === "" ? null : selectedValue;
-                DOM.listBadgeContainer.querySelectorAll('.list-badge').forEach(badge =>
-badge.classList.remove('active'));
+                DOM.listBadgeContainer.querySelectorAll('.list-badge').forEach(badge => badge.classList.remove('active'));
                 clickedBadge.classList.add('active');
                 loadUserLibrary();
             }
@@ -3353,9 +3308,7 @@ badge.classList.remove('active'));
                     showToast(`List "${listName}" created.`);
                     cancelListCreation();
                     await fetchBookLists();
-                } catch (error) { console.error('Error creating list:', error); showToast(`Error: ${error.message}`);
-DOM.createListBtn.disabled = false; DOM.createListBtn.classList.remove('loading'); DOM.createListBtn.textContent = '✓';
-DOM.newListNameInput.focus(); }
+                } catch (error) { console.error('Error creating list:', error); showToast(`Error: ${error.message}`); DOM.createListBtn.disabled = false; DOM.createListBtn.classList.remove('loading'); DOM.createListBtn.textContent = '✓'; DOM.newListNameInput.focus(); }
             }
 
             function renderMoveToListDropdown(dropdownElement, bookId, currentListIdStr) {
@@ -3402,17 +3355,14 @@ DOM.newListNameInput.focus(); }
                 try {
                     let fileType = state.bookData.title.includes('.') ? state.bookData.title.split('.').pop().toLowerCase() : 'txt';
                     const bookContent = state.bookData.content && state.bookData.content.length < 100000 ? state.bookData.content : null;
-                    const metadata = { chapters: state.bookData.chapters.map(chapter => ({ title: chapter.title, startLine: chapter.startLine, endLine: chapter.endLine, content: chapter.content, markdownContent: chapter.markdownContent
-})), preferHtmlView: state.settings.preferHtmlView, sourceUrl: state.bookData.sourceUrl };
+                    const metadata = { chapters: state.bookData.chapters.map(chapter => ({ title: chapter.title, startLine: chapter.startLine, endLine: chapter.endLine, content: chapter.content, markdownContent: chapter.markdownContent })), preferHtmlView: state.settings.preferHtmlView, sourceUrl: state.bookData.sourceUrl };
                     const lastPosition = state.lastPosition || { chapter: state.bookData.currentPosition, scroll: DOM.contentArea.scrollTop || 0, percentComplete: calculatePercentageComplete(), timestamp: new Date().getTime() };
                     let existingBookQuery = supabase.from('ebooks').select('id').eq('title', state.bookData.title).eq('user_id', session.user.id);
                     if (state.bookData.currentListId === null) { existingBookQuery = existingBookQuery.is('list_id', null); } else { existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId); }
                     const { data: existingBook, error: existingBookError } = await existingBookQuery.maybeSingle();
                     if (existingBookError) { console.error("Error checking for existing book:", existingBookError); throw existingBookError; }
-                    if (existingBook && existingBook.id) { const { error: updateError } = await supabase.from('ebooks').update({ metadata: metadata, last_position: lastPosition, updated_at: new Date() }).eq('id', existingBook.id); if
-(updateError) throw updateError; }
-                    else { const { error: insertError } = await supabase.from('ebooks').insert({ user_id: session.user.id, title: state.bookData.title, content: bookContent, file_type: fileType, metadata: metadata, last_position:
-lastPosition, list_id: state.bookData.currentListId || null }); if (insertError) throw insertError; }
+                    if (existingBook && existingBook.id) { const { error: updateError } = await supabase.from('ebooks').update({ metadata: metadata, last_position: lastPosition, updated_at: new Date() }).eq('id', existingBook.id); if (updateError) throw updateError; }
+                    else { const { error: insertError } = await supabase.from('ebooks').insert({ user_id: session.user.id, title: state.bookData.title, content: bookContent, file_type: fileType, metadata: metadata, last_position: lastPosition, list_id: state.bookData.currentListId || null }); if (insertError) throw insertError; }
                     return true;
                 } catch (error) { console.error('Error saving book:', error); return false; }
             }
@@ -3424,8 +3374,7 @@ lastPosition, list_id: state.bookData.currentListId || null }); if (insertError)
                     state.bookData.currentListId = book.list_id || null;
                     state.bookData.rawContent = book.raw_content || null;
                     DOM.bookTitle.textContent = book.title;
-                    if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) { state.bookData.chapters = book.metadata.chapters.map(chapter => ({ title: chapter.title, content: chapter.content || "Chapter
-content not available", startLine: chapter.startLine, endLine: chapter.endLine })); if (book.metadata.sourceUrl) state.bookData.sourceUrl = book.metadata.sourceUrl; else state.bookData.sourceUrl = null; }
+                    if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) { state.bookData.chapters = book.metadata.chapters.map(chapter => ({ title: chapter.title, content: chapter.content || "Chapter content not available", startLine: chapter.startLine, endLine: chapter.endLine })); if (book.metadata.sourceUrl) state.bookData.sourceUrl = book.metadata.sourceUrl; else state.bookData.sourceUrl = null; }
                     else if (book.content) { state.bookData.content = book.content; state.bookData.chapters = [{ title: book.title, content: book.content, startLine: 0, endLine: book.content.split('\n').length }]; }
                     else { throw new Error('Book content not available'); }
                     if (book.metadata && book.metadata.preferHtmlView !== undefined) { state.settings.preferHtmlView = book.metadata.preferHtmlView; } else { state.settings.preferHtmlView = (book.file_type === 'url'); }
@@ -3444,11 +3393,8 @@ content not available", startLine: chapter.startLine, endLine: chapter.endLine }
                 setTimeout(() => {
                     const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
                     if (isPositionRecent && lastPosition.textAnchor) { if (restoreByTextAnchor(lastPosition.textAnchor)) return; }
-                    if (lastPosition.percentComplete !== undefined) { const scrollHeight = DOM.contentArea.scrollHeight; const clientHeight = DOM.contentArea.clientHeight; if (scrollHeight > clientHeight) { const targetPosition =
-lastPosition.percentComplete * (scrollHeight - clientHeight); DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'smooth' }); return; } }
-                    if (lastPosition.scroll) { if (lastPosition.contentHeight && lastPosition.viewportHeight) { const oldRatio = lastPosition.contentHeight / lastPosition.viewportHeight; const newRatio = DOM.contentArea.scrollHeight /
-DOM.contentArea.clientHeight; if (Math.abs(oldRatio - newRatio) < 0.5) { const scaledPosition = lastPosition.scroll * (newRatio / oldRatio); DOM.contentArea.scrollTo({ top: scaledPosition, behavior: 'smooth' }); return; } }
-DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'smooth' }); }
+                    if (lastPosition.percentComplete !== undefined) { const scrollHeight = DOM.contentArea.scrollHeight; const clientHeight = DOM.contentArea.clientHeight; if (scrollHeight > clientHeight) { const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight); DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'smooth' }); return; } }
+                    if (lastPosition.scroll) { if (lastPosition.contentHeight && lastPosition.viewportHeight) { const oldRatio = lastPosition.contentHeight / lastPosition.viewportHeight; const newRatio = DOM.contentArea.scrollHeight / DOM.contentArea.clientHeight; if (Math.abs(oldRatio - newRatio) < 0.5) { const scaledPosition = lastPosition.scroll * (newRatio / oldRatio); DOM.contentArea.scrollTo({ top: scaledPosition, behavior: 'smooth' }); return; } } DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'smooth' }); }
                 }, 100); // Added small delay
             }
 
@@ -3464,8 +3410,7 @@ DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'smooth' }); }
                         for (let i = 0; i < paragraphs.length; i++) {
                             const searchText = paragraphs[i].textContent?.substring(0, textAnchor.text.length) || '';
                             if (searchText === textAnchor.text || (searchText.length > 10 && searchText.slice(0, 10) === textAnchor.text.slice(0, 10))) {
-                                const rect = paragraphs[i].getBoundingClientRect(); const top = paragraphs[i].offsetTop - DOM.contentArea.offsetTop; const offset = textAnchor.offset || 0; const scrollTarget = top + (offset *
-rect.height);
+                                const rect = paragraphs[i].getBoundingClientRect(); const top = paragraphs[i].offsetTop - DOM.contentArea.offsetTop; const offset = textAnchor.offset || 0; const scrollTarget = top + (offset * rect.height);
                                 DOM.contentArea.scrollTo({ top: Math.max(0, scrollTarget - 50), behavior: 'smooth' }); return true;
                             }
                         } return false;
@@ -3479,8 +3424,7 @@ rect.height);
             function displayChatMessage(sender, message, isLoading = false) {
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('chat-message', sender);
-                if (sender === 'assistant') { let processedMessage = escapeHTML(message); processedMessage = processedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); processedMessage =
-processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'); processedMessage = processedMessage.replace(/\n/g, '<br>'); messageElement.innerHTML = processedMessage; }
+                if (sender === 'assistant') { let processedMessage = escapeHTML(message); processedMessage = processedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); processedMessage = processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'); processedMessage = processedMessage.replace(/\n/g, '<br>'); messageElement.innerHTML = processedMessage; }
                 else { messageElement.textContent = message; }
                 if (isLoading) messageElement.classList.add('loading');
                 DOM.chatMessages.appendChild(messageElement);
@@ -3513,22 +3457,14 @@ processedMessage.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" r
                 try {
                     let contextContent = ""; let contextSource = "";
                     if (state.chatUseFullDocument) { contextSource = "the full document"; contextContent = state.bookData.chapters.map(ch => ch.content).join("\n\n---\n\n"); }
-                    else { contextSource = "the current chapter"; const currentChapter = state.bookData.chapters[state.bookData.currentPosition]; contextContent = currentChapter ? currentChapter.content : "No chapter content
-available."; }
+                    else { contextSource = "the current chapter"; const currentChapter = state.bookData.chapters[state.bookData.currentPosition]; contextContent = currentChapter ? currentChapter.content : "No chapter content available."; }
                     const maxContextLength = 15000;
                     const fullContext = contextContent.length > maxContextLength ? contextContent.substring(0, maxContextLength) + "\n... [Context Truncated]" : contextContent;
                     const historyToSend = state.chatHistory.slice(-10);
                     const language = localStorage.getItem('speech-language') || 'en-US';
                     const languageName = language.startsWith('fr') ? 'French' : 'English';
-                    const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to
-help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse Markdown for formatting (like
-**bold**). Use new lines for paragraphs, bullet points, if applicable to make it easier to read.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up
-Questions:**\nAt the VERY END of your response, provide **up to 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should
-encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block:\n[SUGGESTIONS]\n1. Explore the next section\n2. What is the main argument in section X?\n3. Can you
-explain the term Y mentioned earlier?\n[/SUGGESTIONS]`;
-                    const requestPayload = { contents: [ { role: 'user', parts: [{ text: systemPrompt }] }, { role: 'model', parts: [{ text: "Understood. I will focus on exploring and explaining the provided text and suggest concrete
-follow-up questions based on the content." }] }, ...historyToSend.slice(0, -1), { role: 'user', parts: [{ text: `Here is the full context from ${contextSource}:\n\n---\n${fullContext}\n---\n\nNow, please answer my question:` }] }, {
-role: 'model', parts: [{ text: "Okay, I have the context. What is your question?" }] }, historyToSend[historyToSend.length - 1] ] };
+                    const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse Markdown for formatting (like **bold**). Use new lines for paragraphs, bullet points, if applicable to make it easier to read.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up Questions:**\nAt the VERY END of your response, provide **up to 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block:\n[SUGGESTIONS]\n1. Explore the next section\n2. What is the main argument in section X?\n3. Can you explain the term Y mentioned earlier?\n[/SUGGESTIONS]`;
+                    const requestPayload = { contents: [ { role: 'user', parts: [{ text: systemPrompt }] }, { role: 'model', parts: [{ text: "Understood. I will focus on exploring and explaining the provided text and suggest concrete follow-up questions based on the content." }] }, ...historyToSend.slice(0, -1), { role: 'user', parts: [{ text: `Here is the full context from ${contextSource}:\n\n---\n${fullContext}\n---\n\nNow, please answer my question:` }] }, { role: 'model', parts: [{ text: "Okay, I have the context. What is your question?" }] }, historyToSend[historyToSend.length - 1] ] };
                     const response = await geminiChatRequest(state.userApiSettings.api_key, requestPayload.contents, state.userApiSettings.model);
                     loadingElement.remove();
                     let assistantResponseText = 'Sorry, I could not generate a response.';
@@ -3538,19 +3474,15 @@ role: 'model', parts: [{ text: "Okay, I have the context. What is your question?
                         const rawResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
                         const suggestionBlockRegex = /^\s*\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/m;
                         const match = rawResponse.match(suggestionBlockRegex);
-                        if (match && match[1]) { const questionsText = match[1].trim(); extractedSuggestions = questionsText.split('\n').map(q => q.trim().replace(/^\d+\.\s*/, '')).filter(q => q.length > 0); assistantResponseText =
-rawResponse.replace(suggestionBlockRegex, '').trim(); }
+                        if (match && match[1]) { const questionsText = match[1].trim(); extractedSuggestions = questionsText.split('\n').map(q => q.trim().replace(/^\d+\.\s*/, '')).filter(q => q.length > 0); assistantResponseText = rawResponse.replace(suggestionBlockRegex, '').trim(); }
                         else { assistantResponseText = rawResponse.trim(); }
                         if (!assistantResponseText) assistantResponseText = "Okay, I've processed that. What would you like to explore next?";
                     }
                     displayChatMessage('assistant', assistantResponseText);
                     state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] });
                     renderSuggestedQuestions(extractedSuggestions);
-                } catch (error) { console.error('Error handling chat message:', error); loadingElement.remove();
-displayChatMessage('assistant', 'An unexpected error occurred while processing your request.'); state.chatHistory.push({
-role: 'model', parts: [{ text: `Unexpected Error: ${error.message}` }] }); }
-                finally { DOM.chatSendBtn.disabled = false; if (state.chatHistory.length > 20) state.chatHistory =
-state.chatHistory.slice(-20); }
+                } catch (error) { console.error('Error handling chat message:', error); loadingElement.remove(); displayChatMessage('assistant', 'An unexpected error occurred while processing your request.'); state.chatHistory.push({ role: 'model', parts: [{ text: `Unexpected Error: ${error.message}` }] }); }
+                finally { DOM.chatSendBtn.disabled = false; if (state.chatHistory.length > 20) state.chatHistory = state.chatHistory.slice(-20); }
             }
 
             const getApiUrl = (model) =>
@@ -3588,9 +3520,7 @@ state.chatHistory.slice(-20); }
             async function generateFlashcard(text) {
                 if (!state.userApiSettings) return;
                 try {
-                    const prompt = `Extract a single useful vocabulary word or phrase from this text that would be good for a language learner. If the text is long, choose the most difficult or interesting word/phrase.\n\nText:
-"${text}"\n\nReturn in this JSON format without any additional text:\n{\n    "word": "the extracted word or short phrase",\n    "phrase": "A sentence showing the word in context, with the <b>word</b> in bold",\n
-"translation_answer": "vietnamese translation\\nBrief definition in English"\n}`;
+                    const prompt = `Extract a single useful vocabulary word or phrase from this text that would be good for a language learner. If the text is long, choose the most difficult or interesting word/phrase.\n\nText: "${text}"\n\nReturn in this JSON format without any additional text:\n{\n    "word": "the extracted word or short phrase",\n    "phrase": "A sentence showing the word in context, with the <b>word</b> in bold",\n    "translation_answer": "vietnamese translation\\nBrief definition in English"\n}`;
                     const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, state.userApiSettings.model);
                     if (response.error) { console.error('Error generating flashcard:', response.error); return; }
                     const flashcardText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -3609,17 +3539,9 @@ state.chatHistory.slice(-20); }
                 const existingToast = document.querySelector('.flashcard-toast');
                 if (existingToast) existingToast.remove();
                 const toast = document.createElement('div'); toast.className = 'flashcard-toast visible';
-                if (state.lastSelectionRect) { let left = state.lastSelectionRect.left; let top =
-state.lastSelectionRect.bottom + 10; const flashcardWidth = 240; if (left + flashcardWidth > window.innerWidth) left =
-window.innerWidth - flashcardWidth - 10; toast.style.left = `${left}px`; toast.style.top = `${top}px`;
-toast.style.bottom = 'auto'; toast.style.right = 'auto'; }
+                if (state.lastSelectionRect) { let left = state.lastSelectionRect.left; let top = state.lastSelectionRect.bottom + 10; const flashcardWidth = 240; if (left + flashcardWidth > window.innerWidth) left = window.innerWidth - flashcardWidth - 10; toast.style.left = `${left}px`; toast.style.top = `${top}px`; toast.style.bottom = 'auto'; toast.style.right = 'auto'; }
                 else { toast.style.bottom = "20px"; toast.style.right = "20px"; }
-                toast.innerHTML = `<div class="flashcard-header"><div
-class="flashcard-word">${escapeHTML(flashcardData.word)}</div><button type="button" class="flashcard-close-btn"
-aria-label="Close">×</button></div><div
-class="flashcard-translation">${formatTranslation(flashcardData.translation_answer)}</div><div
-class="flashcard-actions"><button type="button" class="flashcard-speak-btn" aria-label="Speak">🔊</button><button
-type="button" class="flashcard-save-btn">Save</button></div>`;
+                toast.innerHTML = `<div class="flashcard-header"><div class="flashcard-word">${escapeHTML(flashcardData.word)}</div><button type="button" class="flashcard-close-btn" aria-label="Close">×</button></div><div class="flashcard-translation">${formatTranslation(flashcardData.translation_answer)}</div><div class="flashcard-actions"><button type="button" class="flashcard-speak-btn" aria-label="Speak">🔊</button><button type="button" class="flashcard-save-btn">Save</button></div>`;
                 document.body.appendChild(toast);
                 toast.querySelector('.flashcard-close-btn').addEventListener('click', () => {
 toast.classList.add('fade-out'); setTimeout(() => { toast.remove(); }, 500); });
@@ -3629,15 +3551,11 @@ speakText(flashcardData.word); });
                 const speakSelectionEnabled = state.settings.speakSelectionEnabled;
                 if (autoSpeakEnabled && !speakSelectionEnabled) setTimeout(() => speakText(flashcardData.word), 300);
                 toast.querySelector('.flashcard-save-btn').addEventListener('click', async () => {
-                    const saveButton = toast.querySelector('.flashcard-save-btn'); saveButton.textContent = 'Saving...';
-saveButton.disabled = true;
+                    const saveButton = toast.querySelector('.flashcard-save-btn'); saveButton.textContent = 'Saving...'; saveButton.disabled = true;
                     const { data: { session } } = await supabase.auth.getSession();
-                    if (!session) { showToast('Please sign in to save flashcards'); saveButton.textContent = 'Save';
-saveButton.disabled = false; return; }
+                    if (!session) { showToast('Please sign in to save flashcards'); saveButton.textContent = 'Save'; saveButton.disabled = false; return; }
                     try {
-                        const { error } = await supabase.from('flashcards').insert({ user_id: session.user.id, word:
-flashcardData.word, phrase: flashcardData.phrase, translation_answer: flashcardData.translation_answer, state: "new",
-due: new Date().toISOString(), stability: 0.5, difficulty: 5, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 });
+                        const { error } = await supabase.from('flashcards').insert({ user_id: session.user.id, word: flashcardData.word, phrase: flashcardData.phrase, translation_answer: flashcardData.translation_answer, state: "new", due: new Date().toISOString(), stability: 0.5, difficulty: 5, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 });
                         if (error) throw error;
                         saveButton.textContent = 'Saved!'; saveButton.disabled = true;
                         setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => { if (document.body.contains(toast)) toast.remove(); }, 500); }, 1000);
