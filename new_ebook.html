@@ -2314,7 +2314,7 @@
                 DOM.openFileBtn.addEventListener('click', () => DOM.fileInput.click());
                 DOM.fileInput.addEventListener('change', handleFileSelected);
                 DOM.processTextBtn.addEventListener('click', processInputText);
-                DOM.exampleBookBtn.addEventListener('click', downloadExampleBook);
+                // DOM.exampleBookBtn listener removed - handled by <a> tag
                 DOM.toggleTextInput.addEventListener('click', (e) => {
                     e.preventDefault();
                     DOM.textInputContainer.style.display = DOM.textInputContainer.style.display === 'none' ? 'block' : 'none';
@@ -2601,8 +2601,7 @@ saveUserPreferences(); });
                 const reader = new FileReader();
                 reader.onload = function() {
                     showToast('PDF support is limited. For a better experience, use a dedicated PDF reader app.');
-                    state.bookData.chapters = [{ title: state.bookData.title || 'PDF Content', content: "PDF content extraction is limited in this simple reader.\n\nFor a better experience with PDFs, consider using a dedicated PDF
-reader app.", startLine: 0, endLine: 2 }];
+                    state.bookData.chapters = [{ title: state.bookData.title || 'PDF Content', content: "PDF content extraction is limited in this simple reader.\n\nFor a better experience with PDFs, consider using a dedicated PDF reader app.", startLine: 0, endLine: 2 }];
                     showBook();
                     hideLoading();
                 };
@@ -3393,7 +3392,7 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
                     if (isPositionRecent && lastPosition.textAnchor) { if (restoreByTextAnchor(lastPosition.textAnchor)) return; }
                     if (lastPosition.percentComplete !== undefined) { const scrollHeight = DOM.contentArea.scrollHeight; const clientHeight = DOM.contentArea.clientHeight; if (scrollHeight > clientHeight) { const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight); DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'smooth' }); return; } }
                     if (lastPosition.scroll) { if (lastPosition.contentHeight && lastPosition.viewportHeight) { const oldRatio = lastPosition.contentHeight / lastPosition.viewportHeight; const newRatio = DOM.contentArea.scrollHeight / DOM.contentArea.clientHeight; if (Math.abs(oldRatio - newRatio) < 0.5) { const scaledPosition = lastPosition.scroll * (newRatio / oldRatio); DOM.contentArea.scrollTo({ top: scaledPosition, behavior: 'smooth' }); return; } } DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'smooth' }); }
-                }, 100); // Added small delay
+                }, 250); // Increased delay for rendering/scroll
             }
 
             function restoreByTextAnchor(textAnchor) {
@@ -3749,7 +3748,7 @@ speakText(flashcardData.word); });
                 }
             }
 
-            // Removed duplicate function definition of firecrawlScrapeRequest
+            // firecrawlScrapeRequest function removed as it was defined earlier
 
             return { init };
         })();
