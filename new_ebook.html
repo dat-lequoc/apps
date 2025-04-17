@@ -2811,18 +2811,9 @@ saveUserPreferences(); });
             function displayCurrentChapter() {
                 const chapter = state.bookData.chapters[state.bookData.currentPosition];
                 if (!chapter) return;
-                DOM.contentArea.innerHTML = '';
+                DOM.contentArea.innerHTML = ''; // Clear previous content
 
-                if (!state.settings.viewRawContentEnabled) {
-                    DOM.contentArea.innerHTML = marked.parse(chapter.markdownContent || '');
-                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
-                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
-                    DOM.contentArea.scrollTop = 0;
-                    updateNavigationButtonsState();
-                    updateProgressBar();
-                    return;
-                }
-
+                // Update chapter title in navbar, making it clickable if sourceUrl exists
                 const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title}`;
                 if (state.bookData.sourceUrl) { DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color);
 text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.style.cursor = 'pointer'; }
@@ -2839,11 +2830,14 @@ text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.styl
                     DOM.contentArea.appendChild(pre);
                     DOM.contentArea.style.fontSize = 'inherit';
                     DOM.contentArea.style.lineHeight = 'inherit';
-                } else if (state.settings.preferHtmlView && chapter.content) {
-                    DOM.contentArea.innerHTML = chapter.content;
+
+                } else if (state.settings.preferHtmlView && chapter.content && chapter.content.trim() !== '') {
+                    // Display the fetched HTML content directly if available and preferred
+                    DOM.contentArea.innerHTML = chapter.content; // chapter.content holds the HTML
+                    // Apply reader styles
                     DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
                     DOM.contentArea.style.lineHeight = state.settings.lineHeight;
-                    DOM.contentArea.style.whiteSpace = 'normal';
+                    DOM.contentArea.style.whiteSpace = 'normal'; // Ensure wrapping for HTML
                     DOM.contentArea.style.wordWrap = 'break-word';
                 } else if (chapter.markdownContent) {
                     const lines = chapter.markdownContent.split('\n');
@@ -2865,7 +2859,9 @@ p.innerHTML = processedLine; p.setAttribute('data-p-index', index); DOM.contentA
                     DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
                     DOM.contentArea.style.lineHeight = state.settings.lineHeight;
                 } else {
+                    // Ultimate fallback if no content available
                     DOM.contentArea.innerHTML = '<p>Content not available.</p>';
+                    // Apply reader styles even for fallback
                     DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
                     DOM.contentArea.style.lineHeight = state.settings.lineHeight;
                 }
@@ -3044,16 +3040,33 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
             }
 
             function handleContentClick(e) {
-                if (state.settings.markdownModeEnabled) {
-                    const link = e.target.closest('a');
-                    if (link && link.href && DOM.contentArea.contains(link)) {
-                        e.preventDefault();
+                // --- START: Intercept Link Clicks in HTML/Markdown View ---
+                // Use preferHtmlView as the condition for intercepting links
+                // Also check if raw view is NOT enabled, as links shouldn't be interactive there
+                if (state.settings.preferHtmlView && !state.settings.viewRawContentEnabled) {
+                    const link = e.target.closest('a'); // Find the nearest ancestor anchor tag
+
+                    if (link && link.href && DOM.contentArea.contains(link)) { // Ensure link is within content area
+                        // It's a click on a link within the content area in HTML/Markdown mode
+                        e.preventDefault(); // Stop the browser from following the link immediately
                         const url = link.href;
-                        if (url.startsWith('http://') || url.startsWith('https://')) { showLinkActionConfirmation(url, link.textContent || url); }
-                        else { console.warn(`Link is not directly scrapable or is internal: ${url}`); showToast(`Cannot scrape this type of link: ${url.substring(0, 30)}...`, 3000); }
-                        return;
+
+                        // Check if it's a scrapable URL (http/https)
+                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                            // Show confirmation toast instead of automatically scraping
+                            const linkText = link.textContent || url; // Use link text or URL as display
+                            showLinkActionConfirmation(url, linkText);
+                        } else {
+                            // For non-http links (e.g., mailto:, javascript:, internal anchors #), open normally or ignore
+                            console.warn(`Link is not directly scrapable or is internal: ${url}`);
+                            // Optionally open non-http links in a new tab if desired
+                            // window.open(url, '_blank', 'noopener noreferrer');
+                            showToast(`Cannot scrape this type of link: ${url.substring(0, 30)}...`, 3000);
+                        }
+                        return; // We've handled this click, no need for further UI toggling logic
                     }
                 }
+                // --- END: Intercept Link Clicks ---
                 const selection = window.getSelection();
                 if (selection && selection.toString().trim().length > 0) return;
                 const clickY = e.clientY;
