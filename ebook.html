@@ -7,6 +7,8 @@
     <!-- Include external libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Markdown renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         /* CSS Reset */
         * {
@@ -3308,14 +3310,9 @@
                         // Proceed without markdown if necessary
                     }
 
-                    // Store the raw HTML directly
-                    const rawHtmlContent = response.data.content;
-                    const rawMarkdownContent = response.data.markdown || ''; // Use markdown or empty string
-
-                    // Store HTML for display and raw view
-                    state.bookData.processedHtmlContent = rawHtmlContent;
-                    state.bookData.rawContent = rawHtmlContent; // Raw view now shows the same HTML
-                    // Store markdown as fallback/metadata source
+                    // Store Markdown content for display and raw view
+                    const rawMarkdownContent = response.data.markdown || '';
+                    state.bookData.rawContent = rawMarkdownContent;
                     state.bookData.content = rawMarkdownContent;
 
                     // --- AI Title and Category Generation (using Markdown if available) ---
@@ -3394,13 +3391,12 @@
                     }
                     // --- END: AI Title and Category Generation ---
 
-                    // Create a single chapter containing the HTML and Markdown content
+                    // Create a single chapter containing the Markdown content
                     let chapters = [{
                         title: state.bookData.title || 'Content',
-                        content: state.bookData.processedHtmlContent, // Store the HTML content
-                        markdownContent: state.bookData.content,      // Store the Markdown content
-                        startLine: 0, // Not applicable for HTML blob
-                        endLine: 1    // Not applicable
+                        markdownContent: state.bookData.content,
+                        startLine: 0,
+                        endLine: 1
                     }];
 
                     /* // Old chapter splitting logic based on Markdown - REMOVED
@@ -3455,14 +3451,13 @@
 
                     state.bookData.chapters = chapters;
 
-                    // --- Auto-enable HTML View mode for URL content ---
-                    state.settings.preferHtmlView = true;
-                    DOM.preferHtmlViewToggle.checked = true;
-                    // --- End change ---
+                    // Ensure Markdown view is used for URL content
+                    state.settings.preferHtmlView = false;
+                    DOM.preferHtmlViewToggle.checked = false;
 
                     // Store the original URL
                     state.bookData.sourceUrl = url;
-                    state.bookData.rawContent = response.data.content; // Store raw HTML content in state
+                    state.bookData.rawContent = response.data.markdown; // Store raw Markdown content in state
 
                     showBook(); // This will now render with Markdown enabled
 
@@ -3745,6 +3740,16 @@
                 if (!chapter) return;
                 
                 DOM.contentArea.innerHTML = ''; // Clear previous content
+                // Render Markdown by default when not viewing raw content
+                if (!state.settings.viewRawContentEnabled) {
+                    DOM.contentArea.innerHTML = marked.parse(chapter.markdownContent || '');
+                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
+                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
+                    DOM.contentArea.scrollTop = 0;
+                    updateNavigationButtonsState();
+                    updateProgressBar();
+                    return;
+                }
 
                 // Update chapter title in navbar, making it clickable if sourceUrl exists
                 const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title}`;
@@ -6589,11 +6594,9 @@ Actual Output JSON:
                         body: JSON.stringify({
                              url: url,
                              pageOptions: {
-                                 onlyMainContent: false // Ensure we get full HTML
+                                 onlyMainContent: false // Ensure main content fetch
                              },
-                             // Request both markdown and html if the API supports it in one call
-                             // Otherwise, rely on the logic in processUrlInput which makes two calls
-                             // Assuming the API call structure used in processUrlInput is correct
+                             extractorOptions: { extractionSchema: 'markdown' }
                          })
                     });
 
