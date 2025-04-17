@@ -2704,9 +2704,9 @@ saveUserPreferences(); });
 
             async function scrapeAndSaveLink(url) {
                 if (!state.userApiSettings || !state.userApiSettings.firecrawl_api_key) { showToast('Firecrawl API key needed to scrape. Configure in dashboard.', 4000); return; }
-                // Removed reference to DOM.cleanUrlContentToggle as it doesn't exist
-                // const canClean = state.userApiSettings.api_key && DOM.cleanUrlContentToggle.checked;
-                // if (DOM.cleanUrlContentToggle.checked && !state.userApiSettings.api_key) { showToast('Gemini API key needed for cleaning. Scraping raw content.', 3000); }
+                // Optional: Check for Gemini key if cleaning is desired (Note: cleanUrlContentToggle removed)
+                // const canClean = state.userApiSettings.api_key; // Simplified check
+                // if (canClean && !state.userApiSettings.api_key) { showToast('Gemini API key needed for cleaning. Scraping raw content.', 3000); }
 
                 showToast(`Scraping "${url}"...`, 2000);
                 try {
@@ -3748,7 +3748,15 @@ speakText(flashcardData.word); });
                 }
             }
 
-            // firecrawlScrapeRequest function removed as it was defined earlier
+            // Function to handle downloading the example book (restored)
+            function downloadExampleBook() {
+                // This function is intentionally simple.
+                // The link itself handles the download via the href attribute.
+                // We might add tracking or other logic here in the future if needed.
+                console.log('Example book link clicked.');
+                // No need to prevent default as it's a standard link.
+            }
+
 
             return { init };
         })();
