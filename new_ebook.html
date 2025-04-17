@@ -3099,8 +3099,7 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
                 if (leftPos + popupWidth > viewportWidth - 10) leftPos = Math.max(10, viewportWidth - popupWidth - 10);
                 if (topPos + popupHeight > viewportHeight + window.scrollY - 10) {
                     topPos = rect.top + window.scrollY - popupHeight - 10;
-                    if (topPos < window.scrollY) { leftPos = rect.right + window.scrollX + 10; topPos = rect.top + window.scrollY; if (leftPos + popupWidth > viewportWidth - 10) leftPos = Math.max(10, rect.left + window.scrollX -
-popupWidth - 10); }
+                    if (topPos < window.scrollY) { leftPos = rect.right + window.scrollX + 10; topPos = rect.top + window.scrollY; if (leftPos + popupWidth > viewportWidth - 10) leftPos = Math.max(10, rect.left + window.scrollX - popupWidth - 10); }
                 }
                 popup.style.left = `${leftPos}px`;
                 popup.style.top = `${topPos}px`;
@@ -3162,8 +3161,7 @@ popupWidth - 10); }
             function showLoading() { DOM.loading.classList.add('visible'); }
             function hideLoading() { DOM.loading.classList.remove('visible'); }
             function showToast(message, duration = 3000) { const toast = DOM.toast; toast.textContent = message; toast.classList.add('visible'); setTimeout(() => { toast.classList.remove('visible'); }, duration); }
-            function debounce(func, delay) { const context = this; return function() { const args = arguments; const functionName = func.name || 'anonymous'; clearTimeout(state.debounceTimers[functionName]);
-state.debounceTimers[functionName] = setTimeout(() => { func.apply(context, args); delete state.debounceTimers[functionName]; }, delay); }; }
+            function debounce(func, delay) { const context = this; return function() { const args = arguments; const functionName = func.name || 'anonymous'; clearTimeout(state.debounceTimers[functionName]); state.debounceTimers[functionName] = setTimeout(() => { func.apply(context, args); delete state.debounceTimers[functionName]; }, delay); }; }
 
             async function checkAuthAndLoadApiSettings() {
                 const { data: { session } } = await supabase.auth.getSession();
