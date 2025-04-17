@@ -17,9 +17,7 @@
             padding: 0;
         }
         
-        /* CSS Variables for theming */
         :root {
-            /* Light theme variables */
             --light-bg: #f8f8f8;
             --light-text: #333;
             --light-panel-bg: #fff;
@@ -43,7 +41,6 @@
             --dark-panel-shadow: rgba(0,0,0,0.3);
             --dark-highlight: rgba(66, 133, 244, 0.4);
             
-            /* Common UI colors */
             --primary-color: #4285f4;
             --success-color: #34a853;
             --danger-color: #d93025;
@@ -58,7 +55,6 @@
             --highlight-color: var(--dark-highlight);
         }
         
-        /* Theme classes */
         body.light-theme {
             --bg-color: var(--light-bg);
             --text-color: var(--light-text);
@@ -91,11 +87,11 @@
         }
 
         .hidden {
-            display: none !important; /* Use important to override potential inline styles if needed */
+            display: none !important;
         }
 
         #ai-response-area {
-            display: none; /* Initially hidden, controlled by JS */
+            display: none;
         }
 
         /* Base styles */
@@ -261,7 +257,7 @@
             border-bottom: 1px solid var(--border-color); /* Separator */
             flex-wrap: wrap; /* Allow wrapping if needed on very small screens */
             flex-shrink: 0; /* Prevent header from shrinking */
-            padding: 1.25rem 1.25rem 0.5rem; /* Add padding back to header */
+            padding: 1.25rem 1.25rem 0.5rem;
         }
 
         /* List Badge Styling */
@@ -1370,8 +1366,6 @@
             /* Optional: slightly different hover effect if needed */
             color: #3367d6; /* Example: darker blue on hover */
         }
-        
-        /* Toast notification */
         #toast {
             position: fixed;
             bottom: 1.25rem;
@@ -1677,9 +1671,6 @@
             color: var(--primary-color);
             text-decoration: underline;
         }
-
-        /* ... existing code ... */
-        /* Panels */
         .panel {
             position: fixed;
             background-color: var(--panel-bg);
@@ -2089,34 +2080,28 @@
 </head>
 <body class="dark-theme">
     <div id="app">
-        <!-- Welcome screen -->
         <div id="welcome-screen">
             <div class="welcome-content">
                 <h1>Enhanced Ebook Reader</h1>
                 <p>Open a local file, read from a URL, or paste text.</p>
 
                 <div class="welcome-actions">
-                    <!-- Main Actions: Open File / Sign In -->
                     <div class="main-actions">
                         <button type="button" id="open-file-btn" class="button">Open File</button>
-                        <button type="button" id="login-btn" class="button hidden">Sign In</button> <!-- JS controlled -->
+                        <button type="button" id="login-btn" class="button hidden">Sign In</button>
                     </div>
 
-                    <!-- URL Input Group -->
                     <div class="input-group" id="url-input-container">
                         <div class="input-row">
                             <input id="url-input" type="url" placeholder="Or enter a URL to read" class="input-field">
-                            <!-- Model Selection Dropdown Removed -->
                             <button type="button" id="process-url-btn" class="button">Read URL</button>
                         </div>
                     </div>
-                    <!-- AI Cleaning Toggle Removed -->
 
-                    <!-- Text Input Group (Initially hidden) -->
                     <div id="toggle-text-input-container">
                         <a href="#" id="toggle-text-input">or paste text directly</a>
                     </div>
-                    <div class="input-group" id="text-input-container" style="display: none;"> <!-- JS controlled -->
+                    <div class="input-group" id="text-input-container" style="display: none;">
                         <textarea id="text-input" class="input-field" placeholder="Paste your text here..."></textarea>
                         <div class="input-row">
                             <input id="text-input-title" type="text" placeholder="Enter a title (optional)" class="input-field">
@@ -2124,7 +2109,6 @@
                         </div>
                     </div>
 
-                    <!-- Example Ebook Section -->
                     <div class="example-book-section">
                         <p>Don't have an ebook? Try our example:</p>
                         <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
@@ -2136,21 +2120,17 @@
                     <p>Sign in to save books to your library.</p>
                 </div>
                 
-                <!-- Library Section -->
                 <div id="library-section" style="display: none;">
-                    <!-- Removed list-management div -->
-                    <div id="list-controls-wrapper"> <!-- New wrapper -->
+                    <div id="list-controls-wrapper">
                         <div id="list-badge-container">
-                             <!-- Badges will be populated here by JS -->
                         </div>
-                        <div id="create-list-group"> <!-- Moved here -->
+                        <div id="create-list-group">
                             <input type="text" id="new-list-name" placeholder="New list name..." />
                             <button type="button" id="create-list-btn" class="button">+</button>
-                            <button type="button" id="ai-cleanup-btn" class="button icon-btn" title="AI Library Cleanup" aria-label="AI Library Cleanup" style="display: none;">🧹</button> <!-- Initially hidden -->
+                            <button type="button" id="ai-cleanup-btn" class="button icon-btn" title="AI Library Cleanup" aria-label="AI Library Cleanup" style="display: none;">🧹</button>
                         </div>
                     </div>
                     <div id="library-list">
-                        <!-- Library items will be populated here -->
                     </div>
                 </div>
             </div>
@@ -2275,10 +2255,10 @@
         </div>
 
         <!-- Chat Panel -->
-        <div id="chat-panel" class="panel"> <!-- Use common panel class -->
+        <div id="chat-panel" class="panel">
             <div id="chat-header">
                 <h3>Chat with AI</h3>
-                <div class="chat-header-controls"> <!-- New container for controls -->
+                <div class="chat-header-controls">
                     <button type="button" class="icon-btn chat-clear-btn" id="chat-clear-btn" aria-label="Clear Chat" title="Clear Chat History">🗑️</button>
                     <div class="chat-context-toggle">
                         <input type="checkbox" id="chat-full-doc-toggle" style="width: 16px; height: 16px; vertical-align: middle;" checked>
@@ -2288,31 +2268,24 @@
                 </div>
             </div>
             <div id="chat-messages">
-                <!-- Chat messages will be populated here -->
                 <div class="chat-message assistant">Hello! Ask me anything about the full document <br> (or toggle 'Use Full Document' above to focus on the current chapter).</div>
             </div>
             <div id="chat-input-area">
-                <!-- Suggested Questions Area -->
                 <div id="chat-suggestions">
-                    <!-- Suggested questions will be populated here by JS -->
                 </div>
-                <!-- Input Row -->
                 <div class="chat-input-row">
-                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea> <!-- Default to 1 row -->
+                    <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
                     <button type="button" id="chat-send-btn" class="button">Send</button>
                 </div>
             </div>
         </div>
     
-        <!-- Overlay for panels -->
         <div id="overlay"></div>
         
-        <!-- Loading indicator -->
         <div id="loading">
             <div class="spinner"></div>
         </div>
         
-        <!-- Translation popup -->
         <div id="translation-popup">
             <div id="translation-content"></div>
             <div id="translation-loading">
@@ -2320,11 +2293,9 @@
             </div>
         </div>
         
-        <!-- Toast notification -->
         <div id="toast"></div>
 
-        <!-- File input (hidden) -->
-        <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;"> <!-- Standard practice -->
+        <input type="file" id="file-input" accept=".txt,.epub,.pdf" style="display: none;">
     </div>
 
     <!-- AI Cleanup Modal -->
@@ -2395,13 +2366,10 @@
                 loginBtn: document.getElementById('login-btn'),
                 librarySection: document.getElementById('library-section'),
                 authSection: document.getElementById('auth-section'),
-                // summarizeBtn removed
-                // aiSettingsContent: document.getElementById('ai-settings-content'), // Initialization moved
                 translationToggle: document.getElementById('translation-toggle'),
                 autoSpeakToggle: document.getElementById('auto-speak-toggle'),
-                speakSelectionToggle: document.getElementById('speak-selection-toggle'), // Added Speak Selection toggle
+                speakSelectionToggle: document.getElementById('speak-selection-toggle'),
                 speechLanguage: document.getElementById('speech-language'),
-                // aiResponseArea removed
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
@@ -2409,14 +2377,12 @@
                 viewRawContentToggle: document.getElementById('view-raw-content-toggle'), // Added Raw Content toggle
                 // cleanUrlContentToggle removed
                 sourceUrlDisplay: document.getElementById('source-url-display'),      // Added source URL display area in content
-                sourceUrlContentLink: document.getElementById('source-url-content-link'), // Added source URL link in content area
-                // listFilter: document.getElementById('list-filter'), // Removed list filter dropdown
-                listBadgeContainer: document.getElementById('list-badge-container'), // Added badge container
-                createListBtn: document.getElementById('create-list-btn'),       // Added create list button
-                newListNameInput: document.getElementById('new-list-name'),     // Added new list name input
-                createListGroup: document.getElementById('create-list-group'), // Added create list group
-                aiCleanupBtn: document.getElementById('ai-cleanup-btn'),         // Added AI Cleanup button
-                // AI Cleanup Modal elements
+                sourceUrlContentLink: document.getElementById('source-url-content-link'),
+                listBadgeContainer: document.getElementById('list-badge-container'),
+                createListBtn: document.getElementById('create-list-btn'),
+                newListNameInput: document.getElementById('new-list-name'),
+                createListGroup: document.getElementById('create-list-group'),
+                aiCleanupBtn: document.getElementById('ai-cleanup-btn'),
                 aiCleanupModal: document.getElementById('ai-cleanup-modal'),
                 aiCleanupBackdrop: document.getElementById('ai-cleanup-backdrop'),
                 aiCleanupList: document.getElementById('ai-cleanup-list'),
@@ -2631,9 +2597,6 @@
                 // Add listener to close dropdowns on outside click
                 document.addEventListener('click', handleGlobalClick);
 
-                // URL Model Select listener removed
-
-                // Chat input listeners
                 DOM.chatSendBtn.addEventListener('click', handleSendMessage);
                 DOM.chatInput.addEventListener('keydown', (e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -2791,8 +2754,7 @@
                     toggleNavbar();
                 }
             }
-            
-            // File handling
+
             function handleFileSelected() {
                 const file = DOM.fileInput.files[0];
                 if (!file) return;
