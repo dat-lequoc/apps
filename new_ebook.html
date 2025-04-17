@@ -3833,22 +3833,7 @@ due: new Date().toISOString(), stability: 0.5, difficulty: 5, elapsed_days: 0, s
                 }
             }
 
-            async function firecrawlScrapeRequest(apiKey, url) {
-                console.log('Attempting to scrape URL:', url);
-                try {
-                    const response = await fetch('https://api.firecrawl.dev/v0/scrape', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                        body: JSON.stringify({ url: url, pageOptions: { onlyMainContent: false }, extractorOptions: { extractionSchema: 'markdown' } })
-                    });
-                    if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error || `Firecrawl API request failed with status ${response.status}`); }
-                    return await response.json();
-                } catch (error) {
-                    console.error('Error calling Firecrawl API:', error);
-                    console.error('Error details during Firecrawl API call:', error);
-                    return { error: { message: error.message || 'Failed to connect to Firecrawl API' } };
-                }
-            }
+            // Removed duplicate function definition of firecrawlScrapeRequest
 
             return { init };
         })();
