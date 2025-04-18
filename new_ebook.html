@@ -47,6 +47,7 @@
             --border-color: var(--dark-border);
             --panel-shadow: var(--dark-panel-shadow);
             --highlight-color: var(--dark-highlight);
+            --reader-line-height: 1.6; /* Default line height */
         }
 
         body.light-theme {
@@ -749,12 +750,87 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             background-color: var(--bg-color);
             color: var(--text-color);
+            line-height: var(--reader-line-height); /* Apply reader line height */
         }
 
+        /* Base paragraph style */
         #content-area p {
             margin-bottom: 1rem;
-            line-height: 1.7;
+            /* line-height is inherited from #content-area */
         }
+
+        /* Markdown Content Styling */
+        #content-area h1,
+        #content-area h2,
+        #content-area h3,
+        #content-area h4,
+        #content-area h5,
+        #content-area h6 {
+            font-size: 1.1em; /* Slightly larger than paragraphs */
+            font-weight: 600; /* Less bold than default */
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem; /* Less space after headings */
+            line-height: 1.4; /* Specific line height for headings */
+        }
+
+        #content-area h1 { font-size: 1.3em; }
+        #content-area h2 { font-size: 1.2em; }
+
+        #content-area ul,
+        #content-area ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5em; /* Standard indent */
+        }
+
+        #content-area li {
+            margin-bottom: 0.5rem; /* Space between list items */
+        }
+
+        #content-area blockquote {
+            margin-left: 1em;
+            padding-left: 1em;
+            border-left: 3px solid var(--border-color);
+            color: var(--text-muted, rgba(224, 224, 224, 0.7)); /* Muted color for quotes */
+            margin-bottom: 1rem;
+        }
+        body.light-theme #content-area blockquote { color: var(--text-muted, #666); }
+        body.sepia-theme #content-area blockquote { color: var(--text-muted, #8c7a64); }
+
+
+        #content-area code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        body.light-theme #content-area code { background-color: rgba(0, 0, 0, 0.05); }
+        body.sepia-theme #content-area code { background-color: rgba(95, 75, 50, 0.08); }
+
+
+        #content-area pre {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 0.8em;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+            font-family: monospace;
+            line-height: 1.4; /* Specific line height for code blocks */
+        }
+        body.light-theme #content-area pre { background-color: rgba(0, 0, 0, 0.03); }
+        body.sepia-theme #content-area pre { background-color: rgba(95, 75, 50, 0.05); }
+
+
+        #content-area pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+
+        #content-area hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 1.5rem 0;
+        }
+        /* End Markdown Content Styling */
 
         #settings-panel {
             position: fixed;
@@ -3111,7 +3187,12 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
             function updateFontSize() { DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`; DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-font-size', state.settings.fontSize); }
             function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height reached'); } }
             function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
-            function updateLineHeight() { DOM.contentArea.style.lineHeight = state.settings.lineHeight; DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-line-height', state.settings.lineHeight); }
+            function updateLineHeight() {
+                // Set the CSS variable on the content area element
+                DOM.contentArea.style.setProperty('--reader-line-height', state.settings.lineHeight);
+                DOM.lineHeightValue.textContent = state.settings.lineHeight;
+                localStorage.setItem('ebook-line-height', state.settings.lineHeight);
+            }
             function setTheme(theme) { document.body.classList.remove('light-theme', 'sepia-theme', 'dark-theme'); document.body.classList.add(`${theme}-theme`); DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
 
             function updateProgressBar() {
