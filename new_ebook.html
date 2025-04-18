@@ -1347,6 +1347,13 @@
             flex-shrink: 0; /* Prevent shrinking */
         }
 
+        #url-input-container {
+            width: 100%; /* Take full width of parent */
+            max-width: 550px; /* Limit maximum width */
+            margin-left: auto; /* Center within parent */
+            margin-right: auto; /* Center within parent */
+        }
+
         @media (max-width: 768px) {
             #toc-panel {
                 width: 100%;
@@ -2122,9 +2129,9 @@
                     </div>
 
                      <!-- Local File / Example Section -->
-                     <div style="margin-top: 1rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                     <div style="margin-top: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;"> <!-- Increased margin-top slightly -->
                         <button type="button" id="open-file-btn" class="button button-secondary">Open Local File</button>
-                        <div class="example-book-section" style="margin-top: 0.5rem; margin-bottom: 0;"> <!-- Reduced margins -->
+                        <div class="example-book-section" style="margin-top: 0.2rem; margin-bottom: 0;"> <!-- Further reduced top margin -->
                             <p style="margin-bottom: 0.5rem;">Don't have an ebook? Try our example:</p>
                             <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
                         </div>
