@@ -3522,35 +3522,107 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
             function restoreReadingPosition(lastPosition) {
                 if (!lastPosition) return;
                 showToast('Restoring reading position...', 1500);
-                setTimeout(() => {
-                    const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
-                    if (isPositionRecent && lastPosition.textAnchor) { if (restoreByTextAnchor(lastPosition.textAnchor)) return; }
-                    if (lastPosition.percentComplete !== undefined) { const scrollHeight = DOM.contentArea.scrollHeight; const clientHeight = DOM.contentArea.clientHeight; if (scrollHeight > clientHeight) { const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight); DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'smooth' }); return; } }
-                    if (lastPosition.scroll) { if (lastPosition.contentHeight && lastPosition.viewportHeight) { const oldRatio = lastPosition.contentHeight / lastPosition.viewportHeight; const newRatio = DOM.contentArea.scrollHeight / DOM.contentArea.clientHeight; if (Math.abs(oldRatio - newRatio) < 0.5) { const scaledPosition = lastPosition.scroll * (newRatio / oldRatio); DOM.contentArea.scrollTo({ top: scaledPosition, behavior: 'smooth' }); return; } } DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'smooth' }); }
-                }, 250); // Increased delay for rendering/scroll
+
+                // Use requestAnimationFrame to wait for rendering after chapter display
+                requestAnimationFrame(() => {
+                    // Give it another frame just in case layout is still settling
+                    requestAnimationFrame(() => {
+                        let restored = false;
+                        const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000); // ~3 months
+
+                        // 1. Try restoring by text anchor (most reliable if content hasn't changed drastically)
+                        if (isPositionRecent && lastPosition.textAnchor) {
+                            restored = restoreByTextAnchor(lastPosition.textAnchor);
+                            if (restored) {
+                                console.log("Restored position using text anchor.");
+                                return;
+                            } else {
+                                console.warn("Failed to restore using text anchor, trying percentage.");
+                            }
+                        }
+
+                        // 2. Try restoring by percentage complete (good fallback)
+                        if (lastPosition.percentComplete !== undefined && lastPosition.percentComplete >= 0 && lastPosition.percentComplete <= 1) {
+                            const scrollHeight = DOM.contentArea.scrollHeight;
+                            const clientHeight = DOM.contentArea.clientHeight;
+                            if (scrollHeight > clientHeight) {
+                                const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight);
+                                DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'auto' }); // Use 'auto' for instant jump
+                                console.log(`Restored position using percentage: ${Math.round(lastPosition.percentComplete * 100)}%`);
+                                restored = true;
+                                return;
+                            }
+                        }
+
+                        // 3. As a last resort, use the raw scroll value (least reliable)
+                        if (lastPosition.scroll !== undefined && lastPosition.scroll >= 0) {
+                            DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'auto' }); // Use 'auto' for instant jump
+                            console.warn("Restored position using raw scroll value (fallback).");
+                            restored = true;
+                            return;
+                        }
+
+                        if (!restored) {
+                            console.warn("Could not restore reading position from saved data.");
+                            DOM.contentArea.scrollTo({ top: 0, behavior: 'auto' }); // Go to top if nothing worked
+                        }
+                    });
+                });
             }
 
+
             function restoreByTextAnchor(textAnchor) {
-                if (!textAnchor || textAnchor.index === undefined) return false;
-                const paragraphs = DOM.contentArea.querySelectorAll('p');
-                const paragraph = paragraphs[textAnchor.index];
-                if (!paragraph) return false;
-                if (textAnchor.text) {
-                    const actualText = paragraph.textContent?.substring(0, textAnchor.text.length) || '';
-                    const isSimilar = actualText.length > 0 && (actualText === textAnchor.text || (actualText.length > 10 && actualText.slice(0, 10) === textAnchor.text.slice(0, 10)));
-                    if (!isSimilar) {
+                if (!textAnchor || textAnchor.index === undefined || textAnchor.index < 0) return false;
+
+                const paragraphs = DOM.contentArea.querySelectorAll('p[data-p-index]');
+                let targetParagraph = DOM.contentArea.querySelector(`p[data-p-index="${textAnchor.index}"]`);
+
+                // If the exact index isn't found, or the text doesn't match reasonably, try searching nearby
+                if (!targetParagraph || (textAnchor.text && !isTextSimilar(targetParagraph.textContent, textAnchor.text))) {
+                    console.warn(`Paragraph at index ${textAnchor.index} not found or text mismatch. Searching...`);
+                    if (textAnchor.text) {
                         for (let i = 0; i < paragraphs.length; i++) {
-                            const searchText = paragraphs[i].textContent?.substring(0, textAnchor.text.length) || '';
-                            if (searchText === textAnchor.text || (searchText.length > 10 && searchText.slice(0, 10) === textAnchor.text.slice(0, 10))) {
-                                const rect = paragraphs[i].getBoundingClientRect(); const top = paragraphs[i].offsetTop - DOM.contentArea.offsetTop; const offset = textAnchor.offset || 0; const scrollTarget = top + (offset * rect.height);
-                                DOM.contentArea.scrollTo({ top: Math.max(0, scrollTarget - 50), behavior: 'smooth' }); return true;
+                            if (isTextSimilar(paragraphs[i].textContent, textAnchor.text)) {
+                                targetParagraph = paragraphs[i];
+                                console.log(`Found similar text in paragraph index ${paragraphs[i].getAttribute('data-p-index')}`);
+                                break; // Found a likely match
                             }
-                        } return false;
+                        }
                     }
                 }
-                const rect = paragraph.getBoundingClientRect(); const top = paragraph.offsetTop - DOM.contentArea.offsetTop; const offset = textAnchor.offset || 0; const scrollTarget = top + (offset * rect.height);
-                DOM.contentArea.scrollTo({ top: Math.max(0, scrollTarget - 50), behavior: 'smooth' });
+
+                if (!targetParagraph) {
+                    console.error("Could not find target paragraph for text anchor restoration.");
+                    return false; // Still couldn't find it
+                }
+
+                // Calculate scroll position based on the found paragraph
+                const contentAreaRect = DOM.contentArea.getBoundingClientRect();
+                const paragraphRect = targetParagraph.getBoundingClientRect();
+
+                // Calculate the paragraph's top position relative to the contentArea's top
+                const paragraphTopRelativeToContentArea = paragraphRect.top - contentAreaRect.top;
+
+                // Calculate the target scroll position within the contentArea
+                const offset = textAnchor.offset || 0; // Offset within the paragraph (0 to 1)
+                const scrollTarget = DOM.contentArea.scrollTop + paragraphTopRelativeToContentArea + (offset * paragraphRect.height);
+
+                // Scroll slightly above the target for better context visibility
+                const finalScrollTarget = Math.max(0, scrollTarget - 50);
+
+                DOM.contentArea.scrollTo({ top: finalScrollTarget, behavior: 'auto' }); // Use 'auto' for instant jump
                 return true;
+            }
+
+            // Helper function for text similarity check
+            function isTextSimilar(text1, text2) {
+                if (!text1 || !text2) return false;
+                const t1 = text1.substring(0, 50).trim();
+                const t2 = text2.substring(0, 50).trim();
+                if (t1 === t2) return true;
+                // Allow for minor differences, e.g., first 10 characters match
+                if (t1.length > 10 && t2.length > 10 && t1.slice(0, 10) === t2.slice(0, 10)) return true;
+                return false;
             }
 
             function displayChatMessage(sender, message, isLoading = false) {
