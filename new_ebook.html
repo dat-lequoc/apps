@@ -133,10 +133,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
+            justify-content: flex-start; /* Changed from center to start */
             background-color: var(--bg-color);
             z-index: 100;
-            padding: 5vh 1rem;
+            padding: 3vh 1rem 1rem; /* Reduced top padding, added bottom */
             overflow-y: auto;
         }
 
@@ -150,17 +150,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start; /* Align items to the top */
             width: 100%;
-            max-width: 600px;
+            max-width: 650px; /* Slightly wider */
             padding: 1rem;
+            flex-grow: 1; /* Allow content to take space */
+            display: flex; /* Ensure flex properties apply */
+            flex-direction: column; /* Stack children vertically */
         }
 
         .welcome-actions {
             display: flex;
             flex-direction: column;
-            gap: 1.8rem; /* Increased gap */
-            margin-top: 1.8rem; /* Increased margin */
+            gap: 1.5rem; /* Adjusted gap */
+            margin-top: 1rem; /* Reduced top margin */
             width: 100%;
             align-items: center;
         }
@@ -179,9 +182,9 @@
             margin-top: 2.5rem;
             background-color: var(--panel-bg);
             border-radius: 8px;
-            height: 100vh;
+            /* Removed fixed height, let flexbox handle it */
             box-shadow: 0 2px 8px var(--panel-shadow);
-            display: flex;
+            display: flex; /* Keep flex */
             flex-direction: column;
             overflow: hidden;
         }
@@ -642,6 +645,28 @@
 
         .button:active {
             transform: translateY(1px);
+        }
+
+        .button-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            box-shadow: none;
+        }
+
+        .button-secondary:hover {
+            background-color: rgba(66, 133, 244, 0.1); /* Light primary color background */
+            border-color: #3367d6; /* Darker primary on hover */
+            box-shadow: none;
+        }
+
+        body.light-theme .button-secondary {
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        body.light-theme .button-secondary:hover {
+            background-color: rgba(66, 133, 244, 0.05);
+            border-color: #0b57d0;
         }
 
         .button.loading {
@@ -2063,21 +2088,19 @@
         <div id="welcome-screen">
             <div class="welcome-content">
                 <h1>Enhanced Ebook Reader</h1>
-                <p>Open a local file, read from a URL, or paste text.</p>
+                <p>Read from a URL, paste text, or open a local file.</p>
 
                 <div class="welcome-actions">
-                    <div class="main-actions">
-                        <button type="button" id="open-file-btn" class="button">Open File</button>
-                        <button type="button" id="login-btn" class="button hidden">Sign In</button>
-                    </div>
-
+                    <!-- URL Input First -->
                     <div class="input-group" id="url-input-container">
                         <div class="input-row">
-                            <input id="url-input" type="url" placeholder="Or enter a URL to read" class="input-field">
+                            <input id="url-input" type="url" placeholder="Enter a URL to read" class="input-field">
+                            <button type="button" id="process-url-btn" class="button">Read URL</button>
                             <button type="button" id="process-url-btn" class="button">Read URL</button>
                         </div>
                     </div>
 
+                    <!-- Text Input Section -->
                     <div id="toggle-text-input-container">
                         <a href="#" id="toggle-text-input">or paste text directly</a>
                     </div>
@@ -2086,16 +2109,27 @@
                         <div class="input-row">
                             <input id="text-input-title" type="text" placeholder="Enter a title (optional)" class="input-field">
                             <button type="button" id="process-text-btn" class="button">Read Text</button>
+                            <button type="button" id="process-text-btn" class="button">Read Text</button>
                         </div>
                     </div>
 
-                    <div class="example-book-section">
-                        <p>Don't have an ebook? Try our example:</p>
-                        <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
+                     <!-- Local File / Example Section -->
+                     <div style="margin-top: 1rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                        <button type="button" id="open-file-btn" class="button button-secondary">Open Local File</button>
+                        <div class="example-book-section" style="margin-top: 0.5rem; margin-bottom: 0;"> <!-- Reduced margins -->
+                            <p style="margin-bottom: 0.5rem;">Don't have an ebook? Try our example:</p>
+                            <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
+                        </div>
+                    </div>
+
+                    <!-- Sign In Button (if needed) -->
+                    <div class="main-actions" style="margin-top: 1rem;">
+                         <button type="button" id="login-btn" class="button hidden">Sign In</button>
                     </div>
                 </div>
 
-                <div class="auth-section" id="auth-section">
+                <!-- Auth Status Moved Down -->
+                <div class="auth-section" id="auth-section" style="margin-top: auto; padding-top: 1rem;"> <!-- Push to bottom -->
                     <p>Sign in to save books to your library.</p>
                 </div>
 
