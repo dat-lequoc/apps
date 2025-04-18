@@ -1337,6 +1337,16 @@
             background-color: #a4c2f4;
         }
 
+        .button.icon-btn {
+            padding: 0; /* Remove padding */
+            width: 2.5rem; /* Make it square */
+            height: 2.5rem; /* Make it square */
+            font-size: 1.5rem; /* Adjust icon size */
+            line-height: 2.5rem; /* Center icon vertically */
+            text-align: center; /* Center icon horizontally */
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+
         @media (max-width: 768px) {
             #toc-panel {
                 width: 100%;
@@ -2095,8 +2105,7 @@
                     <div class="input-group" id="url-input-container">
                         <div class="input-row">
                             <input id="url-input" type="url" placeholder="Enter a URL to read" class="input-field">
-                            <button type="button" id="process-url-btn" class="button">Read URL</button>
-                            <button type="button" id="process-url-btn" class="button">Read URL</button>
+                            <button type="button" id="process-url-btn" class="button icon-btn" aria-label="Read URL">➔</button>
                         </div>
                     </div>
 
@@ -2108,7 +2117,6 @@
                         <textarea id="text-input" class="input-field" placeholder="Paste your text here..."></textarea>
                         <div class="input-row">
                             <input id="text-input-title" type="text" placeholder="Enter a title (optional)" class="input-field">
-                            <button type="button" id="process-text-btn" class="button">Read Text</button>
                             <button type="button" id="process-text-btn" class="button">Read Text</button>
                         </div>
                     </div>
