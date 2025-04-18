@@ -2084,17 +2084,10 @@
                 </div>
 
                 <div class="settings-section">
-                    <div class="settings-title">Content View (URLs)</div>
-                    <div class="settings-row">
-                        <label for="prefer-html-view-toggle">Prefer HTML View</label>
-                        <input type="checkbox" id="prefer-html-view-toggle">
-                    </div>
-                </div>
-                <div class="settings-section">
                     <div class="settings-title">Content View</div>
                     <div class="settings-row">
-                        <label for="view-raw-content-toggle">View Raw Content (URLs)</label>
-                        <input type="checkbox" id="view-raw-content-toggle">
+                        <label for="view-raw-html-toggle">View Raw HTML (URLs/EPUBs)</label>
+                        <input type="checkbox" id="view-raw-html-toggle">
                     </div>
                 </div>
             </div>
@@ -2123,6 +2116,8 @@
                 <div id="ai-settings-content">
                     <p>Loading API status...</p>
                 </div>
+                <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem; display: none;">Summarize Chapter</button>
+                <div id="ai-response-area" style="display: none; margin-top: 1rem; background-color: rgba(255, 255, 255, 0.05); border-radius: 4px; padding: 0.75rem; font-size: 0.875rem; max-height: 15rem; overflow-y: auto;"></div>
             </div>
         </div>
 
@@ -2238,8 +2233,7 @@
                 translationPopup: document.getElementById('translation-popup'),
                 translationContent: document.getElementById('translation-content'),
                 translationLoading: document.getElementById('translation-loading'),
-                preferHtmlViewToggle: document.getElementById('prefer-html-view-toggle'),
-                viewRawContentToggle: document.getElementById('view-raw-content-toggle'),
+                viewRawHtmlToggle: document.getElementById('view-raw-html-toggle'), // Renamed
                 sourceUrlDisplay: document.getElementById('source-url-display'),
                 sourceUrlContentLink: document.getElementById('source-url-content-link'),
                 listBadgeContainer: document.getElementById('list-badge-container'),
@@ -2262,8 +2256,10 @@
                 chatClearBtn: document.getElementById('chat-clear-btn'),
                 chatFullDocToggle: document.getElementById('chat-full-doc-toggle'),
                 chatSuggestions: document.getElementById('chat-suggestions'),
-                aiSettingsContent: document.getElementById('ai-settings-content') // Added comma
-            }; // Removed semicolon
+                aiSettingsContent: document.getElementById('ai-settings-content'),
+                summarizeChapterBtn: document.getElementById('summarize-chapter-btn'), // Added
+                aiResponseArea: document.getElementById('ai-response-area') // Added
+            };
 
             let state = {
                 bookData: {
@@ -2279,8 +2275,8 @@
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
-                    preferHtmlView: false,
-                    viewRawContentEnabled: false,
+                    // preferHtmlView: false, // Removed
+                    viewRawHtmlEnabled: false, // Renamed
                     speakSelectionEnabled: false
                 },
                 session: null,
@@ -2346,22 +2342,9 @@
 saveUserPreferences(); });
                 });
 
-                DOM.preferHtmlViewToggle.addEventListener('change', function() {
-                    state.settings.preferHtmlView = this.checked;
-                    if (!this.checked) {
-                        DOM.viewRawContentToggle.checked = false;
-                        state.settings.viewRawContentEnabled = false;
-                    }
-                    displayCurrentChapter();
-                    saveUserPreferences();
-                });
-
-                DOM.viewRawContentToggle.addEventListener('change', function() {
-                    state.settings.viewRawContentEnabled = this.checked;
-                    if (this.checked) {
-                        DOM.preferHtmlViewToggle.checked = true;
-                        state.settings.preferHtmlView = true;
-                    }
+                // Renamed toggle listener
+                DOM.viewRawHtmlToggle.addEventListener('change', function() {
+                    state.settings.viewRawHtmlEnabled = this.checked;
                     displayCurrentChapter();
                     saveUserPreferences();
                 });
@@ -2395,6 +2378,9 @@ saveUserPreferences(); });
                     showToast(`Chat context set to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`, 2000);
                 });
                 DOM.chatSuggestions.addEventListener('click', handleSuggestionClick);
+
+                // Add listener for Summarize button
+                DOM.summarizeChapterBtn.addEventListener('click', summarizeCurrentChapter);
             }
 
             // Function to handle downloading the example book (restored)
@@ -2700,12 +2686,15 @@ saveUserPreferences(); });
                     if (listId !== null) { const listName = state.bookLists.find(l => l.id === listId)?.name || 'Unknown List'; showToast(`Categorized into: "${listName}"`, 3000); console.log("Categorized into: ", listName); }
                     else { showToast('Categorized as Unlisted.', 2000); console.log("Categorized as Unlisted: ", listId); }
 
-                    let chapters = [{ title: state.bookData.title || 'Content', markdownContent: state.bookData.content, startLine: 0, endLine: 1 }];
+                    // Chapter content now primarily uses markdownContent
+                    let chapters = [{ title: state.bookData.title || 'Content', markdownContent: state.bookData.content, content: response.data.content /* Store raw HTML here */, startLine: 0, endLine: 1 }];
                     state.bookData.chapters = chapters;
-                    state.settings.preferHtmlView = false;
-                    DOM.preferHtmlViewToggle.checked = false;
+                    // state.settings.preferHtmlView = false; // Removed
+                    // DOM.preferHtmlViewToggle.checked = false; // Removed
+                    state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                    DOM.viewRawHtmlToggle.checked = false;
                     state.bookData.sourceUrl = url;
-                    state.bookData.rawContent = response.data.markdown;
+                    state.bookData.rawContent = response.data.content; // Store raw HTML in rawContent
                     showBook();
                 } catch (error) { console.error('Error processing URL:', error); showToast(`Error reading URL: ${error.message}`); goToHome(); }
                 finally { DOM.urlInput.value = ''; DOM.processUrlBtn.classList.remove('loading'); DOM.processUrlBtn.disabled = false; hideLoading(); }
@@ -2729,10 +2718,16 @@ saveUserPreferences(); });
 
                     const scrapedBookData = {
                         title: scrapedTitle,
-                        content: markdownContent,
-                        raw_content: rawHtmlContent,
+                        content: null, // Content field no longer primary for URLs
+                        raw_content: rawHtmlContent, // Store raw HTML
                         file_type: 'url',
-                        metadata: { chapters: [{ title: 'Content', content: rawHtmlContent, markdownContent: markdownContent, startLine: 0, endLine: 1 }], preferHtmlView: true },
+                        // Metadata: Store both, default viewRawHtmlEnabled to false (show Markdown)
+                        metadata: {
+                            chapters: [{ title: 'Content', content: rawHtmlContent, markdownContent: markdownContent, startLine: 0, endLine: 1 }],
+                            // preferHtmlView: true, // Removed
+                            viewRawHtmlEnabled: false, // Default to Markdown view
+                            sourceUrl: url // Store source URL in metadata
+                        },
                         last_position: { chapter: 0, percentComplete: 0, scroll: 0, timestamp: new Date().getTime() }
                     };
                     await saveScrapedBook(scrapedBookData, state.bookData.currentListId);
@@ -2828,27 +2823,21 @@ saveUserPreferences(); });
 text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.style.cursor = 'pointer'; }
                 else { DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText); DOM.bookTitle.style.cursor = 'default'; }
 
-                DOM.viewRawContentToggle.disabled = !state.bookData.rawContent;
-                DOM.viewRawContentToggle.closest('.settings-row').title = !state.bookData.rawContent ? "Raw content view only available for books added via URL." : "View the original scraped HTML content.";
+                // Update check for renamed toggle and state property
+                DOM.viewRawHtmlToggle.disabled = !state.bookData.rawContent;
+                DOM.viewRawHtmlToggle.closest('.settings-row').title = !state.bookData.rawContent ? "Raw HTML view only available for books added via URL or EPUB." : "View the original scraped/extracted HTML content.";
 
-                if (state.settings.viewRawContentEnabled && state.bookData.rawContent) {
+                // Updated logic: Show raw HTML if toggle is checked AND raw content exists
+                if (state.settings.viewRawHtmlEnabled && state.bookData.rawContent) {
                     const pre = document.createElement('pre');
-                    pre.style.whiteSpace = 'pre-wrap';
-                    pre.style.wordBreak = 'break-all';
+                    pre.style.whiteSpace = 'pre-wrap'; // Keep existing style
+                    pre.style.wordBreak = 'break-word'; // Use break-word for better readability
                     pre.textContent = state.bookData.rawContent;
                     DOM.contentArea.appendChild(pre);
-                    DOM.contentArea.style.fontSize = 'inherit';
-                    DOM.contentArea.style.lineHeight = 'inherit';
+                    DOM.contentArea.style.fontSize = 'inherit'; // Keep raw view unstyled by reader settings
+                    DOM.contentArea.style.lineHeight = 'inherit'; // Keep raw view unstyled
 
-                } else if (state.settings.preferHtmlView && chapter.content && chapter.content.trim() !== '') {
-                    // Display the fetched HTML content directly if available and preferred
-                    DOM.contentArea.innerHTML = chapter.content; // chapter.content holds the HTML
-                    // Apply reader styles
-                    DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
-                    DOM.contentArea.style.lineHeight = state.settings.lineHeight;
-                    DOM.contentArea.style.wordWrap = 'break-word'; // Ensure wrapping for HTML
-
-                } else if (chapter.markdownContent) { // Render Markdown if HTML view is off OR HTML content is missing/empty
+                } else if (chapter.markdownContent) { // Default: Render Markdown if available
                     // Use marked.js for proper Markdown rendering
                     DOM.contentArea.innerHTML = marked.parse(chapter.markdownContent);
                     // Add data-p-index to paragraphs generated by marked.js for text anchor restoration
@@ -3040,14 +3029,13 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
             }
 
             function handleContentClick(e) {
-                // --- START: Intercept Link Clicks in HTML/Markdown View ---
-                // Use preferHtmlView as the condition for intercepting links
-                // Also check if raw view is NOT enabled, as links shouldn't be interactive there
-                if (state.settings.preferHtmlView && !state.settings.viewRawContentEnabled) {
+                // --- START: Intercept Link Clicks in Markdown View ---
+                // Links should only be interactive when NOT in raw HTML view
+                if (!state.settings.viewRawHtmlEnabled) {
                     const link = e.target.closest('a'); // Find the nearest ancestor anchor tag
 
                     if (link && link.href && DOM.contentArea.contains(link)) { // Ensure link is within content area
-                        // It's a click on a link within the content area in HTML/Markdown mode
+                        // It's a click on a link within the content area in Markdown mode
                         e.preventDefault(); // Stop the browser from following the link immediately
                         const url = link.href;
 
@@ -3188,11 +3176,24 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
                 DOM.aiCleanupBtn.style.display = 'none';
 
                 if (state.userApiSettings) {
-                    if (state.userApiSettings.api_key && state.userApiSettings.model) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Gemini API configured (Model: ${escapeHTML(state.userApiSettings.model)})</span></div>`; canUseAi = true; }
-                    else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Gemini API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`; }
-                    if (state.userApiSettings.firecrawl_api_key) { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Firecrawl API configured</span></div>`; canUseFirecrawl = true; }
-                    else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Firecrawl API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`; }
-                } else { apiStatusHtml += `<div class="api-status-item"><span class="status-icon">⚠️</span><span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI features.</span></div>`; }
+                    if (state.userApiSettings.api_key && state.userApiSettings.model) {
+                        apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Gemini API configured (Model: ${escapeHTML(state.userApiSettings.model)})</span></div>`;
+                        canUseAi = true;
+                        DOM.summarizeChapterBtn.style.display = 'block'; // Show summarize button
+                    } else {
+                        apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Gemini API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`;
+                        DOM.summarizeChapterBtn.style.display = 'none'; // Hide summarize button
+                    }
+                    if (state.userApiSettings.firecrawl_api_key) {
+                        apiStatusHtml += `<div class="api-status-item"><span class="status-icon">✅</span><span class="status-text">Firecrawl API configured</span></div>`;
+                        canUseFirecrawl = true;
+                    } else {
+                        apiStatusHtml += `<div class="api-status-item"><span class="status-icon">❌</span><span class="status-text">Firecrawl API not configured. <a href="index.html" target="_blank">Set up</a>.</span></div>`;
+                    }
+                } else {
+                    apiStatusHtml += `<div class="api-status-item"><span class="status-icon">⚠️</span><span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI features.</span></div>`;
+                    DOM.summarizeChapterBtn.style.display = 'none'; // Hide summarize button
+                }
                 apiStatusHtml += '</div>';
 
                 if (DOM.aiSettingsContent) { DOM.aiSettingsContent.innerHTML = apiStatusHtml; }
@@ -3363,12 +3364,24 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session || !state.bookData.title) return false;
                 try {
-                    let fileType = state.bookData.title.includes('.') ? state.bookData.title.split('.').pop().toLowerCase() : 'txt';
-                    const bookContent = state.bookData.content && state.bookData.content.length < 100000 ? state.bookData.content : null;
-                    const metadata = { chapters: state.bookData.chapters.map(chapter => ({ title: chapter.title, startLine: chapter.startLine, endLine: chapter.endLine, content: chapter.content, markdownContent: chapter.markdownContent })), preferHtmlView: state.settings.preferHtmlView, sourceUrl: state.bookData.sourceUrl };
+                    let fileType = state.bookData.title.includes('.') ? state.bookData.title.split('.').pop().toLowerCase() : (state.bookData.sourceUrl ? 'url' : 'txt');
+                    const bookContent = null; // Don't save large content directly
+                    const metadata = {
+                        chapters: state.bookData.chapters.map(chapter => ({
+                            title: chapter.title,
+                            startLine: chapter.startLine,
+                            endLine: chapter.endLine,
+                            content: chapter.content, // Store HTML content if available
+                            markdownContent: chapter.markdownContent // Store Markdown content if available
+                        })),
+                        // preferHtmlView: state.settings.preferHtmlView, // Removed
+                        viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled, // Save the raw view setting
+                        sourceUrl: state.bookData.sourceUrl
+                    };
                     const lastPosition = state.lastPosition || { chapter: state.bookData.currentPosition, scroll: DOM.contentArea.scrollTop || 0, percentComplete: calculatePercentageComplete(), timestamp: new Date().getTime() };
                     let existingBookQuery = supabase.from('ebooks').select('id').eq('title', state.bookData.title).eq('user_id', session.user.id);
-                    if (state.bookData.currentListId === null) { existingBookQuery = existingBookQuery.is('list_id', null); } else { existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId); }
+                    if (state.bookData.currentListId === null) { existingBookQuery = existingBookQuery.is('list_id', null); }
+                    else { existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId); }
                     const { data: existingBook, error: existingBookError } = await existingBookQuery.maybeSingle();
                     if (existingBookError) { console.error("Error checking for existing book:", existingBookError); throw existingBookError; }
                     if (existingBook && existingBook.id) { const { error: updateError } = await supabase.from('ebooks').update({ metadata: metadata, last_position: lastPosition, updated_at: new Date() }).eq('id', existingBook.id); if (updateError) throw updateError; }
@@ -3384,13 +3397,29 @@ DOM.aiCleanupConfirmBtn.classList.remove('loading'); });
                     state.bookData.currentListId = book.list_id || null;
                     state.bookData.rawContent = book.raw_content || null;
                     DOM.bookTitle.textContent = book.title;
-                    if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) { state.bookData.chapters = book.metadata.chapters.map(chapter => ({ title: chapter.title, content: chapter.content || "Chapter content not available", startLine: chapter.startLine, endLine: chapter.endLine })); if (book.metadata.sourceUrl) state.bookData.sourceUrl = book.metadata.sourceUrl; else state.bookData.sourceUrl = null; }
-                    else if (book.content) { state.bookData.content = book.content; state.bookData.chapters = [{ title: book.title, content: book.content, startLine: 0, endLine: book.content.split('\n').length }]; }
-                    else { throw new Error('Book content not available'); }
-                    if (book.metadata && book.metadata.preferHtmlView !== undefined) { state.settings.preferHtmlView = book.metadata.preferHtmlView; } else { state.settings.preferHtmlView = (book.file_type === 'url'); }
-                    DOM.preferHtmlViewToggle.checked = state.settings.preferHtmlView;
+                    if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
+                        // Load both content types if available in metadata
+                        state.bookData.chapters = book.metadata.chapters.map(chapter => ({
+                            title: chapter.title,
+                            content: chapter.content || null, // HTML content
+                            markdownContent: chapter.markdownContent || (chapter.content ? "Markdown not available" : "Content not available"), // Markdown content
+                            startLine: chapter.startLine,
+                            endLine: chapter.endLine
+                        }));
+                        state.bookData.sourceUrl = book.metadata.sourceUrl || null;
+                    } else {
+                        // Fallback if metadata structure is old or missing
+                        state.bookData.chapters = [{ title: book.title, markdownContent: "Content not available", content: null, startLine: 0, endLine: 1 }];
+                        state.bookData.sourceUrl = null;
+                        console.warn("Book metadata missing or incomplete for:", book.title);
+                    }
+
+                    // Load raw view setting from metadata if present, otherwise default to false
+                    state.settings.viewRawHtmlEnabled = (book.metadata && book.metadata.viewRawHtmlEnabled !== undefined) ? book.metadata.viewRawHtmlEnabled : false;
+                    DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
+
                     const lastPosition = book.last_position || {};
-                    if (lastPosition.chapter !== undefined) state.bookData.currentPosition = lastPosition.chapter;
+                    state.bookData.currentPosition = lastPosition.chapter !== undefined ? lastPosition.chapter : 0;
                     showBook();
                     restoreReadingPosition(lastPosition);
                     hideLoading();
@@ -3658,8 +3687,8 @@ speakText(flashcardData.word); });
                     fontSize: state.settings.fontSize,
                     lineHeight: state.settings.lineHeight,
                     theme: state.settings.theme,
-                    preferHtmlView: state.settings.preferHtmlView,
-                    viewRawContentEnabled: state.settings.viewRawContentEnabled,
+                    // preferHtmlView: state.settings.preferHtmlView, // Removed
+                    viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled, // Renamed
                     translationEnabled: DOM.translationToggle.checked,
                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
                     speakSelectionEnabled: state.settings.speakSelectionEnabled,
@@ -3668,8 +3697,8 @@ speakText(flashcardData.word); });
                 localStorage.setItem('ebook-font-size', preferences.fontSize);
                 localStorage.setItem('ebook-line-height', preferences.lineHeight);
                 localStorage.setItem('ebook-theme', preferences.theme);
-                localStorage.setItem('prefer-html-view-enabled', preferences.preferHtmlView);
-                localStorage.setItem('view-raw-content-enabled', preferences.viewRawContentEnabled);
+                // localStorage.setItem('prefer-html-view-enabled', preferences.preferHtmlView); // Removed
+                localStorage.setItem('view-raw-html-enabled', preferences.viewRawHtmlEnabled); // Renamed
                 localStorage.setItem('translation-enabled', preferences.translationEnabled);
                 localStorage.setItem('auto-speak-enabled', preferences.autoSpeakEnabled);
                 localStorage.setItem('speak-selection-enabled', preferences.speakSelectionEnabled);
@@ -3702,12 +3731,12 @@ speakText(flashcardData.word); });
                 DOM.autoSpeakToggle.checked = localStorage.getItem('auto-speak-enabled') !== 'false';
                 const speechLanguage = localStorage.getItem('speech-language') || 'en-US';
                 DOM.speechLanguage.value = speechLanguage;
-                const preferHtmlViewEnabled = localStorage.getItem('prefer-html-view-enabled') === 'true';
-                state.settings.preferHtmlView = preferHtmlViewEnabled;
-                DOM.preferHtmlViewToggle.checked = preferHtmlViewEnabled;
-                const viewRawContentEnabled = localStorage.getItem('view-raw-content-enabled') === 'true';
-                state.settings.viewRawContentEnabled = viewRawContentEnabled;
-                DOM.viewRawContentToggle.checked = viewRawContentEnabled;
+                // const preferHtmlViewEnabled = localStorage.getItem('prefer-html-view-enabled') === 'true'; // Removed
+                // state.settings.preferHtmlView = preferHtmlViewEnabled; // Removed
+                // DOM.preferHtmlViewToggle.checked = preferHtmlViewEnabled; // Removed
+                const viewRawHtmlEnabled = localStorage.getItem('view-raw-html-enabled') === 'true'; // Renamed
+                state.settings.viewRawHtmlEnabled = viewRawHtmlEnabled; // Renamed
+                DOM.viewRawHtmlToggle.checked = viewRawHtmlEnabled; // Renamed
                 const speakSelectionEnabled = localStorage.getItem('speak-selection-enabled') === 'true';
                 state.settings.speakSelectionEnabled = speakSelectionEnabled;
                 DOM.speakSelectionToggle.checked = speakSelectionEnabled;
@@ -3723,8 +3752,8 @@ speakText(flashcardData.word); });
                     if (prefs.translationEnabled !== undefined) { DOM.translationToggle.checked = prefs.translationEnabled; localStorage.setItem('translation-enabled', prefs.translationEnabled); }
                     if (prefs.autoSpeakEnabled !== undefined) { DOM.autoSpeakToggle.checked = prefs.autoSpeakEnabled; localStorage.setItem('auto-speak-enabled', prefs.autoSpeakEnabled); }
                     if (prefs.speechLanguage) { DOM.speechLanguage.value = prefs.speechLanguage; localStorage.setItem('speech-language', prefs.speechLanguage); }
-                    if (prefs.preferHtmlView !== undefined) { state.settings.preferHtmlView = prefs.preferHtmlView; DOM.preferHtmlViewToggle.checked = prefs.preferHtmlView; localStorage.setItem('prefer-html-view-enabled', prefs.preferHtmlView); }
-                    if (prefs.viewRawContentEnabled !== undefined) { state.settings.viewRawContentEnabled = prefs.viewRawContentEnabled; DOM.viewRawContentToggle.checked = prefs.viewRawContentEnabled; localStorage.setItem('view-raw-content-enabled', prefs.viewRawContentEnabled); if (prefs.viewRawContentEnabled) { state.settings.preferHtmlView = true; DOM.preferHtmlViewToggle.checked = true; localStorage.setItem('prefer-html-view-enabled', true); } }
+                    // if (prefs.preferHtmlView !== undefined) { state.settings.preferHtmlView = prefs.preferHtmlView; DOM.preferHtmlViewToggle.checked = prefs.preferHtmlView; localStorage.setItem('prefer-html-view-enabled', prefs.preferHtmlView); } // Removed
+                    if (prefs.viewRawHtmlEnabled !== undefined) { state.settings.viewRawHtmlEnabled = prefs.viewRawHtmlEnabled; DOM.viewRawHtmlToggle.checked = prefs.viewRawHtmlEnabled; localStorage.setItem('view-raw-html-enabled', prefs.viewRawHtmlEnabled); } // Renamed
                     if (prefs.speakSelectionEnabled !== undefined) { state.settings.speakSelectionEnabled = prefs.speakSelectionEnabled; DOM.speakSelectionToggle.checked = prefs.speakSelectionEnabled; localStorage.setItem('speak-selection-enabled', prefs.speakSelectionEnabled); }
                 } catch (error) {
                     console.error('Error loading user preferences:', error);
@@ -3771,6 +3800,61 @@ speakText(flashcardData.word); });
             }
 
             // firecrawlScrapeRequest defined earlier, no need for duplicate
+
+            // AI feature: Summarize Chapter (adapted from old.html)
+            async function summarizeCurrentChapter() {
+                if (!state.userApiSettings) {
+                    showToast("Gemini API key needed for summarization. Configure in dashboard.", 4000);
+                    checkAuthAndLoadApiSettings(); // Re-check in case it was just configured
+                    return;
+                }
+
+                const chapter = state.bookData.chapters[state.bookData.currentPosition];
+                if (!chapter) {
+                    showToast("No chapter loaded to summarize.", 2000);
+                    return;
+                }
+
+                const contentToSummarize = chapter.markdownContent || chapter.content || '';
+                if (!contentToSummarize.trim()) {
+                    showToast("Chapter content is empty, cannot summarize.", 2000);
+                    return;
+                }
+
+                DOM.aiResponseArea.style.display = 'block';
+                DOM.aiResponseArea.textContent = 'Generating summary...';
+                DOM.summarizeChapterBtn.disabled = true;
+                DOM.summarizeChapterBtn.classList.add('loading'); // Assuming loading style exists
+
+                try {
+                    // Limit content length for API
+                    const maxContentLength = 15000;
+                    const truncatedContent = contentToSummarize.length > maxContentLength
+                        ? contentToSummarize.substring(0, maxContentLength) + "\n... [Content Truncated]"
+                        : contentToSummarize;
+
+                    const prompt = `Summarize the following text from a book chapter titled "${chapter.title}":\n\n---\n${truncatedContent}\n---\n\nProvide a concise summary (about 3-5 sentences). Focus on the key points and main ideas presented in the text.`;
+
+                    const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, state.userApiSettings.model);
+
+                    if (response.error) {
+                        throw new Error(response.error.message);
+                    }
+
+                    const summary = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate summary.';
+                    DOM.aiResponseArea.innerHTML = marked.parse(summary); // Use marked to render potential markdown in summary
+
+                } catch (error) {
+                    console.error('Error generating summary:', error);
+                    DOM.aiResponseArea.textContent = `An error occurred while generating the summary: ${error.message}`;
+                } finally {
+                    DOM.summarizeChapterBtn.disabled = false;
+                    DOM.summarizeChapterBtn.classList.remove('loading');
+                    // Scroll the settings panel to show the response area if needed
+                    DOM.settingsPanel.scrollTop = DOM.settingsPanel.scrollHeight;
+                }
+            }
+
 
             return { init };
         })();
