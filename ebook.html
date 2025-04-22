@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Removed marked.min.js script tag -->
     <style>
-        /* CSS styles remain exactly the same as provided in the prompt */
+        /* CSS styles remain exactly the same as provided previously */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -2436,7 +2436,7 @@
 
             // 6. Italics: *text* or _text_ (avoid matching within words or bold markers)
              // Negative lookbehind/lookahead assertions help here.
-             // Matches *word* or _word_ but not a*b*c or a_b_c or **word** or __word__
+             // Matches *word* or _word* but not a*b*c or a_b_c or **word** or __word__
             text = text.replace(/(?<!\w)(?<!\*)\*(\S(?:[^*\n]|\*(?!\*))*\S)\*(?!\w)(?!\*)/g, '<em>$1</em>');
             text = text.replace(/(?<!\w)(?<!_)_(\S(?:[^_\n]|_(?!_))*\S)_(?!\w)(?!_)/g, '<em>$1</em>');
 
@@ -2449,100 +2449,103 @@
 
         /**
          * Converts a Markdown string to basic HTML.
+         * Handles common block elements and delegates inline processing.
+         * Improved list and blockquote handling.
          */
         function markdownToHtml(md) {
             if (!md) return '';
 
             const lines = md.replace(/\r\n/g, '\n').split('\n');
             let html = '';
-            let inList = false;
-            let listType = null; // 'ul' or 'ol'
-            let inCodeBlock = false;
-            let codeBlockContent = '';
+            let currentBlock = null; // Can be 'p', 'ul', 'ol', 'bq', 'pre'
+            let blockContent = '';
+            let listType = null; // 'ul' or 'ol' for lists
             let codeLang = '';
-            let inBlockquote = false;
-            let blockquoteContent = '';
+
+            const closeCurrentBlock = () => {
+                if (currentBlock === 'p') {
+                    html += `<p>${processInlineMarkdown(blockContent.trim())}</p>\n`;
+                } else if (currentBlock === 'ul' || currentBlock === 'ol') {
+                    // Process list items recursively for nested inline markdown
+                    const itemsHtml = blockContent.split('<li>').slice(1).map(item =>
+                        `<li>${processInlineMarkdown(item.replace(/<\/li>$/, '').trim())}</li>`
+                    ).join('\n');
+                    html += `<${listType}>\n${itemsHtml}\n</${listType}>\n`;
+                } else if (currentBlock === 'bq') {
+                    // Process blockquote content recursively
+                    html += `<blockquote>${markdownToHtml(blockContent.trim())}</blockquote>\n`;
+                } else if (currentBlock === 'pre') {
+                    html += `<pre><code${codeLang ? ` class="language-${escapeHTML(codeLang)}"` : ''}>${escapeHTML(blockContent.replace(/\n$/, ''))}</code></pre>\n`;
+                }
+                currentBlock = null;
+                blockContent = '';
+                listType = null;
+                codeLang = '';
+            };
 
             for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
+                const line = lines[i];
+                const trimmedLine = line.trim();
 
                 // --- Code Blocks (```) ---
-                if (line.trim().startsWith('```')) {
-                    if (inCodeBlock) {
+                if (trimmedLine.startsWith('```')) {
+                    if (currentBlock === 'pre') {
                         // Closing code block
-                        html += `<pre><code${codeLang ? ` class="language-${escapeHTML(codeLang)}"` : ''}>${escapeHTML(codeBlockContent.replace(/\n$/, ''))}</code></pre>\n`;
-                        inCodeBlock = false;
-                        codeBlockContent = '';
-                        codeLang = '';
+                        closeCurrentBlock();
                     } else {
                         // Starting code block
-                        if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
-                        if (inBlockquote) { html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`; inBlockquote = false; blockquoteContent = ''; } // Close blockquote
-                        inCodeBlock = true;
-                        codeLang = line.trim().substring(3).trim();
+                        closeCurrentBlock(); // Close any previous block
+                        currentBlock = 'pre';
+                        codeLang = trimmedLine.substring(3).trim();
                     }
-                    continue; // Move to next line
+                    continue;
+                }
+                if (currentBlock === 'pre') {
+                    blockContent += line + '\n';
+                    continue;
                 }
 
-                if (inCodeBlock) {
-                    codeBlockContent += line + '\n';
-                    continue; // Add to code block content
+                // --- Blank Line: Separator ---
+                if (trimmedLine === '') {
+                    closeCurrentBlock(); // End current block on blank line
+                    continue;
                 }
-
-                 // --- Blockquotes (>) ---
-                 if (line.trim().startsWith('>')) {
-                     if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
-                     const quoteLine = line.trim().replace(/^>\s?/, '');
-                     if (!inBlockquote) {
-                         inBlockquote = true;
-                         blockquoteContent = quoteLine + '\n';
-                     } else {
-                         blockquoteContent += quoteLine + '\n';
-                     }
-                      // Check if next line is also blockquote or empty (part of the same block)
-                      if (i + 1 >= lines.length || !lines[i+1].trim().startsWith('>') && lines[i+1].trim() !== '') {
-                          // End of blockquote block
-                           html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`; // Process inner content recursively
-                           inBlockquote = false;
-                           blockquoteContent = '';
-                      } else if (lines[i+1].trim() === '') {
-                          // Add blank line inside blockquote if followed by another quote line
-                          if (i + 2 < lines.length && lines[i+2].trim().startsWith('>')) {
-                              blockquoteContent += '\n';
-                          } else {
-                               // End of blockquote block
-                               html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
-                               inBlockquote = false;
-                               blockquoteContent = '';
-                               i++; // Skip the blank line
-                          }
-                      }
-
-                     continue;
-                 }
-                 // Close blockquote if current line doesn't start with >
-                 if (inBlockquote && !line.trim().startsWith('>')) {
-                    html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
-                    inBlockquote = false;
-                    blockquoteContent = '';
-                 }
 
                 // --- Headings (#) ---
                 const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
                 if (headingMatch) {
-                    if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
+                    closeCurrentBlock();
                     const level = headingMatch[1].length;
                     const headingText = headingMatch[2].trim();
+                    // Escape heading text before processing inline
                     html += `<h${level}>${processInlineMarkdown(escapeHTML(headingText))}</h${level}>\n`;
                     continue;
                 }
 
                 // --- Horizontal Rules (---, ***, ___) ---
-                if (/^\s*([-*_])\s*\1\s*\1\s*$/.test(line.trim())) {
-                     if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
+                if (/^\s*([-*_])\s*\1\s*\1+\s*$/.test(trimmedLine)) { // Allow more than 3 markers
+                    closeCurrentBlock();
                     html += '<hr>\n';
                     continue;
                 }
+
+                // --- Blockquotes (>) ---
+                if (line.startsWith('>')) {
+                    const quoteLine = line.replace(/^>\s?/, '');
+                    if (currentBlock !== 'bq') {
+                        closeCurrentBlock();
+                        currentBlock = 'bq';
+                        blockContent = quoteLine + '\n'; // Start new blockquote content
+                    } else {
+                        blockContent += quoteLine + '\n'; // Add to existing blockquote
+                    }
+                    continue;
+                }
+                 // If line doesn't start with > but we were in a blockquote, close it
+                 if (currentBlock === 'bq' && !line.startsWith('>')) {
+                     closeCurrentBlock();
+                 }
+
 
                 // --- Lists (UL/OL) ---
                 const ulMatch = line.match(/^(\s*)([*+-])\s+(.*)/);
@@ -2554,64 +2557,37 @@
                     const itemContent = (ulMatch || olMatch)[ulMatch ? 3 : 3]; // Content is always last group
                     const startNumber = olMatch ? olMatch[2] : null;
 
-                    if (!inList) {
-                        // Start a new list
-                        inList = true;
-                        listType = currentListType;
-                        const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
-                        html += `<${listType}${startAttr}>\n`;
-                    } else if (listType !== currentListType) {
-                        // Switching list type (e.g., ul to ol) - close old, start new
-                        html += `</${listType}>\n`;
-                        listType = currentListType;
-                        const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
-                        html += `<${listType}${startAttr}>\n`;
+                    if (currentBlock !== currentListType) {
+                         closeCurrentBlock(); // Close previous block (could be paragraph or different list)
+                         currentBlock = currentListType;
+                         listType = currentListType; // Store list type
+                         const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
+                         // Temporarily store items in blockContent, wrapped in markers for later processing
+                         blockContent = `<li>${escapeHTML(itemContent)}</li>`; // Escape item content here
+                    } else {
+                         // Add to the existing list content
+                         blockContent += `<li>${escapeHTML(itemContent)}</li>`; // Escape item content here
                     }
-                    // Add list item (process inline content)
-                    html += `<li>${processInlineMarkdown(escapeHTML(itemContent))}</li>\n`;
-                } else {
-                     // Not a list item
-                     if (inList) {
-                         // Close the list if the line isn't empty (blank lines can be part of lists)
-                         if (line.trim() !== '') {
-                             html += `</${listType}>\n`;
-                             inList = false;
-                             listType = null;
-                         } else {
-                              // Allow blank lines within lists, but don't process them as paragraphs yet
-                              // Need lookahead or more complex state to handle multi-paragraph list items
-                              // Simple approach: treat blank line as potentially ending the list if next isn't item
-                              if (i + 1 >= lines.length || (!lines[i+1].match(/^(\s*)([*+-])\s+(.*)/) && !lines[i+1].match(/^(\s*)(\d+)\.\s+(.*)/))) {
-                                   html += `</${listType}>\n`;
-                                   inList = false;
-                                   listType = null;
-                              }
-                              // If next line *is* a list item, the blank line is ignored or could be part of complex item
-                         }
-                     }
+                    continue;
+                }
+                 // If line is not a list item but we were in a list, close it
+                 if (currentBlock === 'ul' || currentBlock === 'ol') {
+                     closeCurrentBlock();
+                 }
 
-                     // --- Paragraphs (Default) ---
-                      if (!inList && line.trim() !== '') {
-                         // Start or continue a paragraph
-                         html += `<p>${processInlineMarkdown(escapeHTML(line))}</p>\n`;
-                         // Basic paragraph handling: treat each non-empty, non-block line as a paragraph
-                         // A more advanced parser would buffer lines and create multi-line paragraphs.
-                     }
+                // --- Paragraphs (Default) ---
+                if (currentBlock !== 'p') {
+                    closeCurrentBlock(); // Close any non-paragraph block
+                    currentBlock = 'p';
+                    blockContent = escapeHTML(line); // Start new paragraph, escape content
+                } else {
+                    // Add line to existing paragraph buffer with a space separator
+                    blockContent += ' ' + escapeHTML(line);
                 }
             }
 
-            // Close any open list at the end
-            if (inList) {
-                html += `</${listType}>\n`;
-            }
-             // Close any open blockquote at the end
-             if (inBlockquote) {
-                 html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
-             }
-
-            // Basic paragraph merging (simple approach)
-            html = html.replace(/<\/p>\n<p>/g, '<br><br>'); // Replace adjacent p tags with breaks (might not be ideal)
-
+            // Close any remaining block at the end of the input
+            closeCurrentBlock();
 
             return html;
         }
@@ -3722,7 +3698,24 @@
             function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
             function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-lineheight', state.settings.lineHeight); updateCssVariables(); /* Update CSS immediately */ }
 
-            function setTheme(theme) { document.body.className = `${theme}-theme`; // Replace all classes DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
+            function setTheme(theme) {
+                // Set the theme class on the body element
+                document.body.className = `${theme}-theme`;
+
+                // Update the active state of theme option buttons
+                DOM.themeOptions.forEach(option => {
+                    option.classList.remove('active');
+                    if (option.getAttribute('data-theme') === theme) {
+                        option.classList.add('active');
+                    }
+                });
+
+                // Update the theme in the application state
+                state.settings.theme = theme;
+
+                // Save the theme preference to localStorage
+                localStorage.setItem('ebook-theme', theme);
+            }
 
             function updateProgressBar() {
                  if (!DOM.contentArea || !DOM.progressBar || !state.bookData.chapters || state.bookData.chapters.length === 0) {
