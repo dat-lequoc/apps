@@ -3242,36 +3242,6 @@
                 setTimeout(removeToast, 15000);
             }
 
-            function renderSuggestedQuestions(questions = []) {
-                DOM.chatSuggestions.innerHTML = '';
-                if (questions && questions.length > 0) {
-                    DOM.chatSuggestions.style.display = 'flex';
-                    questions.forEach(question => {
-                        const chip = document.createElement('button');
-                        chip.className = 'suggestion-chip';
-                        chip.textContent = question;
-                        chip.type = 'button';
-                        DOM.chatSuggestions.appendChild(chip);
-                    });
-                } else {
-                    DOM.chatSuggestions.style.display = 'none';
-                }
-            }
-
-            function handleSuggestionClick(event) {
-                const clickedChip = event.target.closest('.suggestion-chip');
-                if (!clickedChip) return;
-                sendSuggestedQuestion(clickedChip.textContent);
-            }
-
-            function sendSuggestedQuestion(question) {
-                if (!state.userApiSettings || !state.userApiSettings.api_key) { displayChatMessage('assistant', 'Sorry, the Gemini API key is not configured. Please set it up in the main dashboard.'); return; }
-                displayChatMessage('user', question);
-                state.chatHistory.push({ role: 'user', parts: [{ text: question }] });
-                const loadingElement = displayChatMessage('assistant', '', true);
-                DOM.chatSendBtn.disabled = true;
-                processAndSendChat(question, loadingElement);
-            }
 
             function showBook() {
                 DOM.welcomeScreen.style.display = 'none';
