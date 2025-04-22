@@ -1920,6 +1920,32 @@
             font-size: 0.9em;
         }
 
+        #chat-suggestions {
+            display: none;
+            padding: 0.25rem 0 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+            flex-shrink: 0;
+        }
+
+        .suggestion-chip {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            transition: background-color 0.2s, color 0.2s;
+            white-space: nowrap;
+        }
+
+        .suggestion-chip:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-color);
+        }
+
         .api-status-section {
             display: flex;
             flex-direction: column;
@@ -2330,6 +2356,7 @@
             </div>
             <div id="chat-input-area">
                 <div id="chat-suggestions">
+                    <!-- Suggested questions will be rendered here -->
                 </div>
                 <div class="chat-input-row">
                     <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
@@ -2594,7 +2621,7 @@
                 chatSendBtn: document.getElementById('chat-send-btn'),
                 chatClearBtn: document.getElementById('chat-clear-btn'),
                 chatFullDocToggle: document.getElementById('chat-full-doc-toggle'),
-                chatSuggestions: document.getElementById('chat-suggestions'),
+                chatSuggestions: document.getElementById('chat-suggestions'), // Container for suggestion chips
                 aiSettingsContent: document.getElementById('ai-settings-content'),
                 summarizeChapterBtn: document.getElementById('summarize-chapter-btn'),
                 aiResponseArea: document.getElementById('ai-response-area')
@@ -2632,9 +2659,10 @@
                 lastPosition: null
             };
 
+            // Initial generic questions if chat is empty
             const initialSuggestedQuestions = [
                 "Summarize this.",
-                "Key points?",
+                "What are the key points?",
                 "Explain the main idea.",
             ];
 
@@ -2718,8 +2746,10 @@
                 DOM.chatFullDocToggle.addEventListener('change', (e) => {
                     state.chatUseFullDocument = e.target.checked;
                     showToast(`Chat context set to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`, 2000);
+                    // Optionally clear suggestions or add default ones when context changes
+                    renderSuggestedQuestions(initialSuggestedQuestions);
                 });
-                DOM.chatSuggestions.addEventListener('click', handleSuggestionClick);
+                DOM.chatSuggestions.addEventListener('click', handleSuggestionClick); // Add listener for suggestion clicks
                 DOM.summarizeChapterBtn.addEventListener('click', summarizeCurrentChapter);
             }
 
@@ -3127,6 +3157,47 @@
                  } catch (error) { console.error('Error scraping and saving link:', error); showToast(`Error scraping "${url}": ${error.message}`, 5000); }
             }
 
+            // Renders clickable suggestion chips in the chat input area
+            function renderSuggestedQuestions(questions = []) {
+                DOM.chatSuggestions.innerHTML = '';
+                if (questions && questions.length > 0) {
+                    DOM.chatSuggestions.style.display = 'flex';
+                    questions.forEach(question => {
+                        const chip = document.createElement('button');
+                        chip.className = 'suggestion-chip';
+                        chip.textContent = question;
+                        chip.type = 'button'; // Important for accessibility and forms
+                        DOM.chatSuggestions.appendChild(chip);
+                    });
+                } else {
+                    DOM.chatSuggestions.style.display = 'none';
+                }
+            }
+
+            // Handles clicks on suggestion chips
+            function handleSuggestionClick(event) {
+                const clickedChip = event.target.closest('.suggestion-chip');
+                if (!clickedChip) return;
+
+                // Send the clicked suggestion as a new message
+                sendSuggestedQuestion(clickedChip.textContent);
+            }
+
+            // Sends a suggested question (similar to user sending a message)
+            function sendSuggestedQuestion(question) {
+                if (!state.userApiSettings || !state.userApiSettings.api_key) {
+                    displayChatMessage('assistant', 'Sorry, the Gemini API key is not configured. Please set it up in the main dashboard.');
+                    return;
+                }
+                displayChatMessage('user', question);
+                state.chatHistory.push({ role: 'user', parts: [{ text: question }] });
+                const loadingElement = displayChatMessage('assistant', '', true);
+                DOM.chatSendBtn.disabled = true;
+                renderSuggestedQuestions([]); // Clear suggestions after one is clicked
+                processAndSendChat(question, loadingElement);
+            }
+
+
             async function saveScrapedBook(scrapedBookData, targetListId = null) {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (!session) { console.error('Cannot save scraped book: User not logged in.'); showToast('Please sign in to save scraped content.', 4000); return false; }
@@ -3350,10 +3421,30 @@
                 const isVisible = !DOM.chatPanel.classList.contains('visible');
                 DOM.chatPanel.classList.toggle('visible', isVisible);
                 DOM.overlay.classList.toggle('visible', isVisible);
-                 if (isVisible) { DOM.tocPanel.classList.remove('visible'); DOM.settingsPanel.classList.remove('visible'); if (state.chatHistory.length <= 1) renderSuggestedQuestions(initialSuggestedQuestions); else renderSuggestedQuestions([]); }
-                 else { renderSuggestedQuestions([]); }
+                 if (isVisible) {
+                     DOM.tocPanel.classList.remove('visible');
+                     DOM.settingsPanel.classList.remove('visible');
+                     // Show initial suggestions only if chat is empty/new
+                     if (state.chatHistory.length <= 1) {
+                         renderSuggestedQuestions(initialSuggestedQuestions);
+                     } else {
+                         // Otherwise, maybe show last suggestions or clear them
+                         // For now, let's clear them if panel was closed and reopened without new message
+                         // renderSuggestedQuestions([]); // Or keep the last ones? Let's keep them for now.
+                     }
+                     DOM.chatInput.focus();
+                 } else {
+                     // Clear suggestions when panel is explicitly closed
+                     renderSuggestedQuestions([]);
+                 }
             }
-            function closeChatPanel() { DOM.chatPanel.classList.remove('visible'); if (!DOM.tocPanel.classList.contains('visible') && !DOM.settingsPanel.classList.contains('visible')) DOM.overlay.classList.remove('visible'); renderSuggestedQuestions([]); }
+            function closeChatPanel() {
+                DOM.chatPanel.classList.remove('visible');
+                if (!DOM.tocPanel.classList.contains('visible') && !DOM.settingsPanel.classList.contains('visible')) {
+                    DOM.overlay.classList.remove('visible');
+                }
+                renderSuggestedQuestions([]); // Clear suggestions on close
+            }
 
 
             function closeAllPanels() {
@@ -4311,7 +4402,7 @@
                 DOM.chatMessages.innerHTML = '';
                 const initialGreeting = state.chatUseFullDocument ? "Chat cleared. Ask me anything about the full document." : "Chat cleared. Ask me anything about the current chapter.";
                 displayChatMessage('assistant', initialGreeting);
-                renderSuggestedQuestions(initialSuggestedQuestions);
+                renderSuggestedQuestions(initialSuggestedQuestions); // Show initial suggestions after clearing
             }
 
             async function handleSendMessage() {
@@ -4321,10 +4412,10 @@
                 displayChatMessage('user', userMessage);
                 state.chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
                 DOM.chatInput.value = '';
-                DOM.chatInput.style.height = 'auto';
+                DOM.chatInput.style.height = 'auto'; // Reset height after sending
                 const loadingElement = displayChatMessage('assistant', '', true);
                 DOM.chatSendBtn.disabled = true;
-                renderSuggestedQuestions([]);
+                renderSuggestedQuestions([]); // Clear suggestions when user sends a message
                 processAndSendChat(userMessage, loadingElement);
             }
 
@@ -4356,7 +4447,8 @@
                      const language = localStorage.getItem('speech-language') || 'en-US';
                      const languageName = language.startsWith('fr') ? 'French' : 'English';
 
-                      const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse basic Markdown for formatting (like **bold**, *italic*, and simple lists starting with * or -). Use new lines for paragraphs.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up Questions:**\nAt the VERY END of your response, provide **up to 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block:\n[SUGGESTIONS]\n1. Explore the next section\n2. What is the main argument in section X?\n3. Can you explain the term Y mentioned earlier?\n[/SUGGESTIONS]`;
+                     // Updated system prompt to request suggestions
+                     const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse basic Markdown for formatting (like **bold**, *italic*, and simple lists starting with * or -). Use new lines for paragraphs.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up Questions:**\nAfter your main response, provide **exactly 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block, and each question on a new line:\n[SUGGESTIONS]\nWhat is the significance of X?\nCan you elaborate on Y?\nHow does Z relate to the previous section?\n[/SUGGESTIONS]`;
 
                      const requestPayloadContents = [
                          { role: 'user', parts: [{ text: systemPrompt }] },
@@ -4373,25 +4465,32 @@
                      loadingElement.remove();
 
                      let assistantResponseText = 'Sorry, I could not generate a response.';
-                     let extractedSuggestions = [];
+                     let extractedSuggestions = []; // To store parsed suggestions
 
                      if (response.error) {
                          assistantResponseText = `Sorry, there was an error: ${response.error.message}`;
                      } else {
                          const rawResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                         // Regex to find the suggestion block at the end
                          const suggestionBlockRegex = /\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/;
                          const match = rawResponse.match(suggestionBlockRegex);
 
                          if (match && match[1]) {
+                             // Extract the text between the tags
                              const questionsText = match[1].trim();
+                             // Split into lines, remove numbering/bullets, filter empty lines
                              extractedSuggestions = questionsText.split('\n')
-                                 .map(q => q.trim().replace(/^\d+\.\s*/, ''))
-                                 .filter(q => q.length > 0 && q.length < 100);
+                                 .map(q => q.trim().replace(/^[\d.*-]+\s*/, '')) // Remove potential list markers
+                                 .filter(q => q.length > 0 && q.length < 100); // Basic validation
+                             // Get the main response text by removing the suggestion block
                              assistantResponseText = rawResponse.replace(suggestionBlockRegex, '').trim();
                          } else {
+                             // If no suggestion block found, use the whole response
                              assistantResponseText = rawResponse.trim();
+                             console.warn("AI response did not contain the expected [SUGGESTIONS] block.");
                          }
 
+                         // Handle cases where the main response might be empty after stripping suggestions
                          if (!assistantResponseText) {
                              assistantResponseText = "Okay, I've processed that. What would you like to explore next?";
                          }
@@ -4399,7 +4498,7 @@
 
                      displayChatMessage('assistant', assistantResponseText);
                      state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] });
-                     renderSuggestedQuestions(extractedSuggestions);
+                     renderSuggestedQuestions(extractedSuggestions); // Render the extracted suggestions
 
                  } catch (error) {
                      console.error('Error handling chat message:', error);
