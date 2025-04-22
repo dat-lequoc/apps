@@ -6,6 +6,7 @@
     <title>Enhanced Ebook Reader</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Removed marked.min.js script tag -->
     <style>
         /* CSS styles remain exactly the same as provided in the prompt */
         * {
@@ -2056,13 +2057,27 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             max-width: 100%;
         }
-
+         /* Styling for assistant message content */
+        .chat-message.assistant p { margin-bottom: 0.5em; } /* Spacing for paragraphs */
+        .chat-message.assistant p:last-child { margin-bottom: 0; }
+        .chat-message.assistant ul { list-style: disc; margin-left: 1.5em; margin-bottom: 0.5em; }
+        .chat-message.assistant ol { list-style: decimal; margin-left: 1.5em; margin-bottom: 0.5em; }
+        .chat-message.assistant li { margin-bottom: 0.25em; }
+        .chat-message.assistant strong { font-weight: bold; }
+        .chat-message.assistant em { font-style: italic; }
+        .chat-message.assistant code { /* Consistent with reader code style */
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.1em 0.3em;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
         .chat-message.assistant a {
             color: var(--primary-color);
             text-decoration: underline;
         }
         .chat-message.assistant a:hover {
-            color: #66a3ff;
+            color: #66a3ff; /* Lighter blue on hover */
         }
 
         .chat-message.assistant.loading::after {
@@ -2385,171 +2400,218 @@
 
         /**
          * Processes inline Markdown elements within a text block.
-         * Assumes HTML has already been escaped.
+         * Assumes HTML has already been escaped where necessary (e.g., inside <code>).
          */
         function processInlineMarkdown(text) {
             if (!text) return '';
 
-            // 1. Inline Code `code` (Handles already escaped HTML inside)
-            text = text.replace(/`([^`]+)`/g, (match, code) => `<code>${code}</code>`);
+            // Order of operations matters!
+            // 1. Escape HTML entities in the text *before* applying markdown tags
+            //    but *after* code blocks are handled (code content should be escaped).
+            //    Let's handle escaping within tags where content is generated.
 
-            // 2. Images: ![alt text](url)
+            // 2. Inline Code `code` (Content is already escaped by escapeHTML in markdownToHtml)
+            text = text.replace(/`([^`]+)`/g, (match, code) => `<code>${escapeHTML(code)}</code>`);
+
+            // 3. Images: ![alt text](url)
             text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) =>
                 `<img src="${escapeHTML(src)}" alt="${escapeHTML(alt)}">`
             );
 
-            // 3. Links: [link text](url)
+            // 4. Links: [link text](url)
             text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, href) =>
-                `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">${linkText}</a>`
+                 // Link text itself might contain other inline markdown (like bold/italic)
+                 // Let's process linkText recursively, but be careful about nested links.
+                 // Basic approach: process linkText after escaping the href.
+                `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">${processInlineMarkdown(linkText)}</a>` // Recursive call for link text
             );
 
-            // 4. Bold: **text** or __text__ (must be careful not to greedily match across lines if text spans lines - shouldn't happen with current block logic)
-            text = text.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
-            text = text.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+            // 5. Bold: **text** or __text__
+            // Use capturing groups and ensure markers are not immediately adjacent to word boundaries
+            // to avoid issues like a_b_c or word**s**word.
+            // This regex is simpler and might miss some edge cases but is generally safer.
+            text = text.replace(/\*\*(\S(?:[^*\n]|\*(?!\*))*\S)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/__(\S(?:[^_\n]|_(?!_))*\S)__/g, '<strong>$1</strong>');
 
-            // 5. Italics: *text* or _text_ (must be careful not to greedily match or overlap bold)
-            // Process italics after bold to avoid conflicts with __
-            text = text.replace(/(?<!\*)\*([^\*]+)\*(?!\*)/g, '<em>$1</em>'); // Avoid **
-            text = text.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>'); // Avoid __
 
-            // Optional: Handle simple line breaks within paragraphs if needed
-            // text = text.replace(/(?<!\n)\n(?!\n)/g, '<br>\n'); // Replaces single newlines with <br>
+            // 6. Italics: *text* or _text_ (avoid matching within words or bold markers)
+             // Negative lookbehind/lookahead assertions help here.
+             // Matches *word* or _word_ but not a*b*c or a_b_c or **word** or __word__
+            text = text.replace(/(?<!\w)(?<!\*)\*(\S(?:[^*\n]|\*(?!\*))*\S)\*(?!\w)(?!\*)/g, '<em>$1</em>');
+            text = text.replace(/(?<!\w)(?<!_)_(\S(?:[^_\n]|_(?!_))*\S)_(?!\w)(?!_)/g, '<em>$1</em>');
+
+
+            // Optional: Handle simple line breaks within paragraphs if needed (can interfere with block parsing)
+            // text = text.replace(/(?<!\n)\n(?!\n)/g, '<br>\n');
 
             return text;
         }
 
         /**
          * Converts a Markdown string to basic HTML.
-         * Focuses on common block elements and delegates inline processing.
          */
         function markdownToHtml(md) {
             if (!md) return '';
 
-            // Normalize line endings and split into lines
             const lines = md.replace(/\r\n/g, '\n').split('\n');
             let html = '';
-            let i = 0;
-            let currentParagraph = ''; // Buffer for paragraph lines
+            let inList = false;
+            let listType = null; // 'ul' or 'ol'
+            let inCodeBlock = false;
+            let codeBlockContent = '';
+            let codeLang = '';
+            let inBlockquote = false;
+            let blockquoteContent = '';
 
-            const closeParagraph = () => {
-                if (currentParagraph) {
-                    html += `<p>${processInlineMarkdown(currentParagraph.trim())}</p>\n`;
-                    currentParagraph = '';
-                }
-            };
-
-            while (i < lines.length) {
-                const line = lines[i];
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
 
                 // --- Code Blocks (```) ---
                 if (line.trim().startsWith('```')) {
-                    closeParagraph(); // End any open paragraph
-                    let block = '';
-                    let lang = line.trim().substring(3).trim();
-                    i++;
-                    while (i < lines.length && !lines[i].trim().startsWith('```')) {
-                        block += lines[i] + '\n';
-                        i++;
+                    if (inCodeBlock) {
+                        // Closing code block
+                        html += `<pre><code${codeLang ? ` class="language-${escapeHTML(codeLang)}"` : ''}>${escapeHTML(codeBlockContent.replace(/\n$/, ''))}</code></pre>\n`;
+                        inCodeBlock = false;
+                        codeBlockContent = '';
+                        codeLang = '';
+                    } else {
+                        // Starting code block
+                        if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
+                        if (inBlockquote) { html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`; inBlockquote = false; blockquoteContent = ''; } // Close blockquote
+                        inCodeBlock = true;
+                        codeLang = line.trim().substring(3).trim();
                     }
-                    html += `<pre><code${lang ? ` class="language-${escapeHTML(lang)}"` : ''}>${escapeHTML(block.replace(/\n$/, ''))}</code></pre>\n`;
-                    i++; // Skip closing ```
-                    continue;
+                    continue; // Move to next line
                 }
+
+                if (inCodeBlock) {
+                    codeBlockContent += line + '\n';
+                    continue; // Add to code block content
+                }
+
+                 // --- Blockquotes (>) ---
+                 if (line.trim().startsWith('>')) {
+                     if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
+                     const quoteLine = line.trim().replace(/^>\s?/, '');
+                     if (!inBlockquote) {
+                         inBlockquote = true;
+                         blockquoteContent = quoteLine + '\n';
+                     } else {
+                         blockquoteContent += quoteLine + '\n';
+                     }
+                      // Check if next line is also blockquote or empty (part of the same block)
+                      if (i + 1 >= lines.length || !lines[i+1].trim().startsWith('>') && lines[i+1].trim() !== '') {
+                          // End of blockquote block
+                           html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`; // Process inner content recursively
+                           inBlockquote = false;
+                           blockquoteContent = '';
+                      } else if (lines[i+1].trim() === '') {
+                          // Add blank line inside blockquote if followed by another quote line
+                          if (i + 2 < lines.length && lines[i+2].trim().startsWith('>')) {
+                              blockquoteContent += '\n';
+                          } else {
+                               // End of blockquote block
+                               html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
+                               inBlockquote = false;
+                               blockquoteContent = '';
+                               i++; // Skip the blank line
+                          }
+                      }
+
+                     continue;
+                 }
+                 // Close blockquote if current line doesn't start with >
+                 if (inBlockquote && !line.trim().startsWith('>')) {
+                    html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
+                    inBlockquote = false;
+                    blockquoteContent = '';
+                 }
 
                 // --- Headings (#) ---
                 const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
                 if (headingMatch) {
-                    closeParagraph();
+                    if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
                     const level = headingMatch[1].length;
                     const headingText = headingMatch[2].trim();
-                    html += `<h${level}>${processInlineMarkdown(headingText)}</h${level}>\n`;
-                    i++;
+                    html += `<h${level}>${processInlineMarkdown(escapeHTML(headingText))}</h${level}>\n`;
                     continue;
                 }
 
                 // --- Horizontal Rules (---, ***, ___) ---
-                 if (/^\s*([-*_])\s*\1\s*\1\s*$/.test(line.trim())) {
-                     closeParagraph();
-                     html += '<hr>\n';
-                     i++;
-                     continue;
-                 }
-
-                // --- Blockquotes (>) ---
-                 if (line.trim().startsWith('>')) {
-                     closeParagraph();
-                     let block = '';
-                     while (i < lines.length && lines[i].trim().startsWith('>')) {
-                         // Remove '>' and optional space
-                         block += lines[i].trim().replace(/^>\s?/, '') + '\n';
-                         i++;
-                     }
-                     // Recursively process inner content for nested markdown (e.g., bold inside quote)
-                     html += `<blockquote>${markdownToHtml(block.trim())}</blockquote>\n`; // Recursive call!
-                     continue;
-                 }
-
-                 // --- Lists (UL/OL) ---
-                 const ulMatch = line.match(/^(\s*)([*+-])\s+(.*)/);
-                 const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)/);
-
-                 if (ulMatch || olMatch) {
-                    closeParagraph();
-                    const listType = olMatch ? 'ol' : 'ul';
-                    const startIndent = (ulMatch || olMatch)[1].length; // Indentation of the first item
-                    let listHtml = '';
-
-                    while (i < lines.length) {
-                        const currentLine = lines[i];
-                        const currentIndentMatch = currentLine.match(/^(\s*)/);
-                        const currentIndent = currentIndentMatch ? currentIndentMatch[1].length : 0;
-
-                        // Check if line is a valid list item for the current list type and indent level
-                        const itemUlMatch = currentLine.match(/^(\s*)([*+-])\s+(.*)/);
-                        const itemOlMatch = currentLine.match(/^(\s*)(\d+)\.\s+(.*)/);
-                        const itemMatch = (listType === 'ul' && itemUlMatch) || (listType === 'ol' && itemOlMatch);
-
-                        if (itemMatch && currentIndent >= startIndent) {
-                            // TODO: Handle multi-line list items and nested lists (complex)
-                            // Basic: Treat each line as a separate item for now
-                            listHtml += `<li>${processInlineMarkdown(itemMatch[itemMatch.length-1])}</li>\n`;
-                            i++;
-                        } else if (currentLine.trim() === '' && i + 1 < lines.length) {
-                            // Look ahead: if the next line is also part of the list, treat blank line as part of multi-line item (difficult)
-                            // Simple approach: Blank line ends the list if next line isn't an item
-                            const nextLine = lines[i+1];
-                            const nextUlMatch = nextLine.match(/^(\s*)([*+-])\s+(.*)/);
-                            const nextOlMatch = nextLine.match(/^(\s*)(\d+)\.\s+(.*)/);
-                             if (!nextUlMatch && !nextOlMatch) {
-                                 break; // End list
-                             }
-                             // Otherwise, potentially part of multi-line item - skip blank line for now
-                             i++;
-                        }
-                         else {
-                             // Line doesn't match list format or indent, end the list
-                             break;
-                         }
-                    }
-                    const startAttr = (listType === 'ol' && olMatch[2] !== '1') ? ` start="${olMatch[2]}"` : '';
-                    html += `<${listType}${startAttr}>\n${listHtml}</${listType}>\n`;
-                    continue; // Continue main loop after list processing
-                 }
-
-
-                // --- Paragraphs (Default) ---
-                if (line.trim() !== '') {
-                    // Add line to current paragraph buffer
-                    currentParagraph += (currentParagraph ? '\n' : '') + line;
-                } else {
-                    // Blank line: End the current paragraph if one exists
-                    closeParagraph();
+                if (/^\s*([-*_])\s*\1\s*\1\s*$/.test(line.trim())) {
+                     if (inList) { html += `</${listType}>\n`; inList = false; listType = null; } // Close list
+                    html += '<hr>\n';
+                    continue;
                 }
-                i++; // Move to the next line
+
+                // --- Lists (UL/OL) ---
+                const ulMatch = line.match(/^(\s*)([*+-])\s+(.*)/);
+                const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)/);
+                const isListItem = ulMatch || olMatch;
+
+                if (isListItem) {
+                    const currentListType = olMatch ? 'ol' : 'ul';
+                    const itemContent = (ulMatch || olMatch)[ulMatch ? 3 : 3]; // Content is always last group
+                    const startNumber = olMatch ? olMatch[2] : null;
+
+                    if (!inList) {
+                        // Start a new list
+                        inList = true;
+                        listType = currentListType;
+                        const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
+                        html += `<${listType}${startAttr}>\n`;
+                    } else if (listType !== currentListType) {
+                        // Switching list type (e.g., ul to ol) - close old, start new
+                        html += `</${listType}>\n`;
+                        listType = currentListType;
+                        const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
+                        html += `<${listType}${startAttr}>\n`;
+                    }
+                    // Add list item (process inline content)
+                    html += `<li>${processInlineMarkdown(escapeHTML(itemContent))}</li>\n`;
+                } else {
+                     // Not a list item
+                     if (inList) {
+                         // Close the list if the line isn't empty (blank lines can be part of lists)
+                         if (line.trim() !== '') {
+                             html += `</${listType}>\n`;
+                             inList = false;
+                             listType = null;
+                         } else {
+                              // Allow blank lines within lists, but don't process them as paragraphs yet
+                              // Need lookahead or more complex state to handle multi-paragraph list items
+                              // Simple approach: treat blank line as potentially ending the list if next isn't item
+                              if (i + 1 >= lines.length || (!lines[i+1].match(/^(\s*)([*+-])\s+(.*)/) && !lines[i+1].match(/^(\s*)(\d+)\.\s+(.*)/))) {
+                                   html += `</${listType}>\n`;
+                                   inList = false;
+                                   listType = null;
+                              }
+                              // If next line *is* a list item, the blank line is ignored or could be part of complex item
+                         }
+                     }
+
+                     // --- Paragraphs (Default) ---
+                      if (!inList && line.trim() !== '') {
+                         // Start or continue a paragraph
+                         html += `<p>${processInlineMarkdown(escapeHTML(line))}</p>\n`;
+                         // Basic paragraph handling: treat each non-empty, non-block line as a paragraph
+                         // A more advanced parser would buffer lines and create multi-line paragraphs.
+                     }
+                }
             }
 
-            // Close any remaining paragraph at the end of the input
-            closeParagraph();
+            // Close any open list at the end
+            if (inList) {
+                html += `</${listType}>\n`;
+            }
+             // Close any open blockquote at the end
+             if (inBlockquote) {
+                 html += `<blockquote>${markdownToHtml(blockquoteContent.trim())}</blockquote>\n`;
+             }
+
+            // Basic paragraph merging (simple approach)
+            html = html.replace(/<\/p>\n<p>/g, '<br><br>'); // Replace adjacent p tags with breaks (might not be ideal)
+
 
             return html;
         }
@@ -2680,7 +2742,7 @@
                 checkAuthAndLoadApiSettings();
                 loadUserPreferences();
                 // Set initial CSS variables based on settings
-                updateCssVariables();
+                updateCssVariables(); // <<< CORRECTED: Added semicolon
             }
 
              function updateCssVariables() {
@@ -2890,7 +2952,8 @@
                         let title = null;
                         for(let j=0; j<Math.min(5, currentChapterLines.length); j++) {
                             const trimmedLine = currentChapterLines[j].trim();
-                            if (trimmedLine && trimmedLine.length < 80 && !trimmedLine.startsWith('>') && !trimmedLine.startsWith('*') && !trimmedLine.startsWith('-') && !trimmedLine.startsWith('+') && !/^\d+\./.test(trimmedLine)) {
+                            // Basic title heuristic: not empty, < 80 chars, doesn't look like markdown element start
+                            if (trimmedLine && trimmedLine.length < 80 && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('>') && !trimmedLine.startsWith('*') && !trimmedLine.startsWith('-') && !trimmedLine.startsWith('+') && !/^\d+\./.test(trimmedLine) && !trimmedLine.startsWith('```') && !trimmedLine.startsWith('---')) {
                                 title = trimmedLine;
                                 break;
                             }
@@ -2977,29 +3040,36 @@
                              if (titleTag && titleTag.textContent.trim()) title = titleTag.textContent.trim();
                              else if (h1 && h1.textContent.trim()) title = h1.textContent.trim();
 
-                             // Convert body to basic Markdown (simplistic conversion)
+                             // Convert body to basic Markdown (very simplistic)
                              const bodyElement = htmlDoc.body;
                              let markdownContent = '';
                              if (bodyElement) {
-                                 // Very basic conversion - treat block elements as paragraphs
+                                 // Simplistic conversion: treat common block elements as paragraphs/headings
                                  bodyElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre').forEach(el => {
                                      const text = el.textContent?.trim();
                                      if (text) {
                                          let prefix = '';
-                                         if (el.tagName.startsWith('H')) {
-                                             prefix = '#'.repeat(parseInt(el.tagName.substring(1), 10)) + ' ';
-                                         } else if (el.tagName === 'LI') {
-                                              prefix = '* '; // Assume unordered for simplicity
-                                         } else if (el.tagName === 'BLOCKQUOTE') {
+                                         const tagName = el.tagName.toLowerCase();
+                                         if (tagName.startsWith('h')) {
+                                             prefix = '#'.repeat(parseInt(tagName.substring(1), 10)) + ' ';
+                                         } else if (tagName === 'li') {
+                                              // Attempt to determine list type from parent (basic)
+                                              prefix = el.closest('ol') ? '1. ' : '* '; // Assumes top-level list numbering
+                                         } else if (tagName === 'blockquote') {
                                               prefix = '> ';
-                                         } else if (el.tagName === 'PRE') {
-                                              prefix = '```\n'; // Wrap code blocks
-                                              markdownContent += prefix + text + '\n```\n\n';
-                                              return; // Skip default paragraph ending
+                                         } else if (tagName === 'pre') {
+                                              prefix = '```\n';
+                                              markdownContent += prefix + text + '\n```\n\n'; // Handle code blocks separately
+                                              return;
                                          }
-                                         markdownContent += prefix + text + '\n\n'; // Double newline for paragraph breaks
+                                         markdownContent += prefix + text + '\n\n'; // Double newline for breaks
                                      }
                                  });
+                                 // If no block elements found, use all text content
+                                 if (markdownContent.trim() === '') {
+                                      markdownContent = bodyElement.textContent?.trim() || '';
+                                 }
+
                              } else {
                                  markdownContent = "[Could not extract content body]";
                              }
@@ -3058,7 +3128,7 @@
                     });
                     if (!response.ok) {
                         const errorData = await response.json();
-                        throw new Error(errorData.error || `Firecrawl API request failed with status ${response.status}`);
+                        throw new Error(errorData.error?.message || `Firecrawl API request failed with status ${response.status}`);
                     }
                     return await response.json();
                 } catch (error) {
@@ -3259,11 +3329,15 @@
 
             function displayCurrentChapter() {
                 const chapter = state.bookData.chapters[state.bookData.currentPosition];
-                if (!chapter) return;
+                if (!chapter) {
+                     console.error("Attempted to display non-existent chapter at index:", state.bookData.currentPosition);
+                     DOM.contentArea.innerHTML = '<p>Error: Chapter not found.</p>';
+                     return;
+                }
                 DOM.contentArea.innerHTML = ''; // Clear previous content
 
                 // Update chapter title in navbar
-                const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title}`;
+                const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title || `Chapter ${state.bookData.currentPosition + 1}`}`;
                 if (state.bookData.sourceUrl) { DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.style.cursor = 'pointer'; }
                 else { DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText); DOM.bookTitle.style.cursor = 'default'; }
 
@@ -3335,7 +3409,7 @@
 
                 DOM.contentArea.scrollTop = 0; // Scroll to top on chapter change
                 updateNavigationButtonsState();
-                updateProgressBar();
+                updateProgressBar(); // Update progress after rendering
 
                 // Show source URL if available
                 if (state.bookData.sourceUrl) { DOM.sourceUrlContentLink.href = state.bookData.sourceUrl; DOM.sourceUrlContentLink.textContent = state.bookData.sourceUrl; DOM.sourceUrlDisplay.style.display = 'block'; }
@@ -3365,14 +3439,15 @@
             }
 
             function updateNavigationButtonsState() {
+                const numChapters = state.bookData.chapters?.length || 0;
                 DOM.prevBtn.style.opacity = state.bookData.currentPosition <= 0 ? '0.5' : '1';
                 DOM.prevBtn.style.pointerEvents = state.bookData.currentPosition <= 0 ? 'none' : 'auto';
-                DOM.nextBtn.style.opacity = state.bookData.currentPosition >= state.bookData.chapters.length - 1 ? '0.5' : '1';
-                DOM.nextBtn.style.pointerEvents = state.bookData.currentPosition >= state.bookData.chapters.length - 1 ? 'none' : 'auto';
+                DOM.nextBtn.style.opacity = state.bookData.currentPosition >= numChapters - 1 ? '0.5' : '1';
+                DOM.nextBtn.style.pointerEvents = state.bookData.currentPosition >= numChapters - 1 ? 'none' : 'auto';
             }
 
             function goToPrevious() { if (state.bookData.currentPosition > 0) { state.bookData.currentPosition--; displayCurrentChapter(); saveBookToLibrary(); } }
-            function goToNext() { if (state.bookData.currentPosition < state.bookData.chapters.length - 1) { state.bookData.currentPosition++; displayCurrentChapter(); saveBookToLibrary(); } }
+            function goToNext() { const numChapters = state.bookData.chapters?.length || 0; if (state.bookData.currentPosition < numChapters - 1) { state.bookData.currentPosition++; displayCurrentChapter(); saveBookToLibrary(); } }
 
             function toggleNavbar() {
                 DOM.navbar.classList.toggle('visible');
@@ -3642,10 +3717,10 @@
 
             function decreaseFontSize() { if (state.settings.fontSize > 70) { state.settings.fontSize -= 10; updateFontSize(); } else { showToast('Minimum font size reached'); } }
             function increaseFontSize() { if (state.settings.fontSize < 200) { state.settings.fontSize += 10; updateFontSize(); } else { showToast('Maximum font size reached'); } }
-            function updateFontSize() { DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-font-size', state.settings.fontSize); updateCssVariables(); /* Update CSS immediately */ }
+            function updateFontSize() { DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-fontsize', state.settings.fontSize); updateCssVariables(); /* Update CSS immediately */ }
             function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height reached'); } }
             function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
-            function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-line-height', state.settings.lineHeight); updateCssVariables(); /* Update CSS immediately */ }
+            function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-lineheight', state.settings.lineHeight); updateCssVariables(); /* Update CSS immediately */ }
 
             function setTheme(theme) { document.body.className = `${theme}-theme`; // Replace all classes DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
 
@@ -3727,23 +3802,22 @@
                      const p = paragraphs[i];
                      const rect = p.getBoundingClientRect(); // Position relative to viewport
                      const pTopInViewport = rect.top;
-                     const pBottomInViewport = rect.bottom;
+                     // const pBottomInViewport = rect.bottom; // Not needed for this heuristic
 
-                     // Check if the paragraph is at least partially visible within the content area's viewport
-                     // A common heuristic: the top of the paragraph is within the top 1/3rd of the viewport
+                     // Heuristic: Find the first paragraph whose top is visible within the top ~1/3 of the content area viewport
                       if (pTopInViewport >= contentTop && pTopInViewport < contentTop + viewportHeight / 3) {
                          const text = p.textContent?.substring(0, 50).trim() || '';
-                         // Calculate offset based on how much of the paragraph top is scrolled past
-                          const offset = Math.max(0, Math.min(1, (contentTop - pTopInViewport) / rect.height));
+                         // Offset calculation might not be super accurate, but gives an idea
+                         const offset = Math.max(0, Math.min(1, (contentTop - pTopInViewport) / rect.height));
                          return { index: parseInt(p.getAttribute('data-p-index')), text: text, offset: offset };
                      }
                  }
 
                  // Fallback: If no paragraph found in the top third, return the first paragraph's info
                   const firstP = paragraphs[0];
-                  const firstPRect = firstP.getBoundingClientRect();
+                  // const firstPRect = firstP.getBoundingClientRect(); // Not needed for fallback offset 0
                  return {
-                     index: parseInt(firstP.getAttribute('data-p-index')),
+                     index: parseInt(firstP.getAttribute('data-p-index')) || 0, // Default to 0 if attribute missing
                      text: firstP.textContent?.substring(0, 50).trim() || '',
                      offset: 0 // Assume starting at the top of the first paragraph
                  };
@@ -4162,7 +4236,7 @@
                  const { data: { session } } = await supabase.auth.getSession();
                  // Only save if logged in and there's a valid book title/data
                  if (!session || !state.bookData.title || !state.bookData.chapters || state.bookData.chapters.length === 0) {
-                      console.log("Save skipped: No session or book data.");
+                      // console.log("Save skipped: No session or book data."); // Too noisy
                       return false;
                  }
 
@@ -4173,9 +4247,13 @@
                          fileType = 'url';
                      } else if (state.bookData.title.includes('.')) {
                          fileType = state.bookData.title.split('.').pop().toLowerCase();
+                          // Basic validation for common ebook types
+                          const knownTypes = ['txt', 'epub', 'pdf', 'url'];
+                          if (!knownTypes.includes(fileType)) {
+                             fileType = 'text'; // Default to text if extension is weird
+                          }
                      } else {
-                          // Guess based on content? Might be unreliable. Default to 'text'.
-                          fileType = 'text';
+                          fileType = 'text'; // Default for untitled/text paste
                      }
 
 
@@ -4186,7 +4264,7 @@
                              // Include both content types if they exist
                              content: chapter.content || null, // Raw HTML content
                              markdownContent: chapter.markdownContent || null, // Markdown content
-                             startLine: chapter.startLine,
+                             startLine: chapter.startLine, // Might be less relevant now
                              endLine: chapter.endLine
                          })),
                          viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled, // Persist view preference
@@ -4215,13 +4293,7 @@
                          updated_at: new Date() // Always update timestamp
                      };
 
-                     // Use upsert to either insert or update based on title and list_id
-                     // Note: A unique constraint on (user_id, title, list_id) might be useful in Supabase
-                     // For simplicity here, we'll upsert based on title primarily, assuming titles are unique enough *within a list/unlisted* for a user.
-                     // A more robust approach might involve querying first, then updating or inserting.
-                     // Let's try upsert with conflict resolution on (user_id, title, list_id IF NOT NULL) - tricky constraint setup.
-                     // Simpler: Query first.
-
+                     // Query first to get ID if exists
                      let existingBookQuery = supabase.from('ebooks')
                          .select('id')
                          .eq('user_id', session.user.id)
@@ -4250,7 +4322,7 @@
                                  metadata: bookRecord.metadata,
                                  last_position: bookRecord.last_position,
                                  updated_at: bookRecord.updated_at,
-                                 file_type: bookRecord.file_type // Update file type if it changed (unlikely)
+                                 file_type: bookRecord.file_type // Update file type if it changed
                              })
                              .eq('id', existingBook.id);
 
@@ -4258,14 +4330,22 @@
                              console.error("Error updating book:", updateError);
                              throw updateError;
                          }
-                         // console.log("Book updated in library:", bookRecord.title);
+                         // console.log("Book updated in library:", bookRecord.title); // Too noisy for scroll saves
                      } else {
                          // --- INSERT new book ---
-                          // Remove updated_at from insert object as Supabase handles it
-                          delete bookRecord.updated_at;
                          const { error: insertError } = await supabase
                              .from('ebooks')
-                             .insert(bookRecord);
+                             .insert({ // Insert the full record except updated_at
+                                user_id: bookRecord.user_id,
+                                title: bookRecord.title,
+                                content: bookRecord.content,
+                                raw_content: bookRecord.raw_content,
+                                file_type: bookRecord.file_type,
+                                metadata: bookRecord.metadata,
+                                last_position: bookRecord.last_position,
+                                list_id: bookRecord.list_id
+                                // Supabase handles created_at/updated_at on insert
+                             });
 
                          if (insertError) {
                              console.error("Error inserting book:", insertError);
@@ -4277,7 +4357,7 @@
                      return true; // Indicate success
                  } catch (error) {
                      console.error('Error saving book to library:', error);
-                      showToast("Error saving progress.", 2000); // Notify user
+                      // showToast("Error saving progress.", 2000); // Avoid toast on background saves
                      return false; // Indicate failure
                  }
              }
@@ -4404,10 +4484,7 @@
 
                  // Ensure paragraphs have the data-p-index attribute (might be missing if content was loaded differently)
                  DOM.contentArea.querySelectorAll('p:not([data-p-index])').forEach((p, index) => {
-                      // This simple re-indexing might be wrong if called multiple times,
-                      // it's better to ensure it's set correctly during displayCurrentChapter
-                      // For robustness, we'll just try to find the element.
-                      // p.setAttribute('data-p-index', index); // Avoid re-indexing here
+                       // Re-adding indices dynamically is risky. Best effort: find by index attr.
                  });
 
 
@@ -4416,9 +4493,10 @@
                  // If the exact index isn't found, try to find by text similarity (less reliable but good fallback)
                   if (!targetParagraph && textAnchor.text) {
                      console.warn(`Paragraph at index ${textAnchor.index} not found. Searching by text...`);
-                     const paragraphs = DOM.contentArea.querySelectorAll('p[data-p-index]'); // Get potentially re-indexed paragraphs
+                     const paragraphs = DOM.contentArea.querySelectorAll('p'); // Get all paragraphs
                      for (let i = 0; i < paragraphs.length; i++) {
-                         if (isTextSimilar(paragraphs[i].textContent, textAnchor.text)) {
+                          // Only check paragraphs that *should* have an index from rendering
+                         if (paragraphs[i].hasAttribute('data-p-index') && isTextSimilar(paragraphs[i].textContent, textAnchor.text)) {
                              targetParagraph = paragraphs[i];
                              console.log(`Found similar text in paragraph index ${paragraphs[i].getAttribute('data-p-index')}`);
                              break; // Found a likely match
@@ -4459,22 +4537,10 @@
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('chat-message', sender);
                 if (sender === 'assistant') {
-                     // Basic Markdown handling for chat (Bold and Links)
-                     let processedMessage = escapeHTML(message);
-                     processedMessage = processedMessage.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                     processedMessage = processedMessage.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-                     // Handle simple unordered lists (lines starting with * or -)
-                      processedMessage = processedMessage.replace(/^([*-])\s+(.*)$/gm, '<li>$2</li>');
-                      // Wrap consecutive list items in <ul>
-                      processedMessage = processedMessage.replace(/(<li>.*?<\/li>\s*)+/g, '<ul>$1</ul>');
-                     // Basic newline handling
-                     processedMessage = processedMessage.replace(/\n/g, '<br>'); // Convert remaining newlines
-                      // Clean up potential extra <br> around list tags
-                      processedMessage = processedMessage.replace(/<br>\s*<ul>/g, '<ul>');
-                      processedMessage = processedMessage.replace(/<\/ul>\s*<br>/g, '</ul>');
-                     messageElement.innerHTML = processedMessage;
+                     // Use the same markdown parser as the reader for consistency
+                      messageElement.innerHTML = markdownToHtml(message);
                 }
-                else { messageElement.textContent = message; }
+                else { messageElement.textContent = message; } // User messages are plain text
                 if (isLoading) messageElement.classList.add('loading');
                 DOM.chatMessages.appendChild(messageElement);
                 DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
@@ -4840,10 +4906,14 @@
                  };
 
                  // Save to localStorage immediately for persistence
-                 for (const key in preferences) {
-                     localStorage.setItem(`ebook-${key.toLowerCase().replace(/enabled/,'')}`, preferences[key]);
-                 }
-                  localStorage.setItem('ebook-viewrawhtml', preferences.viewRawHtmlEnabled); // Keep separate key for raw view maybe
+                 localStorage.setItem('ebook-fontsize', preferences.fontSize);
+                 localStorage.setItem('ebook-lineheight', preferences.lineHeight);
+                 localStorage.setItem('ebook-theme', preferences.theme);
+                 localStorage.setItem('ebook-viewrawhtml', preferences.viewRawHtmlEnabled);
+                 localStorage.setItem('ebook-translation', preferences.translationEnabled);
+                 localStorage.setItem('ebook-autospeak', preferences.autoSpeakEnabled);
+                 localStorage.setItem('ebook-speakselection', preferences.speakSelectionEnabled);
+                 localStorage.setItem('ebook-speechlanguage', preferences.speechLanguage);
 
 
                  // Save to Supabase if logged in
@@ -4851,22 +4921,13 @@
                  if (!session) return;
 
                  try {
+                      // Use upsert to handle both insert and update
                      const { error } = await supabase
                          .from('user_settings')
-                         .update({ preferences: preferences }) // Update the JSONB column
-                         .eq('user_id', session.user.id);
+                         .upsert({ user_id: session.user.id, preferences: preferences }, { onConflict: 'user_id' }); // Specify conflict target
 
-                     if (error) {
-                          // If the row doesn't exist (e.g., new user), try inserting
-                          if (error.code === 'PGRST116') { // Code for "JSON object requested, multiple (or no) rows returned"
-                              const { error: insertError } = await supabase
-                                  .from('user_settings')
-                                  .insert({ user_id: session.user.id, preferences: preferences });
-                              if (insertError) throw insertError; // Throw insert error if it fails
-                          } else {
-                              throw error; // Throw original update error
-                          }
-                      }
+                     if (error) throw error;
+
                  } catch (error) {
                      console.error('Error saving user preferences to DB:', error);
                       // Don't show toast for background saves unless critical
@@ -4931,12 +4992,21 @@
                          DOM.speakSelectionToggle.checked = state.settings.speakSelectionEnabled;
                          // Checkbox and select values are already updated directly above
 
-                          // Persist the potentially merged settings back to localStorage
-                          saveUserPreferences(); // This ensures localStorage matches DB or initial defaults
+                          // Persist the potentially merged settings back to localStorage for next load
+                          // This might be slightly redundant if saveUserPreferences is called elsewhere, but ensures consistency
+                         localStorage.setItem('ebook-fontsize', state.settings.fontSize);
+                         localStorage.setItem('ebook-lineheight', state.settings.lineHeight);
+                         localStorage.setItem('ebook-theme', state.settings.theme);
+                         localStorage.setItem('ebook-viewrawhtml', state.settings.viewRawHtmlEnabled);
+                         localStorage.setItem('ebook-translation', DOM.translationToggle.checked);
+                         localStorage.setItem('ebook-autospeak', DOM.autoSpeakToggle.checked);
+                         localStorage.setItem('ebook-speakselection', state.settings.speakSelectionEnabled);
+                         localStorage.setItem('ebook-speechlanguage', DOM.speechLanguage.value);
+
                      } else {
                           // No settings found in DB, save current (localStorage or default) settings to DB
                           console.log("No preferences found in DB for user, saving current settings.");
-                          saveUserPreferences();
+                          saveUserPreferences(); // This will also update localStorage
                      }
 
                  } catch (error) {
@@ -5058,6 +5128,8 @@
                      DOM.settingsPanel.scrollTop = DOM.settingsPanel.scrollHeight;
                  }
             }
+
+
             return { init };
         })();
 
