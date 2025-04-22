@@ -6,9 +6,7 @@
     <title>Enhanced Ebook Reader</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Removed marked.min.js script tag -->
     <style>
-        /* CSS styles remain exactly the same as provided previously */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -48,7 +46,7 @@
             --border-color: var(--dark-border);
             --panel-shadow: var(--dark-panel-shadow);
             --highlight-color: var(--dark-highlight);
-            --reader-line-height: 1.6; /* Default line height */
+            --reader-line-height: 1.6;
         }
 
         body.light-theme {
@@ -142,10 +140,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Changed from center to start */
+            justify-content: flex-start;
             background-color: var(--bg-color);
             z-index: 100;
-            padding: 3vh 1rem 1rem; /* Reduced top padding, added bottom */
+            padding: 3vh 1rem 1rem;
             overflow-y: auto;
         }
 
@@ -159,20 +157,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start; /* Align items to the top */
+            justify-content: flex-start;
             width: 100%;
-            max-width: 650px; /* Slightly wider */
+            max-width: 650px;
             padding: 1rem;
-            flex-grow: 1; /* Allow content to take space */
-            display: flex; /* Ensure flex properties apply */
-            flex-direction: column; /* Stack children vertically */
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .welcome-actions {
             display: flex;
             flex-direction: column;
-            gap: 1.5rem; /* Adjusted gap */
-            margin-top: 1rem; /* Reduced top margin */
+            gap: 1.5rem;
+            margin-top: 1rem;
             width: 100%;
             align-items: center;
         }
@@ -191,9 +189,8 @@
             margin-top: 2.5rem;
             background-color: var(--panel-bg);
             border-radius: 8px;
-            /* Removed fixed height, let flexbox handle it */
             box-shadow: 0 2px 8px var(--panel-shadow);
-            display: flex; /* Keep flex */
+            display: flex;
             flex-direction: column;
             overflow: hidden;
         }
@@ -387,14 +384,14 @@
             color: var(--text-color);
             font-family: inherit;
             font-size: 1rem;
-            transition: border-color 0.2s ease, box-shadow 0.2s ease; /* Added transition */
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .input-field:focus,
         .select-field:focus {
             outline: none;
             border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2); /* Added focus ring */
+            box-shadow: 0 0 0 2px rgba(var(--primary-color), 0.2);
         }
 
         #text-input {
@@ -425,18 +422,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.8rem 1rem; /* Slightly increased padding */
-            margin-bottom: 0.6rem; /* Increased gap */
-            background-color: transparent; /* Transparent background */
-            border: 1px solid var(--border-color); /* Subtle border */
-            border-radius: 6px; /* Slightly larger radius */
+            padding: 0.8rem 1rem;
+            margin-bottom: 0.6rem;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             cursor: pointer;
             transition: background-color 0.2s, border-color 0.2s;
         }
 
         .library-item:hover {
-            background-color: rgba(255, 255, 255, 0.05); /* Adjusted hover */
-            border-color: rgba(255, 255, 255, 0.15); /* Highlight border on hover */
+            background-color: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.15);
         }
 
         .library-item-details {
@@ -638,18 +635,18 @@
             background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 6px; /* Slightly larger radius */
-            padding: 0.8rem 1.6rem; /* Increased padding */
+            border-radius: 6px;
+            padding: 0.8rem 1.6rem;
             font-size: 1rem;
-            font-weight: 500; /* Slightly bolder text */
+            font-weight: 500;
             cursor: pointer;
-            box-shadow: 0 1px 3px var(--panel-shadow); /* Softer shadow */
+            box-shadow: 0 1px 3px var(--panel-shadow);
             transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
         }
 
         .button:hover {
             background-color: #3367d6;
-            box-shadow: 0 2px 6px var(--panel-shadow); /* Enhance shadow on hover */
+            box-shadow: 0 2px 6px var(--panel-shadow);
         }
 
         .button:active {
@@ -664,8 +661,8 @@
         }
 
         .button-secondary:hover {
-            background-color: rgba(66, 133, 244, 0.1); /* Light primary color background */
-            border-color: #3367d6; /* Darker primary on hover */
+            background-color: rgba(66, 133, 244, 0.1);
+            border-color: #3367d6;
             box-shadow: none;
         }
 
@@ -788,8 +785,8 @@
             height: 100%;
             overflow-y: auto;
             padding: 1rem;
-            padding-top: 2rem; /* Ensure space below navbar */
-            padding-bottom: 4rem; /* Ensure space above nav controls */
+            padding-top: 2rem;
+            padding-bottom: 4rem;
             -webkit-overflow-scrolling: touch;
             user-select: text;
             -webkit-user-select: text;
@@ -797,40 +794,37 @@
             transition: background-color 0.3s ease, color 0.3s ease;
             background-color: var(--bg-color);
             color: var(--text-color);
-            line-height: var(--reader-line-height); /* Apply reader line height */
-            font-size: calc(1rem * var(--settings-font-size, 1)); /* Apply font size */
-            font-family: inherit; /* Ensure reader font applies */
-            word-wrap: break-word; /* Ensure long words break */
-            position: relative; /* Needed for text anchor calculations */
+            line-height: var(--reader-line-height);
+            font-size: calc(1rem * var(--settings-font-size, 1));
+            font-family: inherit;
+            word-wrap: break-word;
+            position: relative;
         }
 
         #content-area img {
             max-width: 100%;
             height: auto;
-            display: block; /* Optional: ensures block-level behavior */
-            margin: 1rem auto; /* Optional: centers images and adds space */
-            border-radius: 4px; /* Slightly rounded corners for images */
+            display: block;
+            margin: 1rem auto;
+            border-radius: 4px;
         }
 
-        /* Base paragraph style */
         #content-area p {
             margin-bottom: 1rem;
-            /* line-height is inherited from #content-area */
         }
 
-        /* Markdown Content Styling (applies to manually generated HTML) */
         #content-area h1,
         #content-area h2,
         #content-area h3,
         #content-area h4,
         #content-area h5,
         #content-area h6 {
-            font-weight: 600; /* Less bold than default */
+            font-weight: 600;
             margin-top: 1.5rem;
-            margin-bottom: 0.5rem; /* Less space after headings */
-            line-height: 1.4; /* Specific line height for headings */
-            padding-bottom: 0.2em; /* Optional: space below heading text */
-            border-bottom: 1px solid var(--border-color); /* Subtle separator */
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+            padding-bottom: 0.2em;
+            border-bottom: 1px solid var(--border-color);
         }
 
         #content-area h1 { font-size: 1.3em; border-bottom-width: 2px; }
@@ -841,17 +835,17 @@
         #content-area ul,
         #content-area ol {
             margin-bottom: 1rem;
-            padding-left: 1.5em; /* Standard indent */
+            padding-left: 1.5em;
         }
 
         #content-area li {
-            margin-bottom: 0.5rem; /* Space between list items */
+            margin-bottom: 0.5rem;
         }
-        #content-area li > p { /* No extra margin for paragraphs directly inside list items */
+        #content-area li > p {
              margin-bottom: 0;
         }
         #content-area li > ul,
-        #content-area li > ol { /* Indentation for nested lists */
+        #content-area li > ol {
             margin-top: 0.5rem;
             margin-bottom: 0.5rem;
         }
@@ -861,15 +855,15 @@
             margin-right: 1em;
             margin-bottom: 1rem;
             padding: 0.5em 1em;
-            border-left: 3px solid var(--primary-color); /* Highlight with primary color */
-            background-color: rgba(255, 255, 255, 0.03); /* Subtle background */
-            color: var(--text-muted, rgba(224, 224, 224, 0.8)); /* Muted color for quotes */
+            border-left: 3px solid var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted, rgba(224, 224, 224, 0.8));
             font-style: italic;
         }
         body.light-theme #content-area blockquote { background-color: rgba(0, 0, 0, 0.03); color: var(--text-muted, #555); }
         body.sepia-theme #content-area blockquote { background-color: rgba(95, 75, 50, 0.04); color: var(--text-muted, #7a6853); }
 
-         #content-area blockquote p { /* Paragraphs inside blockquotes */
+         #content-area blockquote p {
               margin-bottom: 0.5rem;
          }
          #content-area blockquote p:last-child {
@@ -881,21 +875,21 @@
             padding: 0.1em 0.3em;
             border-radius: 3px;
             font-family: monospace;
-            font-size: 0.9em; /* Slightly smaller */
+            font-size: 0.9em;
         }
         body.light-theme #content-area code { background-color: rgba(0, 0, 0, 0.05); }
         body.sepia-theme #content-area code { background-color: rgba(95, 75, 50, 0.08); }
 
 
         #content-area pre {
-            background-color: rgba(0, 0, 0, 0.2); /* Darker background for code blocks */
+            background-color: rgba(0, 0, 0, 0.2);
             padding: 0.8em 1em;
             border-radius: 4px;
             overflow-x: auto;
             margin-bottom: 1rem;
             font-family: monospace;
-            line-height: 1.4; /* Specific line height for code blocks */
-            border: 1px solid var(--border-color); /* Add border */
+            line-height: 1.4;
+            border: 1px solid var(--border-color);
         }
         body.light-theme #content-area pre { background-color: rgba(0, 0, 0, 0.03); border: 1px solid #ddd; }
         body.sepia-theme #content-area pre { background-color: rgba(95, 75, 50, 0.05); border: 1px solid rgba(95, 75, 50, 0.1); }
@@ -904,7 +898,7 @@
         #content-area pre code {
             background-color: transparent;
             padding: 0;
-            font-size: inherit; /* Inherit pre's font size */
+            font-size: inherit;
             border: none;
         }
 
@@ -913,7 +907,6 @@
             border-top: 1px solid var(--border-color);
             margin: 1.5rem 0;
         }
-        /* End Markdown Content Styling */
 
         #settings-panel {
             position: fixed;
@@ -921,7 +914,7 @@
             left: 0;
             right: 0;
             background-color: var(--panel-bg);
-            padding: 1.5rem; /* Increased padding */
+            padding: 1.5rem;
             border-top-left-radius: var(--panel-radius);
             border-top-right-radius: var(--panel-radius);
             box-shadow: 0 -2px 10px var(--panel-shadow);
@@ -994,9 +987,8 @@
             font-size: 0.875rem;
             max-height: 12.5rem;
             overflow-y: auto;
-            border: 1px solid var(--border-color); /* Add border */
+            border: 1px solid var(--border-color);
         }
-         /* AI Response Area Markdown styles */
         #ai-response-area p { margin-bottom: 0.5rem; }
         #ai-response-area ul, #ai-response-area ol { padding-left: 1.2em; margin-bottom: 0.5rem; }
         #ai-response-area li { margin-bottom: 0.25rem; }
@@ -1123,7 +1115,7 @@
         #toc-content {
             flex: 1;
             overflow-y: auto;
-            padding: 1rem 1.5rem; /* Increased horizontal padding */
+            padding: 1rem 1.5rem;
         }
 
         .toc-item {
@@ -1385,20 +1377,20 @@
         }
 
         .button.icon-btn {
-            padding: 0; /* Remove padding */
-            width: 2.5rem; /* Make it square */
-            height: 2.5rem; /* Make it square */
-            font-size: 1.5rem; /* Adjust icon size */
-            line-height: 2.5rem; /* Center icon vertically */
-            text-align: center; /* Center icon horizontally */
-            flex-shrink: 0; /* Prevent shrinking */
+            padding: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            font-size: 1.5rem;
+            line-height: 2.5rem;
+            text-align: center;
+            flex-shrink: 0;
         }
 
         #url-input-container {
-            width: 50%; /* Take full width of parent */
-            max-width: 550px; /* Limit maximum width */
-            margin-left: auto; /* Center within parent */
-            margin-right: auto; /* Center within parent */
+            width: 50%;
+            max-width: 550px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         @media (max-width: 768px) {
@@ -2057,15 +2049,14 @@
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             max-width: 100%;
         }
-         /* Styling for assistant message content */
-        .chat-message.assistant p { margin-bottom: 0.5em; } /* Spacing for paragraphs */
+        .chat-message.assistant p { margin-bottom: 0.5em; }
         .chat-message.assistant p:last-child { margin-bottom: 0; }
         .chat-message.assistant ul { list-style: disc; margin-left: 1.5em; margin-bottom: 0.5em; }
         .chat-message.assistant ol { list-style: decimal; margin-left: 1.5em; margin-bottom: 0.5em; }
         .chat-message.assistant li { margin-bottom: 0.25em; }
         .chat-message.assistant strong { font-weight: bold; }
         .chat-message.assistant em { font-style: italic; }
-        .chat-message.assistant code { /* Consistent with reader code style */
+        .chat-message.assistant code {
             background-color: rgba(255, 255, 255, 0.1);
             padding: 0.1em 0.3em;
             border-radius: 3px;
@@ -2077,7 +2068,7 @@
             text-decoration: underline;
         }
         .chat-message.assistant a:hover {
-            color: #66a3ff; /* Lighter blue on hover */
+            color: #66a3ff;
         }
 
         .chat-message.assistant.loading::after {
@@ -2169,7 +2160,6 @@
                 <p>Read from a URL, paste text, or open a local file.</p>
 
                 <div class="welcome-actions">
-                    <!-- URL Input First -->
                     <div class="input-group" id="url-input-container">
                         <div class="input-row">
                             <input id="url-input" type="url" placeholder="Enter a URL to read" class="input-field">
@@ -2177,7 +2167,6 @@
                         </div>
                     </div>
 
-                    <!-- Text Input Section -->
                     <div id="toggle-text-input-container">
                         <a href="#" id="toggle-text-input">or paste text directly</a>
                     </div>
@@ -2189,23 +2178,20 @@
                         </div>
                     </div>
 
-                     <!-- Local File / Example Section -->
-                     <div style="margin-top: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;"> <!-- Increased margin-top slightly -->
+                     <div style="margin-top: 1.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
                         <button type="button" id="open-file-btn" class="button button-secondary">Open Local File</button>
-                        <div class="example-book-section" style="margin-top: 0.2rem; margin-bottom: 0;"> <!-- Further reduced top margin -->
+                        <div class="example-book-section" style="margin-top: 0.2rem; margin-bottom: 0;">
                             <p style="margin-bottom: 0.5rem;">Don't have an ebook? Try our example:</p>
                             <a id="example-book-btn" class="button success-button" href="https://raw.githubusercontent.com/dat-lequoc/apps/refs/heads/main/ebooks/Kundera%2C%20Milan%20-%20The%20Unbearable%20Lightness%20of%20Being%20(2017%2C%20Faber%20and%20Faber)%20-%20libgen.li.epub" target="_blank" rel="noopener">Download Sample Book</a>
                         </div>
                     </div>
 
-                    <!-- Sign In Button (if needed) -->
                     <div class="main-actions" style="margin-top: 1rem;">
                          <button type="button" id="login-btn" class="button hidden">Sign In</button>
                     </div>
                 </div>
 
-                <!-- Auth Status Moved Down -->
-                <div class="auth-section" id="auth-section" style="margin-top: auto; padding-top: 1rem;"> <!-- Push to bottom -->
+                <div class="auth-section" id="auth-section" style="margin-top: auto; padding-top: 1rem;">
                     <p>Sign in to save books to your library.</p>
                 </div>
 
@@ -2385,10 +2371,6 @@
     </div>
 
     <script>
-        // --- START: Manual Markdown Parser ---
-        /**
-         * Basic HTML escaping. Crucial to prevent XSS.
-         */
         function escapeHTML(str) {
              if (!str) return '';
              return str.replace(/&/g, '&amp;')
@@ -2398,81 +2380,41 @@
                        .replace(/'/g, '&#039;');
         }
 
-        /**
-         * Processes inline Markdown elements within a text block.
-         * Assumes HTML has already been escaped where necessary (e.g., inside <code>).
-         */
         function processInlineMarkdown(text) {
             if (!text) return '';
-
-            // Order of operations matters!
-            // 1. Escape HTML entities in the text *before* applying markdown tags
-            //    but *after* code blocks are handled (code content should be escaped).
-            //    Let's handle escaping within tags where content is generated.
-
-            // 2. Inline Code `code` (Content is already escaped by escapeHTML in markdownToHtml)
             text = text.replace(/`([^`]+)`/g, (match, code) => `<code>${escapeHTML(code)}</code>`);
-
-            // 3. Images: ![alt text](url)
             text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, src) =>
                 `<img src="${escapeHTML(src)}" alt="${escapeHTML(alt)}">`
             );
-
-            // 4. Links: [link text](url)
             text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, href) =>
-                 // Link text itself might contain other inline markdown (like bold/italic)
-                 // Let's process linkText recursively, but be careful about nested links.
-                 // Basic approach: process linkText after escaping the href.
-                `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">${processInlineMarkdown(linkText)}</a>` // Recursive call for link text
+                `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer">${processInlineMarkdown(linkText)}</a>`
             );
-
-            // 5. Bold: **text** or __text__
-            // Use capturing groups and ensure markers are not immediately adjacent to word boundaries
-            // to avoid issues like a_b_c or word**s**word.
-            // This regex is simpler and might miss some edge cases but is generally safer.
             text = text.replace(/\*\*(\S(?:[^*\n]|\*(?!\*))*\S)\*\*/g, '<strong>$1</strong>');
             text = text.replace(/__(\S(?:[^_\n]|_(?!_))*\S)__/g, '<strong>$1</strong>');
-
-
-            // 6. Italics: *text* or _text_ (avoid matching within words or bold markers)
-             // Negative lookbehind/lookahead assertions help here.
-             // Matches *word* or _word* but not a*b*c or a_b_c or **word** or __word__
             text = text.replace(/(?<!\w)(?<!\*)\*(\S(?:[^*\n]|\*(?!\*))*\S)\*(?!\w)(?!\*)/g, '<em>$1</em>');
             text = text.replace(/(?<!\w)(?<!_)_(\S(?:[^_\n]|_(?!_))*\S)_(?!\w)(?!_)/g, '<em>$1</em>');
-
-
-            // Optional: Handle simple line breaks within paragraphs if needed (can interfere with block parsing)
-            // text = text.replace(/(?<!\n)\n(?!\n)/g, '<br>\n');
-
             return text;
         }
 
-        /**
-         * Converts a Markdown string to basic HTML.
-         * Handles common block elements and delegates inline processing.
-         * Improved list and blockquote handling.
-         */
         function markdownToHtml(md) {
             if (!md) return '';
 
             const lines = md.replace(/\r\n/g, '\n').split('\n');
             let html = '';
-            let currentBlock = null; // Can be 'p', 'ul', 'ol', 'bq', 'pre'
+            let currentBlock = null;
             let blockContent = '';
-            let listType = null; // 'ul' or 'ol' for lists
+            let listType = null;
             let codeLang = '';
 
             const closeCurrentBlock = () => {
                 if (currentBlock === 'p') {
                     html += `<p>${processInlineMarkdown(blockContent.trim())}</p>\n`;
                 } else if (currentBlock === 'ul' || currentBlock === 'ol') {
-                    // Process list items recursively for nested inline markdown
                     const itemsHtml = blockContent.split('<li>').slice(1).map(item =>
                         `<li>${processInlineMarkdown(item.replace(/<\/li>$/, '').trim())}</li>`
                     ).join('\n');
                     html += `<${listType}>\n${itemsHtml}\n</${listType}>\n`;
                 } else if (currentBlock === 'bq') {
-                    // Process blockquote content recursively
                     html += `<blockquote>${markdownToHtml(blockContent.trim())}</blockquote>\n`;
                 } else if (currentBlock === 'pre') {
                     html += `<pre><code${codeLang ? ` class="language-${escapeHTML(codeLang)}"` : ''}>${escapeHTML(blockContent.replace(/\n$/, ''))}</code></pre>\n`;
@@ -2487,14 +2429,11 @@
                 const line = lines[i];
                 const trimmedLine = line.trim();
 
-                // --- Code Blocks (```) ---
                 if (trimmedLine.startsWith('```')) {
                     if (currentBlock === 'pre') {
-                        // Closing code block
                         closeCurrentBlock();
                     } else {
-                        // Starting code block
-                        closeCurrentBlock(); // Close any previous block
+                        closeCurrentBlock();
                         currentBlock = 'pre';
                         codeLang = trimmedLine.substring(3).trim();
                     }
@@ -2505,93 +2444,78 @@
                     continue;
                 }
 
-                // --- Blank Line: Separator ---
                 if (trimmedLine === '') {
-                    closeCurrentBlock(); // End current block on blank line
+                    closeCurrentBlock();
                     continue;
                 }
 
-                // --- Headings (#) ---
                 const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
                 if (headingMatch) {
                     closeCurrentBlock();
                     const level = headingMatch[1].length;
                     const headingText = headingMatch[2].trim();
-                    // Escape heading text before processing inline
                     html += `<h${level}>${processInlineMarkdown(escapeHTML(headingText))}</h${level}>\n`;
                     continue;
                 }
 
-                // --- Horizontal Rules (---, ***, ___) ---
-                if (/^\s*([-*_])\s*\1\s*\1+\s*$/.test(trimmedLine)) { // Allow more than 3 markers
+                if (/^\s*([-*_])\s*\1\s*\1+\s*$/.test(trimmedLine)) {
                     closeCurrentBlock();
                     html += '<hr>\n';
                     continue;
                 }
 
-                // --- Blockquotes (>) ---
                 if (line.startsWith('>')) {
                     const quoteLine = line.replace(/^>\s?/, '');
                     if (currentBlock !== 'bq') {
                         closeCurrentBlock();
                         currentBlock = 'bq';
-                        blockContent = quoteLine + '\n'; // Start new blockquote content
+                        blockContent = quoteLine + '\n';
                     } else {
-                        blockContent += quoteLine + '\n'; // Add to existing blockquote
+                        blockContent += quoteLine + '\n';
                     }
                     continue;
-                }
-                 // If line doesn't start with > but we were in a blockquote, close it
+                 }
                  if (currentBlock === 'bq' && !line.startsWith('>')) {
                      closeCurrentBlock();
                  }
 
-
-                // --- Lists (UL/OL) ---
                 const ulMatch = line.match(/^(\s*)([*+-])\s+(.*)/);
                 const olMatch = line.match(/^(\s*)(\d+)\.\s+(.*)/);
                 const isListItem = ulMatch || olMatch;
 
                 if (isListItem) {
                     const currentListType = olMatch ? 'ol' : 'ul';
-                    const itemContent = (ulMatch || olMatch)[ulMatch ? 3 : 3]; // Content is always last group
+                    const itemContent = (ulMatch || olMatch)[ulMatch ? 3 : 3];
                     const startNumber = olMatch ? olMatch[2] : null;
 
                     if (currentBlock !== currentListType) {
-                         closeCurrentBlock(); // Close previous block (could be paragraph or different list)
+                         closeCurrentBlock();
                          currentBlock = currentListType;
-                         listType = currentListType; // Store list type
+                         listType = currentListType;
                          const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
-                         // Temporarily store items in blockContent, wrapped in markers for later processing
-                         blockContent = `<li>${escapeHTML(itemContent)}</li>`; // Escape item content here
+                         blockContent = `<li>${escapeHTML(itemContent)}</li>`;
                     } else {
-                         // Add to the existing list content
-                         blockContent += `<li>${escapeHTML(itemContent)}</li>`; // Escape item content here
+                         blockContent += `<li>${escapeHTML(itemContent)}</li>`;
                     }
                     continue;
                 }
-                 // If line is not a list item but we were in a list, close it
                  if (currentBlock === 'ul' || currentBlock === 'ol') {
                      closeCurrentBlock();
                  }
 
-                // --- Paragraphs (Default) ---
                 if (currentBlock !== 'p') {
-                    closeCurrentBlock(); // Close any non-paragraph block
+                    closeCurrentBlock();
                     currentBlock = 'p';
-                    blockContent = escapeHTML(line); // Start new paragraph, escape content
+                    blockContent = escapeHTML(line);
                 } else {
-                    // Add line to existing paragraph buffer with a space separator
                     blockContent += ' ' + escapeHTML(line);
                 }
             }
 
-            // Close any remaining block at the end of the input
             closeCurrentBlock();
 
             return html;
         }
-        // --- END: Manual Markdown Parser ---
 
 
         const EbookApp = (function() {
@@ -2678,11 +2602,11 @@
             let state = {
                 bookData: {
                     title: '',
-                    content: '', // Older HTML content (fallback)
+                    content: '',
                     chapters: [],
                     currentPosition: 0,
                     sourceUrl: null,
-                    rawContent: null, // Raw HTML from EPUB/URL
+                    rawContent: null,
                     currentListId: null
                 },
                 settings: {
@@ -2717,14 +2641,11 @@
                 setupEventListeners();
                 checkAuthAndLoadApiSettings();
                 loadUserPreferences();
-                // Set initial CSS variables based on settings
                 updateCssVariables();
             }
 
              function updateCssVariables() {
                 document.documentElement.style.setProperty('--reader-line-height', state.settings.lineHeight);
-                // Font size is applied directly to contentArea, but could be a variable too
-                // document.documentElement.style.setProperty('--settings-font-size', `${state.settings.fontSize / 100}`);
                 DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
             }
 
@@ -2765,7 +2686,7 @@
 
                 DOM.viewRawHtmlToggle.addEventListener('change', function() {
                     state.settings.viewRawHtmlEnabled = this.checked;
-                    displayCurrentChapter(); // Re-render with new view setting
+                    displayCurrentChapter();
                     saveUserPreferences();
                 });
 
@@ -2859,8 +2780,8 @@
                 DOM.bookTitle.textContent = file.name;
                 state.bookData.title = file.name;
                 state.bookData.currentListId = null;
-                state.bookData.sourceUrl = null; // Reset source URL for local files
-                state.bookData.rawContent = null; // Reset raw content
+                state.bookData.sourceUrl = null;
+                state.bookData.rawContent = null;
                 const fileExtension = file.name.split('.').pop().toLowerCase();
                 if (fileExtension === 'txt') { processTextFile(file); }
                 else if (fileExtension === 'epub') { processEpubFile(file); }
@@ -2879,9 +2800,8 @@
                 state.bookData.sourceUrl = null;
                 state.bookData.rawContent = null;
                 try {
-                    // Treat pasted text as Markdown by default
                     state.bookData.chapters = [{ title: customTitle, markdownContent: text, content: null, startLine: 0, endLine: text.split('\n').length }];
-                    state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                    state.settings.viewRawHtmlEnabled = false;
                     DOM.viewRawHtmlToggle.checked = false;
                     showBook();
                 } catch (error) { console.error('Error processing input text:', error); showToast('Error processing text'); }
@@ -2893,16 +2813,15 @@
                 reader.onload = function(e) {
                     try {
                         const text = e.target.result;
-                        // Treat plain text files as Markdown by default
-                        const chapters = splitIntoChapters(text, 1000); // Simple chapter splitting for TXT
+                        const chapters = splitIntoChapters(text, 1000);
                         state.bookData.chapters = chapters.map((chap, index) => ({
                             title: chap.title || `Chapter ${index + 1}`,
-                            markdownContent: chap.content, // Store as Markdown
-                            content: null, // No separate HTML content
+                            markdownContent: chap.content,
+                            content: null,
                             startLine: chap.startLine,
                             endLine: chap.endLine
                         }));
-                        state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                        state.settings.viewRawHtmlEnabled = false;
                         DOM.viewRawHtmlToggle.checked = false;
                         showBook();
                     } catch (error) { console.error('Error processing text file:', error); showToast('Error processing file'); }
@@ -2912,7 +2831,6 @@
                 reader.readAsText(file);
             }
 
-            // Helper to split text into basic chapters
             function splitIntoChapters(text, linesPerChapter = 1000) {
                 const lines = text.split('\n');
                 const chapters = [];
@@ -2921,14 +2839,11 @@
 
                 for (let i = 0; i < lines.length; i++) {
                     currentChapterLines.push(lines[i]);
-                    // Simple split logic (can be improved)
                     if (currentChapterLines.length >= linesPerChapter || i === lines.length - 1) {
                         const chapterContent = currentChapterLines.join('\n');
-                        // Try to find a title in the first few lines
                         let title = null;
                         for(let j=0; j<Math.min(5, currentChapterLines.length); j++) {
                             const trimmedLine = currentChapterLines[j].trim();
-                            // Basic title heuristic: not empty, < 80 chars, doesn't look like markdown element start
                             if (trimmedLine && trimmedLine.length < 80 && !trimmedLine.startsWith('#') && !trimmedLine.startsWith('>') && !trimmedLine.startsWith('*') && !trimmedLine.startsWith('-') && !trimmedLine.startsWith('+') && !/^\d+\./.test(trimmedLine) && !trimmedLine.startsWith('```') && !trimmedLine.startsWith('---')) {
                                 title = trimmedLine;
                                 break;
@@ -3000,27 +2915,25 @@
                         if (manifestItems[idref] && manifestItems[idref].mediaType.includes('html')) { spineItems.push({ id: idref, href: manifestItems[idref].href }); }
                     });
 
-                    let combinedRawHtml = ''; // To store raw HTML for raw view
+                    let combinedRawHtml = '';
                     state.bookData.chapters = [];
 
                     for (const item of spineItems) {
                          const fullPath = rootDir + item.href;
                          try {
                              const chapterHtmlContent = await zip.file(fullPath).async('text');
-                             combinedRawHtml += chapterHtmlContent + "\n<!-- Chapter Break -->\n"; // Append raw HTML
+                             combinedRawHtml += chapterHtmlContent + "\n<!-- Chapter Break -->\n";
 
                              const htmlDoc = parser.parseFromString(chapterHtmlContent, 'text/html');
-                             let title = item.href.split('/').pop().replace(/\.[^/.]+$/, ""); // Fallback title
+                             let title = item.href.split('/').pop().replace(/\.[^/.]+$/, "");
                              const titleTag = htmlDoc.querySelector('title');
                              const h1 = htmlDoc.querySelector('h1');
                              if (titleTag && titleTag.textContent.trim()) title = titleTag.textContent.trim();
                              else if (h1 && h1.textContent.trim()) title = h1.textContent.trim();
 
-                             // Convert body to basic Markdown (very simplistic)
                              const bodyElement = htmlDoc.body;
                              let markdownContent = '';
                              if (bodyElement) {
-                                 // Simplistic conversion: treat common block elements as paragraphs/headings
                                  bodyElement.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre').forEach(el => {
                                      const text = el.textContent?.trim();
                                      if (text) {
@@ -3029,19 +2942,17 @@
                                          if (tagName.startsWith('h')) {
                                              prefix = '#'.repeat(parseInt(tagName.substring(1), 10)) + ' ';
                                          } else if (tagName === 'li') {
-                                              // Attempt to determine list type from parent (basic)
-                                              prefix = el.closest('ol') ? '1. ' : '* '; // Assumes top-level list numbering
+                                              prefix = el.closest('ol') ? '1. ' : '* ';
                                          } else if (tagName === 'blockquote') {
                                               prefix = '> ';
                                          } else if (tagName === 'pre') {
                                               prefix = '```\n';
-                                              markdownContent += prefix + text + '\n```\n\n'; // Handle code blocks separately
+                                              markdownContent += prefix + text + '\n```\n\n';
                                               return;
                                          }
-                                         markdownContent += prefix + text + '\n\n'; // Double newline for breaks
+                                         markdownContent += prefix + text + '\n\n';
                                      }
                                  });
-                                 // If no block elements found, use all text content
                                  if (markdownContent.trim() === '') {
                                       markdownContent = bodyElement.textContent?.trim() || '';
                                  }
@@ -3052,9 +2963,9 @@
 
                              state.bookData.chapters.push({
                                  title: title || `Chapter ${state.bookData.chapters.length + 1}`,
-                                 markdownContent: markdownContent.trim(), // Store as Markdown
-                                 content: chapterHtmlContent, // Store original HTML for raw view reference in metadata later
-                                 startLine: 0, // Line numbers less relevant here
+                                 markdownContent: markdownContent.trim(),
+                                 content: chapterHtmlContent,
+                                 startLine: 0,
                                  endLine: 0
                              });
                          } catch (error) {
@@ -3063,13 +2974,13 @@
                          }
                     }
 
-                    state.bookData.rawContent = combinedRawHtml; // Store combined raw HTML
+                    state.bookData.rawContent = combinedRawHtml;
 
                     if (state.bookData.chapters.length === 0) {
                         state.bookData.chapters.push({ title: state.bookData.title || 'Content', markdownContent: "[Could not extract readable content from this EPUB file.]", content: null, startLine: 0, endLine: 1 });
                     }
 
-                    state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                    state.settings.viewRawHtmlEnabled = false;
                     DOM.viewRawHtmlToggle.checked = false;
                     showBook();
                     hideLoading();
@@ -3081,7 +2992,7 @@
                 reader.onload = function() {
                     showToast('PDF support is limited. For a better experience, use a dedicated PDF reader app.');
                     state.bookData.chapters = [{ title: state.bookData.title || 'PDF Content', markdownContent: "PDF content extraction is limited in this simple reader.\n\nFor a better experience with PDFs, consider using a dedicated PDF reader app.", content: null, startLine: 0, endLine: 2 }];
-                     state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                     state.settings.viewRawHtmlEnabled = false;
                      DOM.viewRawHtmlToggle.checked = false;
                     showBook();
                     hideLoading();
@@ -3098,8 +3009,8 @@
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
                         body: JSON.stringify({
                              url: url,
-                             pageOptions: { onlyMainContent: false }, // Get full page for raw view
-                             extractorOptions: { mode: 'markdown' } // Request Markdown extraction
+                             pageOptions: { onlyMainContent: false },
+                             extractorOptions: { mode: 'markdown' }
                          })
                     });
                     if (!response.ok) {
@@ -3120,7 +3031,7 @@
 
                 DOM.processUrlBtn.classList.add('loading');
                 DOM.processUrlBtn.disabled = true;
-                showLoading(); // Show global loading indicator
+                showLoading();
                 DOM.bookTitle.textContent = `Reading: ${url}`;
                 state.bookData.title = url;
                 state.bookData.currentListId = null;
@@ -3131,17 +3042,16 @@
                     if (!response.data) throw new Error("No data received from Firecrawl.");
 
                     const rawMarkdownContent = response.data.markdown || "[No Markdown content extracted]";
-                    const rawHtmlContent = response.data.content || "[No HTML content extracted]"; // Get raw HTML too
+                    const rawHtmlContent = response.data.content || "[No HTML content extracted]";
 
-                    state.bookData.rawContent = rawHtmlContent; // Store raw HTML for raw view
+                    state.bookData.rawContent = rawHtmlContent;
                     state.bookData.sourceUrl = url;
 
                     showToast('Generating title & category with AI...', 3000);
                     let titleCategoryResult = { generatedTitle: null, listId: null };
 
                     try {
-                        // Use a model available in state.userApiSettings or fallback
-                        const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest'; // Use Flash as a default if not set
+                        const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
                         titleCategoryResult = await generateTitleAndCategory(rawMarkdownContent, modelToUse);
                         showToast(`Title/Category generated.`, 2000);
                     } catch (aiError) {
@@ -3158,23 +3068,22 @@
                     if (listId !== null) { const listName = state.bookLists.find(l => l.id === listId)?.name || 'Unknown List'; showToast(`Categorized into: "${listName}"`, 3000); }
                     else { showToast('Categorized as Unlisted.', 2000); }
 
-                    // Store content: markdown for display, original HTML for raw view metadata
                     state.bookData.chapters = [{
                         title: 'Content',
                         markdownContent: rawMarkdownContent,
-                        content: rawHtmlContent, // Keep raw HTML associated with the chapter for metadata
+                        content: rawHtmlContent,
                         startLine: 0,
                         endLine: 0
                     }];
 
-                    state.settings.viewRawHtmlEnabled = false; // Default to Markdown view
+                    state.settings.viewRawHtmlEnabled = false;
                     DOM.viewRawHtmlToggle.checked = false;
                     showBook();
 
                 } catch (error) {
                     console.error('Error processing URL:', error);
                     showToast(`Error reading URL: ${error.message}`);
-                    goToHome(); // Go back home on error
+                    goToHome();
                 } finally {
                     DOM.urlInput.value = '';
                     DOM.processUrlBtn.classList.remove('loading');
@@ -3198,22 +3107,22 @@
 
                      const scrapedBookData = {
                          title: scrapedTitle,
-                         content: null, // Main content column is deprecated for large text
-                         raw_content: rawHtmlContent, // Store raw HTML here for raw view
+                         content: null,
+                         raw_content: rawHtmlContent,
                          file_type: 'url',
                          metadata: {
                              chapters: [{
                                  title: 'Content',
-                                 content: rawHtmlContent, // Store raw HTML in chapter metadata too
-                                 markdownContent: markdownContent, // Store extracted Markdown
+                                 content: rawHtmlContent,
+                                 markdownContent: markdownContent,
                                  startLine: 0, endLine: 0
                              }],
-                             viewRawHtmlEnabled: false, // Default scraped links to Markdown view
+                             viewRawHtmlEnabled: false,
                              sourceUrl: url
                          },
                          last_position: { chapter: 0, percentComplete: 0, scroll: 0, timestamp: new Date().getTime() }
                      };
-                     await saveScrapedBook(scrapedBookData, state.bookData.currentListId); // Use current reader's list context
+                     await saveScrapedBook(scrapedBookData, state.bookData.currentListId);
                  } catch (error) { console.error('Error scraping and saving link:', error); showToast(`Error scraping "${url}": ${error.message}`, 5000); }
             }
 
@@ -3224,12 +3133,12 @@
                     const { error } = await supabase.from('ebooks').insert({
                         user_id: session.user.id,
                         title: scrapedBookData.title,
-                        content: scrapedBookData.content, // Keep null or small excerpt if desired
-                        raw_content: scrapedBookData.raw_content, // Save raw HTML
+                        content: scrapedBookData.content,
+                        raw_content: scrapedBookData.raw_content,
                         file_type: scrapedBookData.file_type,
-                        metadata: scrapedBookData.metadata, // Includes chapter with MD and raw HTML
+                        metadata: scrapedBookData.metadata,
                         last_position: scrapedBookData.last_position,
-                        list_id: targetListId // Assign list ID
+                        list_id: targetListId
                     });
                     if (error) { if (error.code === '23505') { console.warn(`Book with title "${scrapedBookData.title}" already exists. Skipping save.`); showToast(`Book "${scrapedBookData.title}" already in library.`, 3000); return true; } else { throw error; } }
                     console.log(`Successfully saved scraped book: "${scrapedBookData.title}"`);
@@ -3294,13 +3203,13 @@
 
             function showBook() {
                 DOM.welcomeScreen.style.display = 'none';
-                DOM.navbar.classList.add('visible'); // Show navbar immediately
+                DOM.navbar.classList.add('visible');
                 clearTimeout(state.navbarHideTimer);
                 state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000);
 
-                displayCurrentChapter(); // Render content *before* populating TOC or saving
+                displayCurrentChapter();
                 populateToc();
-                saveBookToLibrary(); // Save initial state or update
+                saveBookToLibrary();
             }
 
             function displayCurrentChapter() {
@@ -3310,71 +3219,55 @@
                      DOM.contentArea.innerHTML = '<p>Error: Chapter not found.</p>';
                      return;
                 }
-                DOM.contentArea.innerHTML = ''; // Clear previous content
+                DOM.contentArea.innerHTML = '';
 
-                // Update chapter title in navbar
                 const chapterTitleText = `${state.bookData.title || 'Book'} - ${chapter.title || `Chapter ${state.bookData.currentPosition + 1}`}`;
                 if (state.bookData.sourceUrl) { DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.style.cursor = 'pointer'; }
                 else { DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText); DOM.bookTitle.style.cursor = 'default'; }
 
-                // Enable/disable raw HTML toggle
                 const canViewRaw = !!(state.bookData.rawContent || (chapter && chapter.content));
                 DOM.viewRawHtmlToggle.disabled = !canViewRaw;
                 DOM.viewRawHtmlToggle.closest('.settings-row').title = !canViewRaw ? "Raw HTML view only available for books added via URL or EPUB." : "View the original scraped/extracted HTML content.";
-                 // Ensure toggle reflects current state even if disabled
                  DOM.viewRawHtmlToggle.checked = canViewRaw && state.settings.viewRawHtmlEnabled;
 
                 let contentToDisplay = '';
-                let displayMode = 'markdown'; // Default
+                let displayMode = 'markdown';
 
-                // Determine what content to show
                 if (canViewRaw && state.settings.viewRawHtmlEnabled) {
-                     // Prioritize book-level raw content if available, else chapter-level
                     contentToDisplay = state.bookData.rawContent || chapter.content || "[Raw HTML not available]";
                     displayMode = 'raw';
                 } else if (typeof chapter.markdownContent === 'string' && chapter.markdownContent.trim() !== '') {
-                    // Use Markdown content if available and not in raw mode
                     contentToDisplay = chapter.markdownContent;
                     displayMode = 'markdown';
                 } else if (typeof chapter.content === 'string' && chapter.content.trim() !== '') {
-                     // Fallback to older HTML content field if Markdown is missing
                      contentToDisplay = chapter.content;
-                     displayMode = 'html_fallback'; // Render as HTML
+                     displayMode = 'html_fallback';
                  } else {
-                    // Ultimate fallback
                     contentToDisplay = '<p>[Content not available for this chapter.]</p>';
                     displayMode = 'html_fallback';
                 }
 
-                 // Render the content based on the mode
                  if (displayMode === 'raw') {
-                    // Render raw content within a <pre> tag for proper display
                     const pre = document.createElement('pre');
                     pre.style.whiteSpace = 'pre-wrap';
                     pre.style.wordBreak = 'break-word';
-                    pre.style.fontFamily = 'monospace'; // Use monospace for raw view
-                    pre.style.fontSize = 'inherit'; // Don't apply reader font size
-                    pre.style.lineHeight = 'inherit'; // Don't apply reader line height
+                    pre.style.fontFamily = 'monospace';
+                    pre.style.fontSize = 'inherit';
+                    pre.style.lineHeight = 'inherit';
                     pre.textContent = contentToDisplay;
                     DOM.contentArea.appendChild(pre);
-                    // Reset reader-specific styles when showing raw HTML
                     DOM.contentArea.style.fontFamily = 'monospace';
                 } else if (displayMode === 'markdown') {
-                    // Use our custom Markdown parser
                     DOM.contentArea.innerHTML = markdownToHtml(contentToDisplay);
-                    // Apply reader styles AFTER content is set
-                    DOM.contentArea.style.fontFamily = 'inherit'; // Reset to reader font
-                    updateCssVariables(); // Apply font size and line height from settings
-                     // Add data-p-index for text anchor restoration (important after innerHTML change)
+                    DOM.contentArea.style.fontFamily = 'inherit';
+                    updateCssVariables();
                      DOM.contentArea.querySelectorAll('p').forEach((p, index) => {
                         p.setAttribute('data-p-index', index);
                     });
-                } else { // html_fallback
-                     DOM.contentArea.innerHTML = contentToDisplay; // Render as plain HTML
-                     // Apply reader styles
+                } else {
+                     DOM.contentArea.innerHTML = contentToDisplay;
                      DOM.contentArea.style.fontFamily = 'inherit';
                      updateCssVariables();
-                     // Add data-p-index for text anchor restoration
                       DOM.contentArea.querySelectorAll('p').forEach((p, index) => {
                          p.setAttribute('data-p-index', index);
                      });
@@ -3383,11 +3276,10 @@
                      }
                  }
 
-                DOM.contentArea.scrollTop = 0; // Scroll to top on chapter change
+                DOM.contentArea.scrollTop = 0;
                 updateNavigationButtonsState();
-                updateProgressBar(); // Update progress after rendering
+                updateProgressBar();
 
-                // Show source URL if available
                 if (state.bookData.sourceUrl) { DOM.sourceUrlContentLink.href = state.bookData.sourceUrl; DOM.sourceUrlContentLink.textContent = state.bookData.sourceUrl; DOM.sourceUrlDisplay.style.display = 'block'; }
                 else { DOM.sourceUrlDisplay.style.display = 'none'; }
             }
@@ -3408,7 +3300,7 @@
                         state.bookData.currentPosition = index;
                         displayCurrentChapter();
                         closeTocPanel();
-                        saveBookToLibrary(); // Save progress on chapter change
+                        saveBookToLibrary();
                     });
                     DOM.tocContent.appendChild(item);
                 });
@@ -3434,11 +3326,9 @@
                 const isVisible = !DOM.tocPanel.classList.contains('visible');
                 DOM.tocPanel.classList.toggle('visible', isVisible);
                 DOM.overlay.classList.toggle('visible', isVisible);
-                // Close other panels if opening TOC
                 if (isVisible) {
                     DOM.settingsPanel.classList.remove('visible');
                     DOM.chatPanel.classList.remove('visible');
-                    // Scroll active item into view
                     const activeItem = DOM.tocContent.querySelector('.toc-active');
                     if (activeItem) {
                         setTimeout(() => activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
@@ -3469,7 +3359,6 @@
                 closeTocPanel();
                 closeSettingsPanel();
                 closeChatPanel();
-                // Overlay is handled by individual close functions
             }
 
             function showAiCleanupModal() {
@@ -3495,7 +3384,6 @@
             async function fetchAllUserBooks() {
                 if (!state.session) return [];
                 try {
-                    // Select raw_content as well for potential size check later if needed
                     const { data: books, error } = await supabase.from('ebooks').select('id, title, file_type, metadata, last_position, updated_at, raw_content').eq('user_id', state.session.user.id).order('updated_at', { ascending: true });
                     if (error) throw error;
                     return books || [];
@@ -3515,7 +3403,7 @@
                      const resultText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
                      let suggestedIds = [];
                      try {
-                         const jsonMatch = resultText.match(/\[.*?\]/s); // Match JSON array more robustly
+                         const jsonMatch = resultText.match(/\[.*?\]/s);
                          if (jsonMatch) { suggestedIds = JSON.parse(jsonMatch[0]).map(id => Number(id)).filter(id => !isNaN(id)); }
                          else { console.warn("AI did not return a valid JSON array for cleanup suggestions.", resultText); }
                      } catch (jsonError) { console.error('Error parsing cleanup suggestions JSON:', jsonError, resultText); throw new Error("AI returned invalid format for suggestions."); }
@@ -3571,46 +3459,35 @@
                 state.selectedListId = 'all';
                 state.bookLists = [];
                 DOM.sourceUrlDisplay.style.display = 'none';
-                // Re-check auth and reload library/lists
-                 checkAuthAndLoadApiSettings(); // This now handles library load if signed in
+                 checkAuthAndLoadApiSettings();
             }
 
             function handleContentClick(e) {
-                // --- START: Intercept Link Clicks ---
-                 // Links should only be interactive when NOT in raw HTML view
                  if (!state.settings.viewRawHtmlEnabled) {
-                     const link = e.target.closest('a'); // Find the nearest ancestor anchor tag
+                     const link = e.target.closest('a');
 
-                     if (link && link.href && DOM.contentArea.contains(link)) { // Ensure link is within content area
-                         // It's a click on a link within the content area in Markdown/HTML mode
-                         e.preventDefault(); // Stop the browser from following the link immediately
+                     if (link && link.href && DOM.contentArea.contains(link)) {
+                         e.preventDefault();
                          const url = link.href;
 
-                         // Check if it's a scrapable URL (http/https)
                          if (url.startsWith('http://') || url.startsWith('https://')) {
                              const linkText = link.textContent || url;
                              showLinkActionConfirmation(url, linkText);
                          } else {
-                             // For non-http links (e.g., mailto:, javascript:, internal anchors #), open normally or ignore
                              console.warn(`Link is not directly scrapable or is internal: ${url}`);
-                              // Optionally open non-http links
-                              // window.open(url, '_blank', 'noopener noreferrer');
                              showToast(`Cannot scrape this type of link: ${url.substring(0, 30)}...`, 3000);
                          }
-                         return; // Handled click, exit
+                         return;
                      }
                  }
-                 // --- END: Intercept Link Clicks ---
 
-                // Existing Navbar toggle logic
                 const selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) return; // Don't toggle UI if selecting text
+                if (selection && selection.toString().trim().length > 0) return;
                 const clickY = e.clientY;
                 const viewportHeight = window.innerHeight;
                 if (DOM.navbar.classList.contains('visible')) { if (!DOM.navbar.contains(e.target)) DOM.navbar.classList.remove('visible'); }
                 else if (clickY <= viewportHeight * 0.15) { toggleNavbar(); }
 
-                // Close translation popup on click away
                 if (!DOM.translationPopup.contains(e.target)) {
                      DOM.translationPopup.classList.remove('visible');
                      setTimeout(() => { DOM.translationPopup.style.display = 'none'; }, 200);
@@ -3626,7 +3503,7 @@
                 if (selectedText.length > 1 && selectedText.length < 500) {
                     clearTimeout(state.translationTimer);
                     state.translationTimer = setTimeout(() => {
-                        if (window.getSelection().toString().trim() !== selectedText) return; // Selection changed
+                        if (window.getSelection().toString().trim() !== selectedText) return;
                         const range = selection.getRangeAt(0);
                         const rect = range.getBoundingClientRect();
                         state.lastSelectionRect = rect;
@@ -3637,7 +3514,6 @@
                         translateText(selectedText);
                     }, 750);
                 } else {
-                     // Selection too short or too long, hide popup
                      DOM.translationPopup.classList.remove('visible');
                      setTimeout(() => { DOM.translationPopup.style.display = 'none'; }, 200);
                      clearTimeout(state.translationTimer);
@@ -3649,32 +3525,28 @@
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
                 popup.style.display = 'block';
-                popup.classList.remove('visible'); // Ensure it's hidden before calculating size
+                popup.classList.remove('visible');
 
-                // Calculate position after making it visible but transparent
                 requestAnimationFrame(() => {
-                    popup.style.opacity = '0'; // Hide while calculating
-                    popup.style.transform = 'translateY(10px)'; // Reset transform
+                    popup.style.opacity = '0';
+                    popup.style.transform = 'translateY(10px)';
 
                     const popupWidth = popup.offsetWidth;
                     const popupHeight = popup.offsetHeight;
-                    let leftPos = rect.left + window.scrollX + (rect.width / 2) - (popupWidth / 2); // Center below selection
-                    let topPos = rect.bottom + window.scrollY + 10; // Below selection
+                    let leftPos = rect.left + window.scrollX + (rect.width / 2) - (popupWidth / 2);
+                    let topPos = rect.bottom + window.scrollY + 10;
 
-                    // Adjust horizontal position
                     leftPos = Math.max(10, Math.min(leftPos, viewportWidth - popupWidth - 10));
 
-                    // Adjust vertical position if it goes off screen
                     if (topPos + popupHeight > viewportHeight + window.scrollY - 10) {
-                        topPos = rect.top + window.scrollY - popupHeight - 10; // Try above selection
-                         // If still off screen (selection very high), position beside (less ideal)
+                        topPos = rect.top + window.scrollY - popupHeight - 10;
                         if (topPos < window.scrollY) {
                             topPos = rect.top + window.scrollY;
                              if (rect.right + popupWidth < viewportWidth - 10) {
-                                leftPos = rect.right + window.scrollX + 10; // Right of selection
+                                leftPos = rect.right + window.scrollX + 10;
                             } else {
-                                leftPos = rect.left + window.scrollX - popupWidth - 10; // Left of selection
-                                leftPos = Math.max(10, leftPos); // Ensure stays on screen left
+                                leftPos = rect.left + window.scrollX - popupWidth - 10;
+                                leftPos = Math.max(10, leftPos);
                             }
                         }
                     }
@@ -3682,7 +3554,6 @@
                     popup.style.left = `${leftPos}px`;
                     popup.style.top = `${topPos}px`;
 
-                    // Make visible with animation
                     requestAnimationFrame(() => {
                          popup.style.opacity = '1';
                          popup.style.transform = 'translateY(0)';
@@ -3693,29 +3564,12 @@
 
             function decreaseFontSize() { if (state.settings.fontSize > 70) { state.settings.fontSize -= 10; updateFontSize(); } else { showToast('Minimum font size reached'); } }
             function increaseFontSize() { if (state.settings.fontSize < 200) { state.settings.fontSize += 10; updateFontSize(); } else { showToast('Maximum font size reached'); } }
-            function updateFontSize() { DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-fontsize', state.settings.fontSize); updateCssVariables(); /* Update CSS immediately */ }
+            function updateFontSize() { DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-fontsize', state.settings.fontSize); updateCssVariables(); }
             function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height reached'); } }
             function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
-            function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-lineheight', state.settings.lineHeight); updateCssVariables(); /* Update CSS immediately */ }
+            function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-lineheight', state.settings.lineHeight); updateCssVariables(); }
 
-            function setTheme(theme) {
-                // Set the theme class on the body element
-                document.body.className = `${theme}-theme`;
-
-                // Update the active state of theme option buttons
-                DOM.themeOptions.forEach(option => {
-                    option.classList.remove('active');
-                    if (option.getAttribute('data-theme') === theme) {
-                        option.classList.add('active');
-                    }
-                });
-
-                // Update the theme in the application state
-                state.settings.theme = theme;
-
-                // Save the theme preference to localStorage
-                localStorage.setItem('ebook-theme', theme);
-            }
+            function setTheme(theme) { document.body.className = `${theme}-theme`; DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
 
             function updateProgressBar() {
                  if (!DOM.contentArea || !DOM.progressBar || !state.bookData.chapters || state.bookData.chapters.length === 0) {
@@ -3727,36 +3581,31 @@
                  const scrollHeight = DOM.contentArea.scrollHeight;
                  const clientHeight = DOM.contentArea.clientHeight;
 
-                 // Calculate progress within the current chapter
                  let chapterProgress = 0;
                  if (scrollHeight > clientHeight) {
                      chapterProgress = scrollTop / (scrollHeight - clientHeight);
                  } else if (scrollTop >= 0) {
-                    // If content is shorter than viewport, consider it 0% unless scrolled fully down (edge case)
                     chapterProgress = (scrollHeight <= clientHeight && scrollTop === 0) ? 0 : 1;
                  }
-                 chapterProgress = Math.max(0, Math.min(1, chapterProgress)); // Clamp between 0 and 1
+                 chapterProgress = Math.max(0, Math.min(1, chapterProgress));
 
-                 // Calculate overall progress based on chapter position and within-chapter progress
                  const totalChapters = state.bookData.chapters.length;
                  const currentChapterIndex = state.bookData.currentPosition;
 
                  let overallProgress = 0;
                  if (totalChapters > 0) {
-                     // Progress based on completed chapters + progress in current chapter
                      overallProgress = (currentChapterIndex / totalChapters) + (chapterProgress / totalChapters);
                  }
 
-                 overallProgress = Math.max(0, Math.min(1, overallProgress)); // Clamp final progress
+                 overallProgress = Math.max(0, Math.min(1, overallProgress));
 
                  DOM.progressBar.style.width = `${overallProgress * 100}%`;
 
-                 // Debounce saving the detailed position
                  debounce(saveReadingProgress, 1500)();
             }
 
             function saveReadingProgress() {
-                 if (!state.bookData.chapters || state.bookData.chapters.length === 0) return; // Don't save if no book loaded
+                 if (!state.bookData.chapters || state.bookData.chapters.length === 0) return;
 
                  const percentComplete = calculatePercentageComplete();
                  const currentPosition = {
@@ -3764,10 +3613,10 @@
                      percentComplete: percentComplete,
                      scroll: DOM.contentArea.scrollTop || 0,
                      timestamp: new Date().getTime(),
-                     textAnchor: findVisibleTextAnchor() // Store text anchor for better restore
+                     textAnchor: findVisibleTextAnchor()
                  };
                  state.lastPosition = currentPosition;
-                 saveBookToLibrary(); // Update the book record in the database
+                 saveBookToLibrary();
             }
 
             function calculatePercentageComplete() {
@@ -3775,44 +3624,35 @@
                 const scrollHeight = DOM.contentArea.scrollHeight;
                 const clientHeight = DOM.contentArea.clientHeight;
                 if (scrollHeight <= clientHeight) {
-                    // If content fits entirely, progress is 0% if at top, 100% if scrolled at all (even 1px)
-                    // However, for consistency, let's call it 0% if at the very top, 1 otherwise.
-                    // updateProgressBar handles the overall progress better.
                      return scrollTop === 0 ? 0 : 1;
                 }
-                return Math.max(0, Math.min(1, scrollTop / (scrollHeight - clientHeight))); // Clamp between 0 and 1
+                return Math.max(0, Math.min(1, scrollTop / (scrollHeight - clientHeight)));
             }
 
             function findVisibleTextAnchor() {
                  const paragraphs = DOM.contentArea.querySelectorAll('p[data-p-index]');
                  const scrollTop = DOM.contentArea.scrollTop;
-                 const contentTop = DOM.contentArea.getBoundingClientRect().top; // Top of the scrollable area
+                 const contentTop = DOM.contentArea.getBoundingClientRect().top;
                  const viewportHeight = DOM.contentArea.clientHeight;
 
                  if (paragraphs.length === 0) return null;
 
                  for (let i = 0; i < paragraphs.length; i++) {
                      const p = paragraphs[i];
-                     const rect = p.getBoundingClientRect(); // Position relative to viewport
+                     const rect = p.getBoundingClientRect();
                      const pTopInViewport = rect.top;
-                     // const pBottomInViewport = rect.bottom; // Not needed for this heuristic
-
-                     // Heuristic: Find the first paragraph whose top is visible within the top ~1/3 of the content area viewport
                       if (pTopInViewport >= contentTop && pTopInViewport < contentTop + viewportHeight / 3) {
                          const text = p.textContent?.substring(0, 50).trim() || '';
-                         // Offset calculation might not be super accurate, but gives an idea
                          const offset = Math.max(0, Math.min(1, (contentTop - pTopInViewport) / rect.height));
                          return { index: parseInt(p.getAttribute('data-p-index')), text: text, offset: offset };
                      }
                  }
 
-                 // Fallback: If no paragraph found in the top third, return the first paragraph's info
                   const firstP = paragraphs[0];
-                  // const firstPRect = firstP.getBoundingClientRect(); // Not needed for fallback offset 0
                  return {
-                     index: parseInt(firstP.getAttribute('data-p-index')) || 0, // Default to 0 if attribute missing
+                     index: parseInt(firstP.getAttribute('data-p-index')) || 0,
                      text: firstP.textContent?.substring(0, 50).trim() || '',
-                     offset: 0 // Assume starting at the top of the first paragraph
+                     offset: 0
                  };
             }
 
@@ -3826,30 +3666,25 @@
                 const { data: { session } } = await supabase.auth.getSession();
                 state.session = session;
                 if (!session) {
-                    // Not logged in: Show login, hide library
                     DOM.loginBtn.classList.remove('hidden');
                     DOM.authSection.innerHTML = `<p>Sign in to save books to your library.</p>`;
                     DOM.librarySection.style.display = 'none';
-                    renderListBadges(); // Show default badges like "All", "Unlisted"
-                    updateAiFeatureAvailability(null); // Disable AI features visually
-                    return; // Stop here if not logged in
+                    renderListBadges();
+                    updateAiFeatureAvailability(null);
+                    return;
                 }
 
-                 // Logged in: Update UI, fetch settings & library
                  DOM.loginBtn.classList.add('hidden');
                  DOM.authSection.innerHTML = `<p>Signed in as ${session.user.email}</p>`;
-                 DOM.librarySection.style.display = 'flex'; // Use flex for proper layout
+                 DOM.librarySection.style.display = 'flex';
 
-                 // Fetch API settings first
                  state.userApiSettings = await getUserApiSettings();
-                 updateAiFeatureAvailability(state.userApiSettings); // Update UI based on keys
+                 updateAiFeatureAvailability(state.userApiSettings);
 
-                 // Then fetch lists and the library content for the default view ('all')
-                 await fetchBookLists(); // Fetch lists first to populate listInfoMap
-                 loadUserLibrary(); // Load library items for the current filter
+                 await fetchBookLists();
+                 loadUserLibrary();
             }
 
-            // New helper to update UI based on API key availability
             function updateAiFeatureAvailability(apiSettings) {
                 let canUseAi = false;
                 let canUseFirecrawl = false;
@@ -3862,14 +3697,12 @@
                     apiStatusHtml += `<div class="api-status-item"><span class="status-icon">${canUseAi ? '✅' : '❌'}</span><span class="status-text">Gemini API ${canUseAi ? `configured (Model: ${escapeHTML(apiSettings.model)})` : `not configured. <a href="index.html" target="_blank">Set up</a>.`}</span></div>`;
                     apiStatusHtml += `<div class="api-status-item"><span class="status-icon">${canUseFirecrawl ? '✅' : '❌'}</span><span class="status-text">Firecrawl API ${canUseFirecrawl ? 'configured' : `not configured. <a href="index.html" target="_blank">Set up</a>.`}</span></div>`;
                  } else {
-                     // Case where user is logged in but no settings found or error fetching
                      apiStatusHtml += `<div class="api-status-item"><span class="status-icon">⚠️</span><span class="status-text">Sign in and <a href="index.html" target="_blank">configure API keys</a> in the dashboard to enable AI features.</span></div>`;
                  }
                 apiStatusHtml += '</div>';
 
                 DOM.aiSettingsContent.innerHTML = apiStatusHtml;
 
-                 // Enable/Disable UI elements
                  DOM.translationToggle.disabled = !canUseAi;
                  DOM.chatBtn.disabled = !canUseAi;
                  DOM.summarizeChapterBtn.style.display = canUseAi ? 'block' : 'none';
@@ -3880,12 +3713,10 @@
                  DOM.urlInput.disabled = !canUseFirecrawl;
                  DOM.urlInput.placeholder = canUseFirecrawl ? "Enter a URL to read" : "Firecrawl API key needed";
 
-
-                 // Visual cues (opacity, tooltips)
                  const setDisabledStyle = (el, disabled, title) => {
                      el.style.opacity = disabled ? "0.5" : "1";
                      el.style.cursor = disabled ? "not-allowed" : "pointer";
-                     el.title = disabled ? title : (el.dataset.originalTitle || ''); // Use original title if exists
+                     el.title = disabled ? title : (el.dataset.originalTitle || '');
                  };
 
                  setDisabledStyle(DOM.chatBtn, !canUseAi, "Gemini API key needed for chat.");
@@ -3897,7 +3728,6 @@
                  setDisabledStyle(DOM.processUrlBtn, !canUseFirecrawl, "Firecrawl API key needed to process URLs.");
                  DOM.urlInputContainer.title = !canUseFirecrawl ? "Firecrawl API key needed. Set it up in the main dashboard." : "";
 
-                 // Save original titles if not already done
                  if (!DOM.chatBtn.dataset.originalTitle) DOM.chatBtn.dataset.originalTitle = DOM.chatBtn.title;
                  if (!DOM.aiCleanupBtn.dataset.originalTitle) DOM.aiCleanupBtn.dataset.originalTitle = DOM.aiCleanupBtn.title;
                  if (!DOM.summarizeChapterBtn.dataset.originalTitle) DOM.summarizeChapterBtn.dataset.originalTitle = DOM.summarizeChapterBtn.title;
@@ -3926,30 +3756,27 @@
 
             async function loadUserLibrary() {
                  const { data: { session } } = await supabase.auth.getSession();
-                 if (!session) return; // Should not happen if called after auth check, but safety first
+                 if (!session) return;
 
                  const libraryList = document.getElementById('library-list');
                  libraryList.innerHTML = '<div style="text-align: center; padding: 20px;">Loading books...</div>';
 
-                 // Ensure listInfoMap is populated before rendering books
                  const listInfoMap = new Map(state.bookLists.map((list, index) => [list.id, { name: list.name, index: index }]));
                  const badgeColors = 5;
 
                  try {
                      let query = supabase.from('ebooks')
-                         .select('id, title, file_type, metadata, list_id, last_position, updated_at, raw_content') // Select necessary fields
+                         .select('id, title, file_type, metadata, list_id, last_position, updated_at, raw_content')
                          .eq('user_id', session.user.id);
 
-                     // Apply list filter
                      if (state.selectedListId === 'all') {
-                         // No list filter needed
-                     } else if (state.selectedListId === null || state.selectedListId === '') { // Filter for unlisted
+                     } else if (state.selectedListId === null || state.selectedListId === '') {
                          query = query.is('list_id', null);
-                     } else { // Filter for a specific list
+                     } else {
                          query = query.eq('list_id', state.selectedListId);
                      }
 
-                     query = query.order('updated_at', { ascending: false }); // Order by last updated
+                     query = query.order('updated_at', { ascending: false });
 
                      const { data: books, error } = await query;
                      if (error) throw error;
@@ -3961,7 +3788,7 @@
                          return;
                      }
 
-                     libraryList.innerHTML = ''; // Clear loading message
+                     libraryList.innerHTML = '';
                      books.forEach(book => {
                          const date = new Date(book.last_position?.timestamp || book.updated_at).toLocaleDateString();
                          const progress = calculateOverallProgress(book);
@@ -3970,7 +3797,7 @@
                          let listBadgeHtml = '';
 
                          if (listName) {
-                             const colorIndex = (listInfo.index + 1) % badgeColors; // +1 to shift colors from 'All'
+                             const colorIndex = (listInfo.index + 1) % badgeColors;
                              listBadgeHtml = `<span class="library-item-list-badge" data-color-index="${colorIndex}" title="List: ${escapeHTML(listName)}">${escapeHTML(listName)}</span>`;
                          } else {
                              listBadgeHtml = `<span class="library-item-list-badge" title="Unlisted">Unlisted</span>`;
@@ -3995,7 +3822,6 @@
                                 <button class="library-item-delete" data-id="${book.id}" aria-label="Delete Book">×</button>
                             </div>`;
 
-                         // Add click listener to load the book (ignore clicks on buttons)
                          item.addEventListener('click', (event) => {
                              if (event.target.closest('.library-item-delete, .library-item-move, .move-list-dropdown')) return;
                              loadBookFromLibrary(book);
@@ -4003,28 +3829,24 @@
 
                          libraryList.appendChild(item);
 
-                         // Setup "Move" button and dropdown logic
                          const moveButton = item.querySelector('.library-item-move');
                          const dropdownContainer = item.querySelector('.move-list-dropdown');
                          if (moveButton && dropdownContainer && state.bookLists.length > 0) {
                              moveButton.style.display = 'inline-block';
                              moveButton.addEventListener('click', (event) => {
                                  event.stopPropagation();
-                                 // Close other dropdowns
                                  document.querySelectorAll('.move-list-dropdown.visible').forEach(dd => {
                                      if (dd !== dropdownContainer) dd.classList.remove('visible');
                                  });
-                                 // Toggle and populate current dropdown
                                  const isVisible = dropdownContainer.classList.toggle('visible');
                                  if (isVisible) {
                                      const bookId = moveButton.getAttribute('data-id');
-                                     const currentListId = moveButton.getAttribute('data-current-list-id') || null; // Ensure null for empty string
+                                     const currentListId = moveButton.getAttribute('data-current-list-id') || null;
                                      renderMoveToListDropdown(dropdownContainer, bookId, currentListId);
                                  }
                              });
                          }
 
-                         // Setup "Delete" button listener
                          const deleteButton = item.querySelector('.library-item-delete');
                          deleteButton.addEventListener('click', async (event) => {
                              event.stopPropagation();
@@ -4048,49 +3870,39 @@
                     const { data, error } = await supabase.from('book_lists').select('id, name').eq('user_id', session.user.id).order('name', { ascending: true });
                     if (error) throw error;
                     state.bookLists = data || [];
-                    renderListBadges(); // Re-render badges with fetched lists
+                    renderListBadges();
                 } catch (error) { console.error('Error fetching book lists:', error); showToast('Could not load book lists'); state.bookLists = []; renderListBadges(); }
             }
 
             function renderListBadges() {
                 DOM.listBadgeContainer.innerHTML = '';
-                const badgeColors = 5; // Number of distinct badge colors
+                const badgeColors = 5;
 
-                // Helper to create badges
                  const createBadge = (text, listId, isSpecial = false, colorIndex = -1) => {
                      const badge = document.createElement('div');
                      badge.className = 'list-badge';
                      badge.textContent = text;
-                     // Use empty string for 'Unlisted' (null ID), 'all' for 'All', otherwise the ID
                      const dataListIdValue = listId === null ? '' : String(listId);
                      badge.setAttribute('data-list-id', dataListIdValue);
 
-                     // Determine active state
                      const currentIdStr = state.selectedListId === null ? '' : String(state.selectedListId);
                      if (currentIdStr === dataListIdValue) {
                          badge.classList.add('active');
                      }
 
-                     // Assign color index if it's a regular list
                      if (!isSpecial && colorIndex >= 0) {
                          badge.setAttribute('data-color-index', colorIndex % badgeColors);
                      } else if (isSpecial && listId === 'all') {
-                          // Give 'All' a default color (optional)
-                          badge.setAttribute('data-color-index', 0); // e.g., use the first color
+                          badge.setAttribute('data-color-index', 0);
                      }
 
                      return badge;
                  };
 
-                 // Add 'All' badge
                  DOM.listBadgeContainer.appendChild(createBadge('All', 'all', true, 0));
+                 DOM.listBadgeContainer.appendChild(createBadge('Unlisted', null, true));
 
-                 // Add 'Unlisted' badge
-                 DOM.listBadgeContainer.appendChild(createBadge('Unlisted', null, true)); // listId null is handled correctly
-
-                 // Add badges for user-created lists
                  state.bookLists.forEach((list, index) => {
-                     // Use index + 1 for color to avoid reusing 'All' color index immediately
                      DOM.listBadgeContainer.appendChild(createBadge(list.name, list.id, false, index + 1));
                  });
             }
@@ -4102,20 +3914,17 @@
 
                  const selectedValue = clickedBadge.getAttribute('data-list-id');
 
-                 // Convert attribute value back to appropriate type for state
                  if (selectedValue === 'all') {
                      state.selectedListId = 'all';
-                 } else if (selectedValue === '') { // Empty string represents Unlisted (null ID)
+                 } else if (selectedValue === '') {
                      state.selectedListId = null;
                  } else {
-                     state.selectedListId = parseInt(selectedValue, 10); // Parse specific list ID
+                     state.selectedListId = parseInt(selectedValue, 10);
                  }
 
-                 // Update UI
                  DOM.listBadgeContainer.querySelectorAll('.list-badge').forEach(badge => badge.classList.remove('active'));
                  clickedBadge.classList.add('active');
 
-                 // Reload library view
                  loadUserLibrary();
             }
 
@@ -4130,45 +3939,40 @@
                     if (error) { if (error.code === '23505') throw new Error(`List "${listName}" already exists.`); else throw error; }
                     showToast(`List "${listName}" created.`);
                     cancelListCreation();
-                    await fetchBookLists(); // Refresh the list badges and state.bookLists
+                    await fetchBookLists();
                 } catch (error) { console.error('Error creating list:', error); showToast(`Error: ${error.message}`); DOM.createListBtn.disabled = false; DOM.createListBtn.classList.remove('loading'); DOM.createListBtn.textContent = '✓'; DOM.newListNameInput.focus(); }
                 finally {
-                    // Ensure button state is reset even on error
                      if (DOM.createListBtn.classList.contains('loading')) {
                          DOM.createListBtn.disabled = false;
                          DOM.createListBtn.classList.remove('loading');
-                         // Reset text based on whether input is visible
                          DOM.createListBtn.textContent = state.isCreatingList ? '✓' : '+';
                      }
                 }
             }
 
             function renderMoveToListDropdown(dropdownElement, bookId, currentListIdStr) {
-                dropdownElement.innerHTML = ''; // Clear previous options
+                dropdownElement.innerHTML = '';
 
-                 // Convert string ID (potentially empty) to number or null
                  const currentListId = (currentListIdStr === '' || currentListIdStr === 'null' || currentListIdStr === null)
                      ? null
                      : parseInt(currentListIdStr, 10);
 
-                 // Add 'Unlisted' option
                  const unlistedOption = document.createElement('div');
                  unlistedOption.className = 'move-list-option';
                  unlistedOption.textContent = 'Unlisted';
-                 unlistedOption.setAttribute('data-target-list-id', ''); // Empty string for null ID target
+                 unlistedOption.setAttribute('data-target-list-id', '');
                  if (currentListId === null) {
                      unlistedOption.classList.add('disabled');
                      unlistedOption.title = 'Already Unlisted';
                  } else {
                      unlistedOption.addEventListener('click', (e) => {
                          e.stopPropagation();
-                         moveBookToList(bookId, null); // Pass null for Unlisted
+                         moveBookToList(bookId, null);
                          dropdownElement.classList.remove('visible');
                      });
                  }
                  dropdownElement.appendChild(unlistedOption);
 
-                 // Add separator if there are other lists
                  if (state.bookLists.length > 0) {
                      const separator = document.createElement('hr');
                      separator.style.margin = '2px 0';
@@ -4176,7 +3980,6 @@
                      dropdownElement.appendChild(separator);
                  }
 
-                 // Add user-created lists
                  state.bookLists.forEach(list => {
                      const option = document.createElement('div');
                      option.className = 'move-list-option';
@@ -4200,12 +4003,12 @@
                  showLoading();
                  try {
                      const { error } = await supabase.from('ebooks').update({
-                         list_id: targetListId, // Use null directly if targetListId is null
-                         updated_at: new Date() // Update timestamp on move
+                         list_id: targetListId,
+                         updated_at: new Date()
                      }).eq('id', bookId);
                      if (error) throw error;
                      showToast("Book moved successfully.");
-                     loadUserLibrary(); // Refresh the current view
+                     loadUserLibrary();
                  } catch (error) {
                      console.error('Error moving book:', error);
                      showToast("Error moving book.");
@@ -4219,7 +4022,7 @@
                 try {
                     const { error } = await supabase.from('ebooks').delete().eq('id', bookId);
                     if (error) throw error;
-                    loadUserLibrary(); // Refresh library view
+                    loadUserLibrary();
                     showToast('Book removed from library');
                 } catch (error) { console.error('Error deleting book:', error); showToast('Could not delete the book'); }
                 finally { hideLoading(); }
@@ -4227,44 +4030,36 @@
 
              async function saveBookToLibrary() {
                  const { data: { session } } = await supabase.auth.getSession();
-                 // Only save if logged in and there's a valid book title/data
                  if (!session || !state.bookData.title || !state.bookData.chapters || state.bookData.chapters.length === 0) {
-                      // console.log("Save skipped: No session or book data."); // Too noisy
                       return false;
                  }
 
                  try {
-                     // Determine file type (less critical now, but keep for consistency)
                      let fileType = 'unknown';
                      if (state.bookData.sourceUrl) {
                          fileType = 'url';
                      } else if (state.bookData.title.includes('.')) {
                          fileType = state.bookData.title.split('.').pop().toLowerCase();
-                          // Basic validation for common ebook types
                           const knownTypes = ['txt', 'epub', 'pdf', 'url'];
                           if (!knownTypes.includes(fileType)) {
-                             fileType = 'text'; // Default to text if extension is weird
+                             fileType = 'text';
                           }
                      } else {
-                          fileType = 'text'; // Default for untitled/text paste
+                          fileType = 'text';
                      }
 
-
-                     // Prepare metadata, including chapters with both Markdown and raw HTML (if available)
                      const metadata = {
                          chapters: state.bookData.chapters.map(chapter => ({
                              title: chapter.title,
-                             // Include both content types if they exist
-                             content: chapter.content || null, // Raw HTML content
-                             markdownContent: chapter.markdownContent || null, // Markdown content
-                             startLine: chapter.startLine, // Might be less relevant now
+                             content: chapter.content || null,
+                             markdownContent: chapter.markdownContent || null,
+                             startLine: chapter.startLine,
                              endLine: chapter.endLine
                          })),
-                         viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled, // Persist view preference
+                         viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled,
                          sourceUrl: state.bookData.sourceUrl
                      };
 
-                     // Get the latest reading position
                      const lastPosition = state.lastPosition || {
                          chapter: state.bookData.currentPosition,
                          scroll: DOM.contentArea.scrollTop || 0,
@@ -4273,20 +4068,18 @@
                          textAnchor: findVisibleTextAnchor()
                      };
 
-                     // Prepare data for upsert
                      const bookRecord = {
                          user_id: session.user.id,
                          title: state.bookData.title,
-                         content: null, // Deprecate direct content saving for large text
-                         raw_content: state.bookData.rawContent || null, // Store raw HTML content
+                         content: null,
+                         raw_content: state.bookData.rawContent || null,
                          file_type: fileType,
                          metadata: metadata,
                          last_position: lastPosition,
-                         list_id: state.bookData.currentListId || null, // Ensure null is used for unlisted
-                         updated_at: new Date() // Always update timestamp
+                         list_id: state.bookData.currentListId || null,
+                         updated_at: new Date()
                      };
 
-                     // Query first to get ID if exists
                      let existingBookQuery = supabase.from('ebooks')
                          .select('id')
                          .eq('user_id', session.user.id)
@@ -4302,20 +4095,18 @@
 
                      if (checkError) {
                          console.error("Error checking for existing book:", checkError);
-                         throw checkError; // Let the catch block handle it
+                         throw checkError;
                      }
 
                      if (existingBook && existingBook.id) {
-                         // --- UPDATE existing book ---
                          const { error: updateError } = await supabase
                              .from('ebooks')
                              .update({
-                                 // Only update fields that change frequently or structure
-                                 raw_content: bookRecord.raw_content, // Update if raw content changed
+                                 raw_content: bookRecord.raw_content,
                                  metadata: bookRecord.metadata,
                                  last_position: bookRecord.last_position,
                                  updated_at: bookRecord.updated_at,
-                                 file_type: bookRecord.file_type // Update file type if it changed
+                                 file_type: bookRecord.file_type
                              })
                              .eq('id', existingBook.id);
 
@@ -4323,12 +4114,10 @@
                              console.error("Error updating book:", updateError);
                              throw updateError;
                          }
-                         // console.log("Book updated in library:", bookRecord.title); // Too noisy for scroll saves
                      } else {
-                         // --- INSERT new book ---
                          const { error: insertError } = await supabase
                              .from('ebooks')
-                             .insert({ // Insert the full record except updated_at
+                             .insert({
                                 user_id: bookRecord.user_id,
                                 title: bookRecord.title,
                                 content: bookRecord.content,
@@ -4337,7 +4126,6 @@
                                 metadata: bookRecord.metadata,
                                 last_position: bookRecord.last_position,
                                 list_id: bookRecord.list_id
-                                // Supabase handles created_at/updated_at on insert
                              });
 
                          if (insertError) {
@@ -4347,11 +4135,10 @@
                           console.log("Book saved to library:", bookRecord.title);
                      }
 
-                     return true; // Indicate success
+                     return true;
                  } catch (error) {
                      console.error('Error saving book to library:', error);
-                      // showToast("Error saving progress.", 2000); // Avoid toast on background saves
-                     return false; // Indicate failure
+                     return false;
                  }
              }
 
@@ -4360,44 +4147,40 @@
                  try {
                      state.bookData.title = book.title;
                      state.bookData.currentListId = book.list_id || null;
-                     state.bookData.rawContent = book.raw_content || null; // Load raw content
+                     state.bookData.rawContent = book.raw_content || null;
                      DOM.bookTitle.textContent = book.title;
 
                      if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
-                         // Load chapters from metadata
                          state.bookData.chapters = book.metadata.chapters.map(chapter => ({
                              title: chapter.title,
-                             content: chapter.content || null, // Raw HTML from metadata
-                             markdownContent: chapter.markdownContent || null, // Markdown from metadata
+                             content: chapter.content || null,
+                             markdownContent: chapter.markdownContent || null,
                              startLine: chapter.startLine,
                              endLine: chapter.endLine
                          }));
                          state.bookData.sourceUrl = book.metadata.sourceUrl || null;
                      } else {
-                         // Fallback if metadata structure is missing/old
                          state.bookData.chapters = [{ title: book.title, markdownContent: "[Content structure not found in metadata]", content: null, startLine: 0, endLine: 1 }];
                          state.bookData.sourceUrl = null;
                          console.warn("Book metadata missing or incomplete for:", book.title);
                      }
 
-                     // Load view setting from metadata
                      state.settings.viewRawHtmlEnabled = (book.metadata && book.metadata.viewRawHtmlEnabled !== undefined)
                          ? book.metadata.viewRawHtmlEnabled
-                         : false; // Default to Markdown view if not set
+                         : false;
                      DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
 
                      const lastPosition = book.last_position || {};
                      state.bookData.currentPosition = lastPosition.chapter !== undefined ? lastPosition.chapter : 0;
 
-                     showBook(); // Display the first/saved chapter
+                     showBook();
 
-                     // Restore position *after* showing the book (content needs to be rendered)
                      restoreReadingPosition(lastPosition);
 
                  } catch (error) {
                      console.error('Error loading book from library:', error);
                      showToast('Error loading book: ' + error.message);
-                     goToHome(); // Go home if loading fails
+                     goToHome();
                  } finally {
                      hideLoading();
                  }
@@ -4407,24 +4190,18 @@
             function restoreReadingPosition(lastPosition) {
                  if (!lastPosition || !DOM.contentArea) return;
 
-                 // Ensure the correct chapter is displayed *before* attempting to scroll
-                 // displayCurrentChapter() should have handled this already if called correctly
-
                  showToast('Restoring reading position...', 1500);
 
-                 // Use requestAnimationFrame to allow the browser to render the chapter content first
                  requestAnimationFrame(() => {
-                     // Maybe even a double frame for complex layouts
                      requestAnimationFrame(() => {
                          let restored = false;
-                         const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000); // ~3 months
+                         const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
 
-                         // 1. Try restoring by text anchor (most reliable if structure matches)
                          if (isPositionRecent && lastPosition.textAnchor && lastPosition.textAnchor.index !== undefined) {
                              restored = restoreByTextAnchor(lastPosition.textAnchor);
                              if (restored) {
                                  console.log(`Restored position using text anchor (Index: ${lastPosition.textAnchor.index}).`);
-                                 updateProgressBar(); // Update progress bar after scroll
+                                 updateProgressBar();
                                  return;
                              } else {
                                  console.warn("Failed to restore using text anchor, trying percentage.");
@@ -4433,7 +4210,6 @@
                               console.warn("Text anchor data seems incomplete, skipping.", lastPosition.textAnchor);
                          }
 
-                         // 2. Try restoring by percentage complete (good fallback)
                          if (lastPosition.percentComplete !== undefined && lastPosition.percentComplete >= 0 && lastPosition.percentComplete <= 1) {
                              const scrollHeight = DOM.contentArea.scrollHeight;
                              const clientHeight = DOM.contentArea.clientHeight;
@@ -4442,30 +4218,27 @@
                                  DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'auto' });
                                  console.log(`Restored position using percentage: ${Math.round(lastPosition.percentComplete * 100)}%`);
                                  restored = true;
-                                 updateProgressBar(); // Update progress bar after scroll
+                                 updateProgressBar();
                                  return;
                              }
                          }
 
-                         // 3. As a last resort, use the raw scroll value (least reliable)
                          if (lastPosition.scroll !== undefined && lastPosition.scroll >= 0) {
-                             // Check if scroll value is plausible
                              if (lastPosition.scroll < DOM.contentArea.scrollHeight) {
                                  DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'auto' });
                                  console.warn("Restored position using raw scroll value (fallback).");
                                  restored = true;
-                                 updateProgressBar(); // Update progress bar after scroll
+                                 updateProgressBar();
                                  return;
                              } else {
                                  console.warn("Saved scroll position exceeds current scroll height, ignoring.");
                              }
                          }
 
-                         // If nothing worked, scroll to top
                          if (!restored) {
                              console.warn("Could not restore reading position from saved data. Scrolling to top.");
                              DOM.contentArea.scrollTo({ top: 0, behavior: 'auto' });
-                             updateProgressBar(); // Update progress bar after scroll
+                             updateProgressBar();
                          }
                      });
                  });
@@ -4475,41 +4248,35 @@
              function restoreByTextAnchor(textAnchor) {
                  if (!textAnchor || textAnchor.index === undefined || textAnchor.index < 0) return false;
 
-                 // Ensure paragraphs have the data-p-index attribute (might be missing if content was loaded differently)
                  DOM.contentArea.querySelectorAll('p:not([data-p-index])').forEach((p, index) => {
-                       // Re-adding indices dynamically is risky. Best effort: find by index attr.
                  });
 
 
                  let targetParagraph = DOM.contentArea.querySelector(`p[data-p-index="${textAnchor.index}"]`);
 
-                 // If the exact index isn't found, try to find by text similarity (less reliable but good fallback)
                   if (!targetParagraph && textAnchor.text) {
                      console.warn(`Paragraph at index ${textAnchor.index} not found. Searching by text...`);
-                     const paragraphs = DOM.contentArea.querySelectorAll('p'); // Get all paragraphs
+                     const paragraphs = DOM.contentArea.querySelectorAll('p');
                      for (let i = 0; i < paragraphs.length; i++) {
-                          // Only check paragraphs that *should* have an index from rendering
                          if (paragraphs[i].hasAttribute('data-p-index') && isTextSimilar(paragraphs[i].textContent, textAnchor.text)) {
                              targetParagraph = paragraphs[i];
                              console.log(`Found similar text in paragraph index ${paragraphs[i].getAttribute('data-p-index')}`);
-                             break; // Found a likely match
+                             break;
                          }
                      }
                  }
 
                  if (!targetParagraph) {
                      console.error("Could not find target paragraph for text anchor restoration.");
-                     return false; // Still couldn't find it
+                     return false;
                  }
 
-                 // Scroll the target paragraph into view near the top
                   targetParagraph.scrollIntoView({ behavior: 'auto', block: 'start' });
 
-                  // Optional: Adjust slightly based on offset if needed, but start is often good enough
-                  if (textAnchor.offset && textAnchor.offset > 0.1) { // Only adjust if significantly offset
+                  if (textAnchor.offset && textAnchor.offset > 0.1) {
                        const rect = targetParagraph.getBoundingClientRect();
                        const scrollAdjustment = rect.height * textAnchor.offset;
-                       DOM.contentArea.scrollTop += scrollAdjustment; // Fine-tune scroll based on offset
+                       DOM.contentArea.scrollTop += scrollAdjustment;
                   }
 
 
@@ -4517,12 +4284,11 @@
                  return true;
              }
 
-            // Helper function for text similarity check (simple prefix match)
             function isTextSimilar(text1, text2) {
                 if (!text1 || !text2) return false;
                 const t1 = text1.substring(0, 50).trim().toLowerCase();
                 const t2 = text2.substring(0, 50).trim().toLowerCase();
-                return t1.startsWith(t2) || t2.startsWith(t1); // Check if one starts with the other
+                return t1.startsWith(t2) || t2.startsWith(t1);
             }
 
 
@@ -4530,10 +4296,9 @@
                 const messageElement = document.createElement('div');
                 messageElement.classList.add('chat-message', sender);
                 if (sender === 'assistant') {
-                     // Use the same markdown parser as the reader for consistency
                       messageElement.innerHTML = markdownToHtml(message);
                 }
-                else { messageElement.textContent = message; } // User messages are plain text
+                else { messageElement.textContent = message; }
                 if (isLoading) messageElement.classList.add('loading');
                 DOM.chatMessages.appendChild(messageElement);
                 DOM.chatMessages.scrollTop = DOM.chatMessages.scrollHeight;
@@ -4555,17 +4320,16 @@
                 displayChatMessage('user', userMessage);
                 state.chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
                 DOM.chatInput.value = '';
-                DOM.chatInput.style.height = 'auto'; // Reset height
+                DOM.chatInput.style.height = 'auto';
                 const loadingElement = displayChatMessage('assistant', '', true);
                 DOM.chatSendBtn.disabled = true;
                 renderSuggestedQuestions([]);
                 processAndSendChat(userMessage, loadingElement);
             }
 
-             // Auto-resize textarea
             DOM.chatInput.addEventListener('input', () => {
-                DOM.chatInput.style.height = 'auto'; // Reset height
-                DOM.chatInput.style.height = `${Math.min(DOM.chatInput.scrollHeight, 80)}px`; // Set new height up to max
+                DOM.chatInput.style.height = 'auto';
+                DOM.chatInput.style.height = `${Math.min(DOM.chatInput.scrollHeight, 80)}px`;
             });
 
 
@@ -4576,34 +4340,28 @@
 
                      if (state.chatUseFullDocument) {
                          contextSource = "the full document";
-                         // Join Markdown content preferentially
                          contextContent = state.bookData.chapters
-                             .map(ch => ch.markdownContent || ch.content || '') // Use MD, fallback to HTML, then empty
+                             .map(ch => ch.markdownContent || ch.content || '')
                              .join("\n\n---\n\n");
                      } else {
                          contextSource = "the current chapter";
-                         // Use Markdown preferentially for the current chapter
                          contextContent = currentChapter ? (currentChapter.markdownContent || currentChapter.content || "No chapter content available.") : "No chapter loaded.";
                      }
 
-                     const maxContextLength = 15000; // Keep context reasonable
+                     const maxContextLength = 15000;
                      const fullContext = contextContent.length > maxContextLength ? contextContent.substring(0, maxContextLength) + "\n... [Context Truncated]" : contextContent;
 
-                     const historyToSend = state.chatHistory.slice(-10); // Limit history
+                     const historyToSend = state.chatHistory.slice(-10);
                      const language = localStorage.getItem('speech-language') || 'en-US';
                      const languageName = language.startsWith('fr') ? 'French' : 'English';
 
                       const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse basic Markdown for formatting (like **bold**, *italic*, and simple lists starting with * or -). Use new lines for paragraphs.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up Questions:**\nAt the VERY END of your response, provide **up to 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block:\n[SUGGESTIONS]\n1. Explore the next section\n2. What is the main argument in section X?\n3. Can you explain the term Y mentioned earlier?\n[/SUGGESTIONS]`;
 
-                    // Construct the conversation history for the API call
                      const requestPayloadContents = [
                          { role: 'user', parts: [{ text: systemPrompt }] },
                          { role: 'model', parts: [{ text: "Understood. I will focus on exploring and explaining the provided text using basic Markdown and suggest concrete follow-up questions based on the content." }] },
-                         // Include previous turns if any
                          ...historyToSend.slice(0, -1),
-                          // Inject the context before the latest user question
                          { role: 'user', parts: [{ text: `Here is the context from ${contextSource}:\n\n---\n${fullContext}\n---\n\nMy question is:` }] },
-                          // The actual user question
                          historyToSend[historyToSend.length - 1]
                      ];
 
@@ -4611,7 +4369,7 @@
                      const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
                      const response = await geminiChatRequest(state.userApiSettings.api_key, requestPayloadContents, modelToUse);
 
-                     loadingElement.remove(); // Remove the loading indicator
+                     loadingElement.remove();
 
                      let assistantResponseText = 'Sorry, I could not generate a response.';
                      let extractedSuggestions = [];
@@ -4620,14 +4378,14 @@
                          assistantResponseText = `Sorry, there was an error: ${response.error.message}`;
                      } else {
                          const rawResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                         const suggestionBlockRegex = /\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/; // Matches end of string
+                         const suggestionBlockRegex = /\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/;
                          const match = rawResponse.match(suggestionBlockRegex);
 
                          if (match && match[1]) {
                              const questionsText = match[1].trim();
                              extractedSuggestions = questionsText.split('\n')
-                                 .map(q => q.trim().replace(/^\d+\.\s*/, '')) // Remove numbering
-                                 .filter(q => q.length > 0 && q.length < 100); // Basic filtering
+                                 .map(q => q.trim().replace(/^\d+\.\s*/, ''))
+                                 .filter(q => q.length > 0 && q.length < 100);
                              assistantResponseText = rawResponse.replace(suggestionBlockRegex, '').trim();
                          } else {
                              assistantResponseText = rawResponse.trim();
@@ -4639,7 +4397,7 @@
                      }
 
                      displayChatMessage('assistant', assistantResponseText);
-                     state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] }); // Save assistant response to history
+                     state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] });
                      renderSuggestedQuestions(extractedSuggestions);
 
                  } catch (error) {
@@ -4651,14 +4409,12 @@
                      state.chatHistory.push({ role: 'assistant', parts: [{ text: `Unexpected Error: ${error.message}` }] });
                  } finally {
                      DOM.chatSendBtn.disabled = false;
-                     // Limit chat history size
                      if (state.chatHistory.length > 20) {
-                         // Keep system prompts + last N turns. Find first non-system prompt to keep context.
-                         const systemPromptsCount = state.chatHistory.findIndex(msg => msg.role !== 'user' && msg.role !== 'model'); // Find where real convo starts
-                         const startIndex = Math.max(systemPromptsCount >= 0 ? systemPromptsCount : 0, state.chatHistory.length - 16); // Keep ~8 turns + system prompts
+                         const systemPromptsCount = state.chatHistory.findIndex(msg => msg.role !== 'user' && msg.role !== 'model');
+                         const startIndex = Math.max(systemPromptsCount >= 0 ? systemPromptsCount : 0, state.chatHistory.length - 16);
                          state.chatHistory = state.chatHistory.slice(startIndex);
                      }
-                     DOM.chatInput.style.height = 'auto'; // Reset height after send
+                     DOM.chatInput.style.height = 'auto';
                  }
             }
 
@@ -4693,7 +4449,7 @@
                     DOM.translationLoading.style.display = 'none';
                     if (response.error) { DOM.translationContent.textContent = `Error: ${response.error.message}`; return; }
                     const translation = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation failed.';
-                    DOM.translationContent.textContent = translation.trim(); // Trim potential whitespace
+                    DOM.translationContent.textContent = translation.trim();
                     generateFlashcard(text);
                 } catch (error) { console.error('Error translating text:', error); DOM.translationLoading.style.display = 'none'; DOM.translationContent.textContent = 'An error occurred during translation.'; }
             }
@@ -4710,11 +4466,9 @@
 
                      const flashcardText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
                      try {
-                         // Find the JSON part more reliably
                          const jsonMatch = flashcardText.match(/\{[\s\S]*\}/);
                          if (jsonMatch) {
                              const flashcardData = JSON.parse(jsonMatch[0]);
-                             // Basic validation
                              if (flashcardData && flashcardData.word && flashcardData.phrase && flashcardData.translation_answer) {
                                 showFlashcardToast(flashcardData);
                              } else {
@@ -4734,16 +4488,16 @@
 
             function formatTranslation(translation) {
                 const parts = translation.split('\n');
-                if (parts.length > 1) return `<b>${escapeHTML(parts[0])}</b><br><i>${escapeHTML(parts.slice(1).join('; '))}</i>`; // Join definitions with semicolon
-                return `<b>${escapeHTML(translation)}</b>`; // Default if only one line
+                if (parts.length > 1) return `<b>${escapeHTML(parts[0])}</b><br><i>${escapeHTML(parts.slice(1).join('; '))}</i>`;
+                return `<b>${escapeHTML(translation)}</b>`;
             }
 
              function showFlashcardToast(flashcardData) {
                  const existingToast = document.querySelector('.flashcard-toast');
-                 if (existingToast) existingToast.remove(); // Remove previous toast immediately
+                 if (existingToast) existingToast.remove();
 
                  const toast = document.createElement('div');
-                 toast.className = 'flashcard-toast visible'; // Start visible
+                 toast.className = 'flashcard-toast visible';
 
                  toast.innerHTML = `
                      <div class="flashcard-header">
@@ -4758,9 +4512,8 @@
 
                  document.body.appendChild(toast);
 
-                 // Position the toast relative to the selection if possible
                  if (state.lastSelectionRect) {
-                     const toastRect = toast.getBoundingClientRect(); // Get size after adding to DOM
+                     const toastRect = toast.getBoundingClientRect();
                      const selRect = state.lastSelectionRect;
                      const viewportWidth = window.innerWidth;
                      const viewportHeight = window.innerHeight;
@@ -4769,24 +4522,20 @@
                       let top = selRect.bottom + margin;
                       let left = selRect.left + (selRect.width / 2) - (toastRect.width / 2);
 
-                      // Adjust horizontal
                       left = Math.max(margin, Math.min(left, viewportWidth - toastRect.width - margin));
 
-                      // Adjust vertical
                       if (top + toastRect.height > viewportHeight - margin) {
-                           top = selRect.top - toastRect.height - margin; // Try above
+                           top = selRect.top - toastRect.height - margin;
                       }
-                      // Ensure it's not off-screen top
                       top = Math.max(margin, top);
 
 
-                     toast.style.position = 'fixed'; // Ensure fixed positioning
+                     toast.style.position = 'fixed';
                      toast.style.top = `${top}px`;
                      toast.style.left = `${left}px`;
-                     toast.style.bottom = 'auto'; // Override default bottom/right
+                     toast.style.bottom = 'auto';
                      toast.style.right = 'auto';
                  } else {
-                     // Fallback to default bottom-right position
                      toast.style.bottom = "20px";
                      toast.style.right = "20px";
                      toast.style.top = 'auto';
@@ -4817,26 +4566,24 @@
                      const { data: { session } } = await supabase.auth.getSession();
                      if (!session) { showToast('Please sign in to save flashcards'); saveButton.textContent = 'Save'; saveButton.disabled = false; return; }
                      try {
-                         // Use upsert to avoid duplicates based on word and user_id
                          const { error } = await supabase.from('flashcards').upsert({
                              user_id: session.user.id,
-                             word: flashcardData.word, // Primary key part 1
+                             word: flashcardData.word,
                              phrase: flashcardData.phrase,
                              translation_answer: flashcardData.translation_answer,
-                             state: "new", // Default state
-                             due: new Date().toISOString(), // Default due date
-                             // Default FSRS parameters (adjust as needed)
+                             state: "new",
+                             due: new Date().toISOString(),
                              stability: 0.5,
                              difficulty: 5,
                              elapsed_days: 0,
                              scheduled_days: 0,
                              reps: 0,
                              lapses: 0
-                         }, { onConflict: 'user_id, word' }); // Define conflict target
+                         }, { onConflict: 'user_id, word' });
 
                          if (error) throw error;
                          saveButton.textContent = 'Saved!';
-                         setTimeout(removeToast, 1000); // Remove after save confirmation
+                         setTimeout(removeToast, 1000);
                      } catch (error) {
                          console.error('Error saving/upserting flashcard:', error);
                          saveButton.textContent = 'Failed';
@@ -4845,34 +4592,31 @@
                      }
                  });
 
-                 // Auto-remove toast after a longer delay
                  setTimeout(removeToast, 20000);
              }
 
             function speakText(text) {
                 if ('speechSynthesis' in window) {
-                    window.speechSynthesis.cancel(); // Stop previous speech
+                    window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(text);
                     const language = localStorage.getItem('speech-language') || 'en-US';
                     utterance.lang = language;
 
-                    // Attempt to select a voice matching the language
                     const voices = window.speechSynthesis.getVoices();
-                    let selectedVoice = voices.find(voice => voice.lang === language); // Exact match first
+                    let selectedVoice = voices.find(voice => voice.lang === language);
                     if (!selectedVoice) {
-                         selectedVoice = voices.find(voice => voice.lang.startsWith(language.split('-')[0])); // Match primary language
+                         selectedVoice = voices.find(voice => voice.lang.startsWith(language.split('-')[0]));
                     }
-                     if (!selectedVoice && language.startsWith('en')) { // Fallback for English variants
+                     if (!selectedVoice && language.startsWith('en')) {
                          selectedVoice = voices.find(voice => voice.lang.startsWith('en-'));
                      }
                     if (selectedVoice) {
                         utterance.voice = selectedVoice;
-                         // console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
                     } else {
                          console.warn(`No voice found for language: ${language}. Using default.`);
                     }
 
-                    utterance.rate = 0.9; // Slightly slower
+                    utterance.rate = 0.9;
                     utterance.pitch = 1.0;
                     window.speechSynthesis.speak(utterance);
                 } else {
@@ -4880,7 +4624,6 @@
                     showToast('Text-to-speech not supported in this browser');
                 }
             }
-            // Ensure voices are loaded (needed for some browsers)
             if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
                 window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
             }
@@ -4898,7 +4641,6 @@
                      speechLanguage: DOM.speechLanguage.value
                  };
 
-                 // Save to localStorage immediately for persistence
                  localStorage.setItem('ebook-fontsize', preferences.fontSize);
                  localStorage.setItem('ebook-lineheight', preferences.lineHeight);
                  localStorage.setItem('ebook-theme', preferences.theme);
@@ -4909,27 +4651,23 @@
                  localStorage.setItem('ebook-speechlanguage', preferences.speechLanguage);
 
 
-                 // Save to Supabase if logged in
                  const { data: { session } } = await supabase.auth.getSession();
                  if (!session) return;
 
                  try {
-                      // Use upsert to handle both insert and update
                      const { error } = await supabase
                          .from('user_settings')
-                         .upsert({ user_id: session.user.id, preferences: preferences }, { onConflict: 'user_id' }); // Specify conflict target
+                         .upsert({ user_id: session.user.id, preferences: preferences }, { onConflict: 'user_id' });
 
                      if (error) throw error;
 
                  } catch (error) {
                      console.error('Error saving user preferences to DB:', error);
-                      // Don't show toast for background saves unless critical
                  }
              }
 
 
              async function loadUserPreferences() {
-                 // Load from localStorage first as defaults/fallback
                  state.settings.fontSize = parseInt(localStorage.getItem('ebook-fontsize') || '100', 10);
                  state.settings.lineHeight = parseFloat(localStorage.getItem('ebook-lineheight') || '1.6');
                  state.settings.theme = localStorage.getItem('ebook-theme') || 'dark';
@@ -4940,34 +4678,31 @@
                  DOM.autoSpeakToggle.checked = localStorage.getItem('ebook-autospeak') !== 'false';
                  DOM.speechLanguage.value = localStorage.getItem('ebook-speechlanguage') || 'en-US';
 
-                 // Apply initial settings loaded from localStorage
                  updateFontSize();
                  updateLineHeight();
                  setTheme(state.settings.theme);
                  DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
                  DOM.speakSelectionToggle.checked = state.settings.speakSelectionEnabled;
 
-                 // Attempt to load from Supabase if logged in
                  const { data: { session } } = await supabase.auth.getSession();
-                 if (!session) return; // Don't try loading from DB if not logged in
+                 if (!session) return;
 
                  try {
                      const { data, error } = await supabase
                          .from('user_settings')
                          .select('preferences')
                          .eq('user_id', session.user.id)
-                         .maybeSingle(); // Use maybeSingle to handle no settings row gracefully
+                         .maybeSingle();
 
                      if (error) {
                          console.error('Error loading user preferences from DB:', error);
-                         return; // Use localStorage values if DB load fails
+                         return;
                      }
 
                      if (data && data.preferences) {
                          const prefs = data.preferences;
                          console.log("Loaded preferences from DB:", prefs);
 
-                         // Override localStorage with DB values if they exist
                          if (prefs.fontSize !== undefined) state.settings.fontSize = prefs.fontSize;
                          if (prefs.lineHeight !== undefined) state.settings.lineHeight = prefs.lineHeight;
                          if (prefs.theme) state.settings.theme = prefs.theme;
@@ -4977,16 +4712,12 @@
                          if (prefs.autoSpeakEnabled !== undefined) DOM.autoSpeakToggle.checked = prefs.autoSpeakEnabled;
                          if (prefs.speechLanguage) DOM.speechLanguage.value = prefs.speechLanguage;
 
-                         // Re-apply settings from DB values
                          updateFontSize();
                          updateLineHeight();
                          setTheme(state.settings.theme);
                          DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
                          DOM.speakSelectionToggle.checked = state.settings.speakSelectionEnabled;
-                         // Checkbox and select values are already updated directly above
 
-                          // Persist the potentially merged settings back to localStorage for next load
-                          // This might be slightly redundant if saveUserPreferences is called elsewhere, but ensures consistency
                          localStorage.setItem('ebook-fontsize', state.settings.fontSize);
                          localStorage.setItem('ebook-lineheight', state.settings.lineHeight);
                          localStorage.setItem('ebook-theme', state.settings.theme);
@@ -4997,9 +4728,8 @@
                          localStorage.setItem('ebook-speechlanguage', DOM.speechLanguage.value);
 
                      } else {
-                          // No settings found in DB, save current (localStorage or default) settings to DB
                           console.log("No preferences found in DB for user, saving current settings.");
-                          saveUserPreferences(); // This will also update localStorage
+                          saveUserPreferences();
                      }
 
                  } catch (error) {
@@ -5010,17 +4740,16 @@
 
             async function generateTitleAndCategory(content, modelName) {
                  if (!state.userApiSettings || !state.userApiSettings.api_key) { console.warn("Gemini API key not available for title/category generation."); return { generatedTitle: null, listId: null }; }
-                 if (!state.bookLists) { console.warn("Book lists not loaded yet for categorization."); } // Check if lists are loaded
+                 if (!state.bookLists) { console.warn("Book lists not loaded yet for categorization."); }
 
                  const maxContentLength = 5000;
                  const truncatedContent = content.length > maxContentLength ? content.substring(0, maxContentLength) + "..." : content;
 
-                 // Ensure list options are correctly formatted, handle empty list case
                  const listOptions = (state.bookLists && state.bookLists.length > 0)
                      ? state.bookLists.map(list => `- ${list.name} (ID: ${list.id})`).join('\n')
                      : "No lists available.";
 
-                 const prompt = `Analyze the following text content scraped from a webpage.\n\nContent Snippet:\n---\n${truncatedContent}\n---\n\nBased on the content, perform the following tasks:\n1.  **Generate a concise and relevant title** for this content (max 10 words).\n2.  **Categorize the content** into ONE of the following existing lists. Choose the list that best fits the topic. If none fit well, choose null.\n\nAvailable Lists:\n${listOptions}\n- Unlisted (ID: null)\n\nReturn the result ONLY in this exact JSON format. The value for "list_id" MUST be either the numeric ID of the chosen list (e.g., 6) or the literal value null (not the string "null"). Do not include the list name in the "list_id" field.\n\nExample Output 1:\n{\n  "title": "Example Title About AI",\n  "list_id": 6 \n}\n\nExample Output 2 (if no list fits):\n{\n  "title": "Example Title About Something Else",\n  "list_id": null\n}\n\nActual Output JSON:\n`; // Removed the potentially confusing last line structure
+                 const prompt = `Analyze the following text content scraped from a webpage.\n\nContent Snippet:\n---\n${truncatedContent}\n---\n\nBased on the content, perform the following tasks:\n1.  **Generate a concise and relevant title** for this content (max 10 words).\n2.  **Categorize the content** into ONE of the following existing lists. Choose the list that best fits the topic. If none fit well, choose null.\n\nAvailable Lists:\n${listOptions}\n- Unlisted (ID: null)\n\nReturn the result ONLY in this exact JSON format. The value for "list_id" MUST be either the numeric ID of the chosen list (e.g., 6) or the literal value null (not the string "null"). Do not include the list name in the "list_id" field.\n\nExample Output 1:\n{\n  "title": "Example Title About AI",\n  "list_id": 6 \n}\n\nExample Output 2 (if no list fits):\n{\n  "title": "Example Title About Something Else",\n  "list_id": null\n}\n\nActual Output JSON:\n`;
 
                  const modelToUse = modelName || state.userApiSettings?.model || 'gemini-1.5-flash-latest';
 
@@ -5029,10 +4758,9 @@
                      if (response.error) throw new Error(response.error.message);
 
                      const resultText = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-                     let parsedResult = { title: null, list_id: null }; // Default
+                     let parsedResult = { title: null, list_id: null };
 
                      try {
-                         // Find JSON block more reliably
                          const jsonMatch = resultText.match(/\{[\s\S]*\}/);
                          if (jsonMatch) {
                              parsedResult = JSON.parse(jsonMatch[0]);
@@ -5041,20 +4769,17 @@
                          }
                      } catch (jsonError) {
                          console.error('Error parsing title/category JSON:', jsonError, resultText);
-                         // Keep default parsedResult
                      }
 
-                     // Validate and sanitize list_id
                      let listId = parsedResult.list_id;
-                      if (listId === 'null' || listId === undefined) { // Check for string "null" or undefined
+                      if (listId === 'null' || listId === undefined) {
                          listId = null;
                      } else if (typeof listId === 'string' && !isNaN(parseInt(listId, 10))) {
-                         listId = parseInt(listId, 10); // Convert numeric string to number
-                     } else if (typeof listId !== 'number' && listId !== null) { // Allow null or number
+                         listId = parseInt(listId, 10);
+                     } else if (typeof listId !== 'number' && listId !== null) {
                           console.warn(`Received unexpected list_id type: ${typeof listId}, value: ${listId}. Defaulting to null.`);
                          listId = null;
                      }
-                      // Ensure the listId actually exists in the user's lists or is null
                       if(listId !== null && !state.bookLists.some(l => l.id === listId)) {
                          console.warn(`AI returned list_id ${listId} which does not exist. Defaulting to null.`);
                          listId = null;
@@ -5062,19 +4787,18 @@
 
 
                      return {
-                         generatedTitle: (typeof parsedResult.title === 'string' ? parsedResult.title.trim() : null) || null, // Ensure title is string or null
-                         listId: listId // Use sanitized listId
+                         generatedTitle: (typeof parsedResult.title === 'string' ? parsedResult.title.trim() : null) || null,
+                         listId: listId
                      };
 
                  } catch (error) {
                      console.error('Error generating title and category:', error);
                      showToast(`AI title/category generation failed: ${error.message}`, 4000);
-                     return { generatedTitle: null, listId: null }; // Return default on error
+                     return { generatedTitle: null, listId: null };
                  }
              }
 
 
-             // AI feature: Summarize Chapter
             async function summarizeCurrentChapter() {
                  if (!state.userApiSettings || !state.userApiSettings.api_key) {
                      showToast("Gemini API key needed for summarization. Configure in dashboard.", 4000);
@@ -5085,12 +4809,11 @@
                  const chapter = state.bookData.chapters[state.bookData.currentPosition];
                  if (!chapter) { showToast("No chapter loaded to summarize.", 2000); return; }
 
-                 // Prioritize Markdown content for summary context
                  const contentToSummarize = chapter.markdownContent || chapter.content || '';
                  if (!contentToSummarize.trim()) { showToast("Chapter content is empty, cannot summarize.", 2000); return; }
 
                  DOM.aiResponseArea.style.display = 'block';
-                 DOM.aiResponseArea.innerHTML = '<p>Generating summary...</p>'; // Use innerHTML for potential styling
+                 DOM.aiResponseArea.innerHTML = '<p>Generating summary...</p>';
                  DOM.summarizeChapterBtn.disabled = true;
                  DOM.summarizeChapterBtn.classList.add('loading');
 
@@ -5108,7 +4831,6 @@
                      if (response.error) throw new Error(response.error.message);
 
                      const summary = response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate summary.';
-                      // Use the custom Markdown parser for the summary
                       DOM.aiResponseArea.innerHTML = markdownToHtml(summary);
 
                  } catch (error) {
@@ -5117,7 +4839,6 @@
                  } finally {
                      DOM.summarizeChapterBtn.disabled = false;
                      DOM.summarizeChapterBtn.classList.remove('loading');
-                     // Scroll the settings panel to show the response area if needed
                      DOM.settingsPanel.scrollTop = DOM.settingsPanel.scrollHeight;
                  }
             }
@@ -5134,11 +4855,10 @@
             if (!book || !book.last_position) return 0;
 
             const lastPos = book.last_position;
-            const totalChapters = (book.metadata?.chapters?.length) || 1; // Assume 1 chapter if metadata missing
+            const totalChapters = (book.metadata?.chapters?.length) || 1;
             const currentChapterIndex = lastPos.chapter !== undefined ? lastPos.chapter : 0;
             const chapterProgress = lastPos.percentComplete !== undefined ? lastPos.percentComplete : 0;
 
-            // Clamp values to avoid errors
             const validTotalChapters = Math.max(1, totalChapters);
             const validCurrentChapterIndex = Math.max(0, Math.min(currentChapterIndex, validTotalChapters - 1));
             const validChapterProgress = Math.max(0, Math.min(1, chapterProgress));
@@ -5148,7 +4868,6 @@
                  overallProgress = (validCurrentChapterIndex / validTotalChapters) + (validChapterProgress / validTotalChapters);
             }
 
-             // Ensure progress doesn't exceed 100% if the last chapter is fully read
              overallProgress = Math.min(1, overallProgress);
 
             return Math.round(overallProgress * 100);
