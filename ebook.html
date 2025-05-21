@@ -93,10 +93,6 @@
             display: none !important;
         }
 
-        #ai-response-area {
-            display: none;
-        }
-
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
             line-height: 1.6;
@@ -447,44 +443,11 @@
         .library-item-title {
             display: inline;
             font-weight: 500;
-            margin-bottom: 0.25rem;
+            /* margin-bottom: 0.25rem; /* Handled by container */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-
-        .library-item-list-badge {
-            font-size: 0.65rem;
-            padding: 0.1rem 0.4rem;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-muted);
-            margin-left: 0.5rem;
-            display: inline-block;
-            vertical-align: middle;
-            white-space: nowrap;
-            max-width: 80px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex-shrink: 0;
-        }
-        .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.15); border: 1px solid rgba(52, 168, 83, 0.3); color: #6fbf73; }
-        .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.15); border: 1px solid rgba(251, 188, 5, 0.3); color: #fdd663; }
-        .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.15); border: 1px solid rgba(234, 67, 53, 0.3); color: #f28b82; }
-        .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.15); border: 1px solid rgba(66, 133, 244, 0.3); color: #8ab4f8; }
-        .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #c58af9; }
-
-        body.light-theme .library-item-list-badge[data-color-index="0"] { background-color: rgba(52, 168, 83, 0.1); border-color: rgba(52, 168, 83, 0.2); color: #0d652d; }
-        body.light-theme .library-item-list-badge[data-color-index="1"] { background-color: rgba(251, 188, 5, 0.1); border-color: rgba(251, 188, 5, 0.2); color: #995200; }
-        body.light-theme .library-item-list-badge[data-color-index="2"] { background-color: rgba(234, 67, 53, 0.1); border-color: rgba(234, 67, 53, 0.2); color: #940a0a; }
-        body.light-theme .library-item-list-badge[data-color-index="3"] { background-color: rgba(66, 133, 244, 0.1); border-color: rgba(66, 133, 244, 0.2); color: #0b57d0; }
-        body.light-theme .library-item-list-badge[data-color-index="4"] { background-color: rgba(156, 39, 176, 0.1); border-color: rgba(156, 39, 176, 0.2); color: #58117a; }
-
-        .library-item-title-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 0.25rem;
+            flex-grow: 1; /* Allow title to take space */
         }
 
         .library-item-list-badge {
@@ -518,6 +481,7 @@
             display: flex;
             align-items: center;
             margin-bottom: 0.25rem;
+            min-width: 0; /* Prevent overflow issues with flex children */
         }
 
         .library-item-meta {
@@ -944,12 +908,6 @@
         #settings-panel > .settings-grid:last-of-type {
              border-bottom: none;
         }
-         #settings-panel > .settings-section:last-child {
-             border-bottom: none;
-             margin-bottom: 0;
-             padding-bottom: 0;
-         }
-
 
         #settings-panel.visible {
             transform: translateY(0);
@@ -981,12 +939,13 @@
         }
 
         #ai-response-area {
+            display: none; /* Controlled by JS */
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
             padding: 0.75rem;
             margin-top: 0.75rem;
             font-size: 0.875rem;
-            max-height: 12.5rem;
+            max-height: 12.5rem; /* From CSS, inline style had 15rem */
             overflow-y: auto;
             border: 1px solid var(--border-color);
         }
@@ -1809,16 +1768,14 @@
         }
 
 
-        .settings-section {
-            margin-bottom: 0;
+        .settings-section { /* This is a general rule, also used by #ai-features-section */
+            margin-bottom: 0; /* Reset by .settings-grid > .settings-section or specific overrides */
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
 
-        .settings-section:last-child {
-            margin-bottom: 0;
-        }
+        /* .settings-section:last-child is handled by the more generic one */
 
         .settings-section > label {
             display: block;
@@ -1852,7 +1809,7 @@
             gap: 10px;
         }
 
-        .theme-option {
+        .theme-option { /* This is for the options in the new .settings-content panel, different from #settings-panel theme options */
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -2104,32 +2061,6 @@
             animation: loading-dots 1.5s infinite;
         }
 
-        #chat-suggestions {
-            display: none;
-            padding: 0.25rem 0 0.5rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.35rem;
-            flex-shrink: 0;
-        }
-
-        .suggestion-chip {
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            border: 1px solid var(--border-color);
-            background-color: rgba(255, 255, 255, 0.08);
-            color: var(--text-muted);
-            transition: background-color 0.2s, color 0.2s;
-            white-space: nowrap;
-        }
-
-        .suggestion-chip:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-            color: var(--text-color);
-        }
-
         @keyframes loading-dots {
             0%, 20% { content: '.'; }
             40% { content: '..'; }
@@ -2335,7 +2266,7 @@
                     <p>Loading API status...</p>
                 </div>
                 <button type="button" id="summarize-chapter-btn" class="button" style="margin-top: 0.75rem; display: none;">Summarize Chapter</button>
-                <div id="ai-response-area" style="display: none; margin-top: 1rem; background-color: rgba(255, 255, 255, 0.05); border-radius: 4px; padding: 0.75rem; font-size: 0.875rem; max-height: 15rem; overflow-y: auto;"></div>
+                <div id="ai-response-area"></div>
             </div>
         </div>
 

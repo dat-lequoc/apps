@@ -212,6 +212,7 @@ create table flashcards (
   reps integer,
   lapses integer,
   ipa text,
+  language text DEFAULT 'en',
   word_audio text,
   phrase_audio text
 );
