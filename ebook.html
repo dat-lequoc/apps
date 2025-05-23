@@ -4491,8 +4491,11 @@
                 if (!state.userApiSettings || !state.userApiSettings.api_key) { DOM.translationContent.textContent = 'Please configure Gemini API key to use translation.'; DOM.translationLoading.style.display = 'none'; return; }
                 DOM.translationContent.textContent = ''; DOM.translationLoading.style.display = 'flex';
                 const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
+                const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
+                const sourceLanguage = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
+
                 try {
-                    const prompt = `Translate the following English text to Vietnamese. Only return the translation without any explanation or additional text.\n\nText: "${text}"`;
+                    const prompt = `Translate the following ${sourceLanguage} text to Vietnamese. Only return the translation without any explanation or additional text.\n\nText: "${text}"`;
                     const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, modelToUse);
                     DOM.translationLoading.style.display = 'none';
                     if (response.error) { DOM.translationContent.textContent = `Error: ${response.error.message}`; return; }
@@ -4505,8 +4508,11 @@
              async function generateFlashcard(text) {
                  if (!state.userApiSettings || !state.userApiSettings.api_key) return;
                  const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
+                 const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
+                 const sourceLanguageForPrompt = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
+                 const definitionLanguageForPrompt = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
                  try {
-                     const prompt = `Extract a single useful vocabulary word or short phrase from this text that would be good for an English language learner focusing on Vietnamese translation. Choose the most salient or potentially difficult word/phrase.\n\nText: "${text}"\n\nReturn ONLY a JSON object in this exact format, with no extra text, comments, or markdown formatting around it:\n{\n    "word": "the extracted word or short phrase in English",\n    "phrase": "An example English sentence using the word/phrase in context, with the <b>word/phrase</b> wrapped in <b> tags.",\n    "translation_answer": "Vietnamese translation of the word/phrase\\nA brief definition or explanation in English"\n}`;
+                     const prompt = `Extract a single useful vocabulary word or short phrase from this ${sourceLanguageForPrompt} text that would be good for a language learner focusing on Vietnamese translation from ${sourceLanguageForPrompt}. Choose the most salient or potentially difficult word/phrase.\n\nText: "${text}"\n\nReturn ONLY a JSON object in this exact format, with no extra text, comments, or markdown formatting around it:\n{\n    "word": "the extracted word or short phrase in ${sourceLanguageForPrompt}",\n    "phrase": "An example ${sourceLanguageForPrompt} sentence using the word/phrase in context, with the <b>word/phrase</b> wrapped in <b> tags.",\n    "translation_answer": "Vietnamese translation of the ${sourceLanguageForPrompt} word/phrase\\nA brief definition or explanation in ${definitionLanguageForPrompt}"\n}`;
 
                      const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, modelToUse);
 
@@ -4865,13 +4871,16 @@
                  DOM.summarizeChapterBtn.disabled = true;
                  DOM.summarizeChapterBtn.classList.add('loading');
 
+                 const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
+                 const summaryLanguage = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
+
                  try {
                      const maxContentLength = 15000;
                      const truncatedContent = contentToSummarize.length > maxContentLength
                          ? contentToSummarize.substring(0, maxContentLength) + "\n... [Content Truncated]"
                          : contentToSummarize;
 
-                     const prompt = `Summarize the following text from a book chapter titled "${chapter.title}":\n\n---\n${truncatedContent}\n---\n\nProvide a concise summary (about 3-5 sentences). Focus on the key points and main ideas presented in the text. Use basic Markdown for clarity (bold, italics).`;
+                     const prompt = `Summarize the following text from a book chapter titled "${chapter.title}":\n\n---\n${truncatedContent}\n---\n\nProvide a concise summary (about 3-5 sentences) in ${summaryLanguage}. Focus on the key points and main ideas presented in the text. The original text's language is likely ${summaryLanguage}. Use basic Markdown for clarity (bold, italics).`;
 
                      const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
                      const response = await geminiSingleRequest(state.userApiSettings.api_key, prompt, modelToUse);
