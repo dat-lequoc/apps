@@ -2413,7 +2413,7 @@
                     closeCurrentBlock();
                     const level = headingMatch[1].length;
                     const headingText = headingMatch[2].trim();
-                    html += `<h${level}>${processInlineMarkdown(escapeHTML(headingText))}</h${level}>\n`;
+                    html += `<h${level}>${processInlineMarkdown(headingText)}</h${level}>\n`;
                     continue;
                 }
 
@@ -2444,7 +2444,7 @@
 
                 if (isListItem) {
                     const currentListType = olMatch ? 'ol' : 'ul';
-                    const itemContent = (ulMatch || olMatch)[ulMatch ? 3 : 3];
+                    const itemContent = isListItem[3];
                     const startNumber = olMatch ? olMatch[2] : null;
 
                     if (currentBlock !== currentListType) {
@@ -2452,9 +2452,9 @@
                          currentBlock = currentListType;
                          listType = currentListType;
                          const startAttr = (listType === 'ol' && startNumber !== '1') ? ` start="${startNumber}"` : '';
-                         blockContent = `<li>${escapeHTML(itemContent)}</li>`;
+                         blockContent = `<li>${itemContent}</li>`;
                     } else {
-                         blockContent += `<li>${escapeHTML(itemContent)}</li>`;
+                         blockContent += `<li>${itemContent}</li>`;
                     }
                     continue;
                 }
@@ -2465,9 +2465,9 @@
                 if (currentBlock !== 'p') {
                     closeCurrentBlock();
                     currentBlock = 'p';
-                    blockContent = escapeHTML(line);
+                    blockContent = line;
                 } else {
-                    blockContent += ' ' + escapeHTML(line);
+                    blockContent += ' ' + line;
                 }
             }
 
@@ -3207,7 +3207,7 @@
                 let displayMode = 'markdown';
 
                 if (canViewRaw && state.settings.viewRawHtmlEnabled) {
-                    contentToDisplay = state.bookData.rawContent || chapter.content || "[Raw HTML not available]";
+                    contentToDisplay = chapter.content || state.bookData.rawContent || "[Raw HTML not available for this section]";
                     displayMode = 'raw';
                 } else if (typeof chapter.markdownContent === 'string' && chapter.markdownContent.trim() !== '') {
                     contentToDisplay = chapter.markdownContent;
@@ -4077,17 +4077,25 @@
                          .select('id')
                          .eq('user_id', session.user.id)
                          .eq('title', state.bookData.title);
-
                      if (state.bookData.currentListId === null) {
                          existingBookQuery = existingBookQuery.is('list_id', null);
                      } else {
                          existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId);
                      }
 
-                     const { data: existingBook, error: checkError } = await existingBookQuery.maybeSingle();
+                     const { data: existingBooksData, error: checkError } = await existingBookQuery.limit(1); // Fetch at most one record
+
+                     let existingBook = null;
+                     if (!checkError && existingBooksData && existingBooksData.length > 0) {
+                         existingBook = existingBooksData[0];
+                         // Optional: For debugging, if you want to know if the base query (without limit) would have found more.
+                         // if (existingBooksData.length > 1) { // This will be false if .limit(1) is effective
+                         //    console.warn(`[DEBUG] Base query for existing book found multiple entries for title "${state.bookData.title}". Using the first one due to .limit(1).`);
+                         // }
+                     }
 
                      if (checkError) {
-                         console.error("Error checking for existing book:", checkError);
+                         console.error("Error checking for existing book (query was limited to 1):", checkError);
                          throw checkError;
                      }
 
@@ -4183,7 +4191,7 @@
             function restoreReadingPosition(lastPosition) {
                  if (!lastPosition || !DOM.contentArea) return;
 
-                 showToast('Restoring reading position...', 1500);
+                 showToast('Restoring reading position...', 2500); // Changed line: Increased duration
 
                  requestAnimationFrame(() => {
                      requestAnimationFrame(() => {
@@ -4780,7 +4788,7 @@
                      } else if (typeof listId !== 'number' && listId !== null) {
                           console.warn(`Received unexpected list_id type: ${typeof listId}, value: ${listId}. Defaulting to null.`);
                          listId = null;
-                     }
+                      }
                       if(listId !== null && !state.bookLists.some(l => l.id === listId)) {
                          console.warn(`AI returned list_id ${listId} which does not exist. Defaulting to null.`);
                          listId = null;
