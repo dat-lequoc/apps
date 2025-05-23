@@ -1167,7 +1167,7 @@
             padding: 16px;
             min-width: 220px;
             max-width: 320px;
-            z-index: 100;
+            z-index: 100; /* Lower z-index than flashcard toast */
             display: none;
             border: 1px solid rgba(0,0,0,0.08);
             transform: translateY(10px);
@@ -1249,17 +1249,19 @@
 
         .flashcard-toast {
             position: fixed;
-            bottom: 20px;
+            /* Fallback position if JS doesn't set top/left (e.g., no selection) */
+            bottom: 70px; 
             right: 20px;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             padding: 8px 12px;
-            width: 240px;
-            z-index: 1000;
+            width: 240px; /* Max-width could also be an option */
+            z-index: 1000; /* Higher z-index */
             font-size: 14px;
             opacity: 1;
             transition: opacity 0.5s ease, transform 0.5s ease;
+            /* top and left will be set by JS if state.lastSelectionRect exists */
         }
 
         body.dark-theme .flashcard-toast {
@@ -1286,11 +1288,17 @@
         .flashcard-close-btn {
             background: none;
             border: none;
-            font-size: 18px;
+            font-size: 22px; /* Increased size */
             cursor: pointer;
             color: #888;
-            padding: 0;
+            padding: 4px; /* Increased clickable area */
             margin: 0;
+            line-height: 1; 
+            width: 30px;    
+            height: 30px;   
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .flashcard-word {
@@ -1378,9 +1386,12 @@
             }
 
             .flashcard-toast {
+                /* Fallback for mobile if JS doesn't position */
                 left: 1.25rem;
                 right: 1.25rem;
-                width: auto;
+                width: auto; /* Full width minus margins */
+                bottom: 20px; 
+                /* JS will likely override top/left if selRect exists, even on mobile */
             }
 
             #chat-panel {
@@ -2330,6 +2341,18 @@
     </div>
 
     <script>
+        function checkOverlap(rect1, rect2) {
+            // Check if one rectangle is on the left side of the other
+            if (rect1.right < rect2.left || rect2.right < rect1.left) {
+                return false;
+            }
+            // Check if one rectangle is above the other
+            if (rect1.bottom < rect2.top || rect2.bottom < rect1.top) {
+                return false;
+            }
+            return true; // Rectangles overlap
+        }
+
         function escapeHTML(str) {
              if (!str) return '';
              return str.replace(/&/g, '&amp;')
@@ -4551,7 +4574,7 @@
                  if (existingToast) existingToast.remove();
 
                  const toast = document.createElement('div');
-                 toast.className = 'flashcard-toast visible';
+                 toast.className = 'flashcard-toast'; // Initially visible will be added by JS
 
                  toast.innerHTML = `
                      <div class="flashcard-header">
@@ -4564,37 +4587,91 @@
                          <button type="button" class="flashcard-save-btn">Save</button>
                      </div>`;
 
-                 document.body.appendChild(toast);
+                // Append to body but keep it hidden and fixed to measure its actual dimensions
+                toast.style.visibility = 'hidden';
+                toast.style.position = 'fixed'; // Crucial for getBoundingClientRect with fixed elements
+                document.body.appendChild(toast);
+                const toastActualRect = toast.getBoundingClientRect(); // Get intrinsic dimensions
 
-                 if (state.lastSelectionRect) {
-                     const toastRect = toast.getBoundingClientRect();
-                     const selRect = state.lastSelectionRect;
-                     const viewportWidth = window.innerWidth;
-                     const viewportHeight = window.innerHeight;
-                     const margin = 10;
+                const selRect = state.lastSelectionRect;
+                const transPopupNode = DOM.translationPopup;
+                const vpWidth = window.innerWidth;
+                const vpHeight = window.innerHeight;
+                const margin = 10; // Spacing from selection and viewport edges
 
-                      let top = selRect.bottom + margin;
-                      let left = selRect.left + (selRect.width / 2) - (toastRect.width / 2);
+                if (selRect) {
+                    let toastTop, toastLeft;
 
-                      left = Math.max(margin, Math.min(left, viewportWidth - toastRect.width - margin));
+                    // Initial preferred position: below selection, horizontally centered
+                    toastTop = selRect.bottom + margin;
+                    toastLeft = selRect.left + (selRect.width / 2) - (toastActualRect.width / 2);
 
-                      if (top + toastRect.height > viewportHeight - margin) {
-                           top = selRect.top - toastRect.height - margin;
-                      }
-                      top = Math.max(margin, top);
+                    // Horizontal clamp: ensure toast is within viewport horizontally
+                    toastLeft = Math.max(margin, Math.min(toastLeft, vpWidth - toastActualRect.width - margin));
+
+                    // Vertical placement: if overflows bottom, try to place above selection
+                    if (toastTop + toastActualRect.height > vpHeight - margin) {
+                        toastTop = selRect.top - toastActualRect.height - margin;
+                    }
+
+                    // Vertical clamp: ensure toast is within viewport vertically (top and bottom)
+                    toastTop = Math.max(margin, toastTop); // Clamp to top edge
+                    if (toastTop + toastActualRect.height > vpHeight - margin) { // If still overflows bottom (e.g., tall selection or small screen)
+                        toastTop = vpHeight - toastActualRect.height - margin; // Clamp to bottom edge
+                    }
+                    
+                    const initialToastPlacementWasBelowSelectionMidpoint = selRect.top + selRect.height / 2 < vpHeight / 2;
 
 
-                     toast.style.position = 'fixed';
-                     toast.style.top = `${top}px`;
-                     toast.style.left = `${left}px`;
-                     toast.style.bottom = 'auto';
-                     toast.style.right = 'auto';
-                 } else {
-                     toast.style.bottom = "20px";
-                     toast.style.right = "20px";
-                     toast.style.top = 'auto';
-                     toast.style.left = 'auto';
-                 }
+                    // Check for overlap with translation popup IF IT IS VISIBLE
+                    if (transPopupNode.classList.contains('visible')) {
+                        const transRect = transPopupNode.getBoundingClientRect();
+                        let currentPotentialToastArea = {
+                            top: toastTop, left: toastLeft,
+                            bottom: toastTop + toastActualRect.height, right: toastLeft + toastActualRect.width
+                        };
+
+                        if (checkOverlap(currentPotentialToastArea, transRect)) {
+                            // Overlap detected! Try to resolve.
+                            if (initialToastPlacementWasBelowSelectionMidpoint) { 
+                                // If toast was trying to be below selection (or selection is in top half of screen),
+                                // and it overlaps translation popup, try pushing toast further down, below translation popup.
+                                let newTop = transRect.bottom + margin;
+                                if (newTop + toastActualRect.height <= vpHeight - margin) { // Check if it fits
+                                    toastTop = newTop;
+                                } else { // If it doesn't fit below, try above translation popup (less ideal if selection was low)
+                                    newTop = transRect.top - toastActualRect.height - margin;
+                                    if (newTop >= margin) toastTop = newTop;
+                                    // If neither fits, it will stick to its last calculated (pre-overlap check) position or clamped one
+                                }
+                            } else {
+                                // If toast was trying to be above selection (or selection is in bottom half of screen),
+                                // and it overlaps translation popup, try pushing toast further up, above translation popup.
+                                let newTop = transRect.top - toastActualRect.height - margin;
+                                if (newTop >= margin) { // Check if it fits
+                                    toastTop = newTop;
+                                } else { // If it doesn't fit above, try below translation popup
+                                    newTop = transRect.bottom + margin;
+                                    if (newTop + toastActualRect.height <= vpHeight - margin) toastTop = newTop;
+                                }
+                            }
+                            // Re-clamp to viewport after adjustment for translation popup
+                            toastTop = Math.max(margin, Math.min(toastTop, vpHeight - toastActualRect.height - margin));
+                            toastLeft = Math.max(margin, Math.min(toastLeft, vpWidth - toastActualRect.width - margin));
+                        }
+                    }
+                    toast.style.top = `${toastTop}px`;
+                    toast.style.left = `${toastLeft}px`;
+                    toast.style.bottom = 'auto'; // Override CSS fallback if JS positions
+                    toast.style.right = 'auto';  // Override CSS fallback if JS positions
+                } else {
+                    // No selection rectangle, rely on CSS for positioning (e.g., bottom-right corner by default).
+                    // The CSS for .flashcard-toast already has bottom/right set.
+                }
+
+                // Make it visible now that it's positioned (or using CSS fallback)
+                toast.style.visibility = 'visible';
+                toast.classList.add('visible');
 
 
                  const removeToast = () => {
