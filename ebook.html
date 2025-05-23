@@ -4029,6 +4029,7 @@
 
                  try {
                      let fileType = 'unknown';
+                     const { data: { session } } = await supabase.auth.getSession(); // Moved session check up
                      if (state.bookData.sourceUrl) {
                          fileType = 'url';
                      } else if (state.bookData.title.includes('.')) {
@@ -4147,6 +4148,7 @@
                  showLoading();
                  try {
                      state.bookData.title = book.title;
+                     state.bookData.id = book.id; // <-- ADD THIS LINE
                      state.bookData.currentListId = book.list_id || null;
                      state.bookData.rawContent = book.raw_content || null;
                      DOM.bookTitle.textContent = book.title;
