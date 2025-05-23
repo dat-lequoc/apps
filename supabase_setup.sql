@@ -387,3 +387,6 @@ GROUP BY
   user_id, date
 ORDER BY 
   date DESC;
+
+ALTER TABLE ebooks
+ADD CONSTRAINT unique_user_book_list UNIQUE (user_id, title, list_id);

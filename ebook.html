@@ -2560,6 +2560,7 @@
 
             let state = {
                 bookData: {
+                    id: null,
                     title: '',
                     content: '',
                     chapters: [],
@@ -2739,6 +2740,7 @@
                 const file = DOM.fileInput.files[0];
                 if (!file) return;
                 showLoading();
+                state.bookData.id = null;
                 DOM.bookTitle.textContent = file.name;
                 state.bookData.title = file.name;
                 state.bookData.currentListId = null;
@@ -2755,6 +2757,7 @@
                 const text = DOM.textInput.value.trim();
                 if (!text) { showToast('Please enter some text'); return; }
                 showLoading();
+                state.bookData.id = null;
                 let customTitle = DOM.textInputTitle.value.trim() || text.substring(0, 20).trim() + (text.length > 20 ? '...' : '');
                 DOM.bookTitle.textContent = customTitle;
                 state.bookData.title = customTitle;
@@ -2994,6 +2997,7 @@
                 DOM.processUrlBtn.classList.add('loading');
                 DOM.processUrlBtn.disabled = true;
                 showLoading();
+                state.bookData.id = null;
                 DOM.bookTitle.textContent = `Reading: ${url}`;
                 state.bookData.title = url;
                 state.bookData.currentListId = null;
@@ -3448,7 +3452,7 @@
                 DOM.fileInput.value = '';
                 DOM.textInput.value = '';
                 DOM.textInputTitle.value = '';
-                state.bookData = { title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null };
+                state.bookData = { id: null, title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null };
                 state.selectedListId = 'all';
                 state.bookLists = [];
                 DOM.sourceUrlDisplay.style.display = 'none';
@@ -4029,7 +4033,6 @@
 
                  try {
                      let fileType = 'unknown';
-                     const { data: { session } } = await supabase.auth.getSession(); // Moved session check up
                      if (state.bookData.sourceUrl) {
                          fileType = 'url';
                      } else if (state.bookData.title.includes('.')) {
@@ -4074,72 +4077,106 @@
                          updated_at: new Date()
                      };
 
-                     let existingBookQuery = supabase.from('ebooks')
-                         .select('id')
-                         .eq('user_id', session.user.id)
-                         .eq('title', state.bookData.title);
-                     if (state.bookData.currentListId === null) {
-                         existingBookQuery = existingBookQuery.is('list_id', null);
-                     } else {
-                         existingBookQuery = existingBookQuery.eq('list_id', state.bookData.currentListId);
-                     }
-
-                     const { data: existingBooksData, error: checkError } = await existingBookQuery.limit(1); // Fetch at most one record
-
-                     let existingBook = null;
-                     if (!checkError && existingBooksData && existingBooksData.length > 0) {
-                         existingBook = existingBooksData[0];
-                         // Optional: For debugging, if you want to know if the base query (without limit) would have found more.
-                         // if (existingBooksData.length > 1) { // This will be false if .limit(1) is effective
-                         //    console.warn(`[DEBUG] Base query for existing book found multiple entries for title "${state.bookData.title}". Using the first one due to .limit(1).`);
-                         // }
-                     }
-
-                     if (checkError) {
-                         console.error("Error checking for existing book (query was limited to 1):", checkError);
-                         throw checkError;
-                     }
-
-                     if (existingBook && existingBook.id) {
-                         const { error: updateError } = await supabase
-                             .from('ebooks')
-                             .update({
-                                 raw_content: bookRecord.raw_content,
-                                 metadata: bookRecord.metadata,
-                                 last_position: bookRecord.last_position,
-                                 updated_at: bookRecord.updated_at,
-                                 file_type: bookRecord.file_type
-                             })
-                             .eq('id', existingBook.id);
-
-                         if (updateError) {
-                             console.error("Error updating book:", updateError);
-                             throw updateError;
-                         }
-                     } else {
-                         const { error: insertError } = await supabase
-                             .from('ebooks')
-                             .insert({
-                                user_id: bookRecord.user_id,
+                    if (state.bookData.id) {
+                        console.log(`Attempting to update book by known ID: ${state.bookData.id}`);
+                        const { error: updateByIdError } = await supabase
+                            .from('ebooks')
+                            .update({
                                 title: bookRecord.title,
-                                content: bookRecord.content,
                                 raw_content: bookRecord.raw_content,
-                                file_type: bookRecord.file_type,
                                 metadata: bookRecord.metadata,
                                 last_position: bookRecord.last_position,
+                                updated_at: bookRecord.updated_at,
+                                file_type: bookRecord.file_type,
                                 list_id: bookRecord.list_id
-                             });
+                            })
+                            .eq('user_id', session.user.id) // Ensure user owns this ID
+                            .eq('id', state.bookData.id);
 
-                         if (insertError) {
-                             console.error("Error inserting book:", insertError);
-                             throw insertError;
-                         }
-                          console.log("Book saved to library:", bookRecord.title);
+                        if (updateByIdError) {
+                            console.error(`Error updating book by ID ${state.bookData.id}:`, updateByIdError);
+                            // If update by ID fails (e.g., record deleted, or RLS policy),
+                            // PGRST116 from Supabase often means "0 rows updated".
+                            if (updateByIdError.code === 'PGRST116' || (updateByIdError.details && updateByIdError.details.includes("0 rows"))) {
+                                console.warn(`Update by ID ${state.bookData.id} found no matching record. Will try to find by attributes or insert.`);
+                                state.bookData.id = null;
+                            } else {
+                                throw updateByIdError;
+                            }
+                        } else {
+                            console.log(`Book updated successfully by ID: ${state.bookData.id}`);
+                            return true;
+                        }
+                    }
+
+                    // Fallback: If state.bookData.id was not set, or update-by-ID failed and reset it
+                    if (!state.bookData.id) {
+                        let existingBookQuery = supabase.from('ebooks')
+                            .select('id')
+                            .eq('user_id', session.user.id)
+                            .eq('title', bookRecord.title);
+
+                        if (bookRecord.list_id === null) {
+                            existingBookQuery = existingBookQuery.is('list_id', null);
+                        } else {
+                            existingBookQuery = existingBookQuery.eq('list_id', bookRecord.list_id);
+                        }
+
+                        const { data: existingBooksData, error: checkError } = await existingBookQuery.limit(1);
+
+                        let existingBookEntry = null;
+                        if (!checkError && existingBooksData && existingBooksData.length > 0) {
+                            existingBookEntry = existingBooksData[0];
+                        }
+
+                        if (checkError) {
+                            console.error("Error checking for existing book by attributes:", checkError);
+                            throw checkError;
+                        }
+
+                        if (existingBookEntry && existingBookEntry.id) {
+                            console.log(`Found existing book by attributes (ID: ${existingBookEntry.id}). Updating.`);
+                            const { error: updateError } = await supabase
+                                .from('ebooks')
+                                .update({ // Only update fields that change, title & list_id were match criteria
+                                    raw_content: bookRecord.raw_content,
+                                    metadata: bookRecord.metadata,
+                                    last_position: bookRecord.last_position,
+                                    updated_at: bookRecord.updated_at,
+                                    file_type: bookRecord.file_type
+                                })
+                                .eq('id', existingBookEntry.id);
+
+                            if (updateError) {
+                                console.error("Error updating book found by attributes:", updateError);
+                                throw updateError;
+                            }
+                            state.bookData.id = existingBookEntry.id; // Store found ID in state
+                            console.log(`Book updated successfully by attributes, ID: ${state.bookData.id}`);
+                        } else {
+                            console.log(`No existing book found by attributes for title "${bookRecord.title}". Inserting new record.`);
+                            const { data: insertedData, error: insertError } = await supabase
+                                .from('ebooks')
+                                .insert(bookRecord)
+                                .select('id') // Select the ID of the newly inserted record
+                                .single();
+
+                            if (insertError) {
+                                console.error("Error inserting new book:", insertError);
+                                throw insertError;
+                            }
+                            if (insertedData && insertedData.id) {
+                                state.bookData.id = insertedData.id; // Store the new ID in state
+                                console.log(`Book inserted successfully with ID: ${state.bookData.id}`);
+                            } else {
+                                console.warn("Insert operation did not return an ID.");
+                            }
+                        }
                      }
 
                      return true;
                  } catch (error) {
-                     console.error('Error saving book to library:', error);
+                     console.error('Full error in saveBookToLibrary:', error);
                      return false;
                  }
              }
@@ -4148,7 +4185,7 @@
                  showLoading();
                  try {
                      state.bookData.title = book.title;
-                     state.bookData.id = book.id; // <-- ADD THIS LINE
+                     state.bookData.id = book.id; // Store the database ID
                      state.bookData.currentListId = book.list_id || null;
                      state.bookData.rawContent = book.raw_content || null;
                      DOM.bookTitle.textContent = book.title;
