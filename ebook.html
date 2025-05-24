@@ -1012,39 +1012,28 @@
 
         #nav-controls {
             position: fixed;
-            bottom: 0;
+            bottom: 1.25rem;
             left: 0;
             right: 0;
             display: flex;
             justify-content: space-between;
-            padding: 0.75rem 1.25rem;
-            background-color: var(--panel-bg);
-            box-shadow: 0 -2px 5px var(--panel-shadow);
+            padding: 0 1.25rem;
             z-index: 15;
-            opacity: 0;
-            transform: translateY(100%);
-            transition: transform 0.3s ease, opacity 0.3s ease;
             pointer-events: none;
-        }
-
-        #nav-controls.visible {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
         }
 
         .nav-btn {
             width: 2.5rem;
             height: 2.5rem;
             border-radius: 50%;
-            background-color: transparent; /* Button transparent as bar has bg */
+            background-color: var(--panel-bg);
             color: var(--text-color);
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            pointer-events: auto; /* This should be on #nav-controls.visible */
-            box-shadow: none; /* Removed individual shadow */
+            pointer-events: auto;
+            box-shadow: 0 2px 5px var(--panel-shadow);
             transition: background-color 0.2s;
         }
 
@@ -2539,7 +2528,6 @@
                 lineHeightValue: document.getElementById('line-height-value'),
                 themeOptions: document.querySelectorAll('.theme-option'),
                 progressBar: document.getElementById('progress-bar'),
-                navControls: document.getElementById('nav-controls'),
                 prevBtn: document.getElementById('prev-btn'),
                 nextBtn: document.getElementById('next-btn'),
                 loading: document.getElementById('loading'),
@@ -3193,9 +3181,9 @@
 
             function showBook() {
                 DOM.welcomeScreen.style.display = 'none';
-                DOM.navbar.classList.remove('visible');
-                DOM.navControls.classList.remove('visible');
+                DOM.navbar.classList.add('visible');
                 clearTimeout(state.navbarHideTimer);
+                state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000);
 
                 displayCurrentChapter();
                 populateToc();
@@ -3308,22 +3296,15 @@
             function goToNext() { const numChapters = state.bookData.chapters?.length || 0; if (state.bookData.currentPosition < numChapters - 1) { state.bookData.currentPosition++; displayCurrentChapter(); saveBookToLibrary(); } }
 
             function toggleNavbar() {
-                const becomingVisible = !DOM.navbar.classList.contains('visible');
-                DOM.navbar.classList.toggle('visible', becomingVisible);
-                DOM.navControls.classList.toggle('visible', becomingVisible);
-
-                clearTimeout(state.navbarHideTimer);
-                if (becomingVisible) {
-                    state.navbarHideTimer = setTimeout(() => {
-                        DOM.navbar.classList.remove('visible');
-                        DOM.navControls.classList.remove('visible');
-                    }, 3000);
+                DOM.navbar.classList.toggle('visible');
+                if (DOM.navbar.classList.contains('visible')) {
+                    clearTimeout(state.navbarHideTimer);
+                    state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000);
                 }
             }
 
             function openAPanelProcedure() {
                 DOM.navbar.classList.add('visible');
-                DOM.navControls.classList.add('visible');
                 clearTimeout(state.navbarHideTimer);
                 DOM.overlay.classList.add('visible');
             }
@@ -3336,7 +3317,6 @@
                     clearTimeout(state.navbarHideTimer); // Clear just in case
                     state.navbarHideTimer = setTimeout(() => {
                         DOM.navbar.classList.remove('visible');
-                        DOM.navControls.classList.remove('visible');
                     }, 3000);
                 }
             }
@@ -3403,7 +3383,6 @@
                     clearTimeout(state.navbarHideTimer);
                     state.navbarHideTimer = setTimeout(() => {
                         DOM.navbar.classList.remove('visible');
-                        DOM.navControls.classList.remove('visible');
                     }, 3000);
                 }
             }
@@ -3498,7 +3477,6 @@
             function goToHome() {
                 DOM.welcomeScreen.style.display = 'flex';
                 DOM.navbar.classList.remove('visible');
-                DOM.navControls.classList.remove('visible');
                 closeAllPanels();
                 DOM.fileInput.value = '';
                 DOM.textInput.value = '';
@@ -3541,7 +3519,6 @@
 
                 const clickedOnInteractiveUI =
                     (DOM.navbar.contains(e.target) && DOM.navbar.classList.contains('visible')) ||
-                    (DOM.navControls.contains(e.target) && DOM.navControls.classList.contains('visible')) ||
                     (DOM.tocPanel.contains(e.target) && DOM.tocPanel.classList.contains('visible')) ||
                     (DOM.settingsPanel.contains(e.target) && DOM.settingsPanel.classList.contains('visible')) ||
                     (DOM.chatPanel.contains(e.target) && DOM.chatPanel.classList.contains('visible')) ||
@@ -3556,7 +3533,6 @@
                         clearTimeout(state.navbarHideTimer);
                         state.navbarHideTimer = setTimeout(() => {
                             DOM.navbar.classList.remove('visible');
-                            DOM.navControls.classList.remove('visible');
                         }, 3000);
                     }
                     return;
