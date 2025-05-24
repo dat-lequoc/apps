@@ -4619,11 +4619,9 @@
                     if (toastLeft + toastActualRect.width > vpWidth - margin) {
                         toastLeft = vpWidth - toastActualRect.width - margin;
                     }
-                    // If aligning to viewport right still makes it go off-screen left (e.g. very wide toast on small screen),
-                    // try left of selection.
-                    if (toastLeft < margin) {
-                         toastLeft = selRect.left - toastActualRect.width - margin;
-                    }
+                    // If the above positioning results in the toast being off-screen to the left
+                    // (e.g., very wide toast on a small screen, or selection is very far right and toast is wide),
+                    // the clamping below will handle it by pinning it to the left margin.
 
                     // --- CLAMPING ---
                     // Horizontal clamp
