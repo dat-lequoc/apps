@@ -443,11 +443,10 @@
         .library-item-title {
             display: inline;
             font-weight: 500;
-            /* margin-bottom: 0.25rem; /* Handled by container */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            flex-grow: 1; /* Allow title to take space */
+            flex-grow: 1;
         }
 
         .library-item-list-badge {
@@ -481,7 +480,7 @@
             display: flex;
             align-items: center;
             margin-bottom: 0.25rem;
-            min-width: 0; /* Prevent overflow issues with flex children */
+            min-width: 0;
         }
 
         .library-item-meta {
@@ -687,7 +686,7 @@
         }
 
         #navbar {
-            position: absolute;
+            position: fixed; /* Changed from absolute */
             top: 0;
             left: 0;
             right: 0;
@@ -749,9 +748,7 @@
         #content-area {
             height: 100%;
             overflow-y: auto;
-            padding: 1rem;
-            padding-top: 2rem;
-            padding-bottom: 4rem;
+            padding: 2.5rem 1.5rem; /* Adjusted padding for better default look */
             -webkit-overflow-scrolling: touch;
             user-select: text;
             -webkit-user-select: text;
@@ -939,13 +936,13 @@
         }
 
         #ai-response-area {
-            display: none; /* Controlled by JS */
+            display: none;
             background-color: rgba(255, 255, 255, 0.05);
             border-radius: 4px;
             padding: 0.75rem;
             margin-top: 0.75rem;
             font-size: 0.875rem;
-            max-height: 12.5rem; /* From CSS, inline style had 15rem */
+            max-height: 12.5rem;
             overflow-y: auto;
             border: 1px solid var(--border-color);
         }
@@ -1015,34 +1012,46 @@
 
         #nav-controls {
             position: fixed;
-            bottom: 1.25rem;
+            bottom: 0;
             left: 0;
             right: 0;
             display: flex;
             justify-content: space-between;
-            padding: 0 1.25rem;
-            pointer-events: none;
+            padding: 0.75rem 1.25rem;
+            background-color: var(--panel-bg);
+            box-shadow: 0 -2px 5px var(--panel-shadow);
             z-index: 15;
+            opacity: 0;
+            transform: translateY(100%);
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        #nav-controls.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
         }
 
         .nav-btn {
             width: 2.5rem;
             height: 2.5rem;
             border-radius: 50%;
-            background-color: var(--panel-bg);
+            background-color: transparent; /* Button transparent as bar has bg */
             color: var(--text-color);
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            pointer-events: auto;
-            box-shadow: 0 2px 5px var(--panel-shadow);
+            pointer-events: auto; /* This should be on #nav-controls.visible */
+            box-shadow: none; /* Removed individual shadow */
             transition: background-color 0.2s;
         }
 
         .nav-btn:hover {
             background-color: rgba(255, 255, 255, 0.1);
         }
+
 
         #toc-panel {
             position: fixed;
@@ -1167,7 +1176,7 @@
             padding: 16px;
             min-width: 220px;
             max-width: 320px;
-            z-index: 100; /* Lower z-index than flashcard toast */
+            z-index: 100;
             display: none;
             border: 1px solid rgba(0,0,0,0.08);
             transform: translateY(10px);
@@ -1249,19 +1258,17 @@
 
         .flashcard-toast {
             position: fixed;
-            /* Fallback position if JS doesn't set top/left (e.g., no selection) */
-            bottom: 70px; 
+            bottom: 70px;
             right: 20px;
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             padding: 8px 12px;
-            width: 240px; /* Max-width could also be an option */
-            z-index: 1000; /* Higher z-index */
+            width: 240px;
+            z-index: 1000;
             font-size: 14px;
             opacity: 1;
             transition: opacity 0.5s ease, transform 0.5s ease;
-            /* top and left will be set by JS if state.lastSelectionRect exists */
         }
 
         body.dark-theme .flashcard-toast {
@@ -1288,14 +1295,14 @@
         .flashcard-close-btn {
             background: none;
             border: none;
-            font-size: 22px; /* Increased size */
+            font-size: 22px;
             cursor: pointer;
             color: #888;
-            padding: 4px; /* Increased clickable area */
+            padding: 4px;
             margin: 0;
-            line-height: 1; 
-            width: 30px;    
-            height: 30px;   
+            line-height: 1;
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -1386,12 +1393,10 @@
             }
 
             .flashcard-toast {
-                /* Fallback for mobile if JS doesn't position */
                 left: 1.25rem;
                 right: 1.25rem;
-                width: auto; /* Full width minus margins */
-                bottom: 20px; 
-                /* JS will likely override top/left if selRect exists, even on mobile */
+                width: auto;
+                bottom: 20px;
             }
 
             #chat-panel {
@@ -1779,14 +1784,13 @@
         }
 
 
-        .settings-section { /* This is a general rule, also used by #ai-features-section */
-            margin-bottom: 0; /* Reset by .settings-grid > .settings-section or specific overrides */
+        .settings-section {
+            margin-bottom: 0;
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
 
-        /* .settings-section:last-child is handled by the more generic one */
 
         .settings-section > label {
             display: block;
@@ -1820,7 +1824,7 @@
             gap: 10px;
         }
 
-        .theme-option { /* This is for the options in the new .settings-content panel, different from #settings-panel theme options */
+        .theme-option {
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -2298,7 +2302,6 @@
             </div>
             <div id="chat-input-area">
                 <div id="chat-suggestions">
-                    <!-- Suggested questions will be rendered here -->
                 </div>
                 <div class="chat-input-row">
                     <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
@@ -2342,15 +2345,13 @@
 
     <script>
         function checkOverlap(rect1, rect2) {
-            // Check if one rectangle is on the left side of the other
             if (rect1.right < rect2.left || rect2.right < rect1.left) {
                 return false;
             }
-            // Check if one rectangle is above the other
             if (rect1.bottom < rect2.top || rect2.bottom < rect1.top) {
                 return false;
             }
-            return true; // Rectangles overlap
+            return true;
         }
 
         function escapeHTML(str) {
@@ -2495,7 +2496,6 @@
             }
 
             closeCurrentBlock();
-
             return html;
         }
 
@@ -2539,6 +2539,7 @@
                 lineHeightValue: document.getElementById('line-height-value'),
                 themeOptions: document.querySelectorAll('.theme-option'),
                 progressBar: document.getElementById('progress-bar'),
+                navControls: document.getElementById('nav-controls'),
                 prevBtn: document.getElementById('prev-btn'),
                 nextBtn: document.getElementById('next-btn'),
                 loading: document.getElementById('loading'),
@@ -2575,7 +2576,7 @@
                 chatSendBtn: document.getElementById('chat-send-btn'),
                 chatClearBtn: document.getElementById('chat-clear-btn'),
                 chatFullDocToggle: document.getElementById('chat-full-doc-toggle'),
-                chatSuggestions: document.getElementById('chat-suggestions'), // Container for suggestion chips
+                chatSuggestions: document.getElementById('chat-suggestions'),
                 aiSettingsContent: document.getElementById('ai-settings-content'),
                 summarizeChapterBtn: document.getElementById('summarize-chapter-btn'),
                 aiResponseArea: document.getElementById('ai-response-area')
@@ -2614,7 +2615,6 @@
                 lastPosition: null
             };
 
-            // Initial generic questions if chat is empty
             const initialSuggestedQuestions = [
                 "Summarize this.",
                 "What are the key points?",
@@ -2701,10 +2701,9 @@
                 DOM.chatFullDocToggle.addEventListener('change', (e) => {
                     state.chatUseFullDocument = e.target.checked;
                     showToast(`Chat context set to: ${state.chatUseFullDocument ? 'Full Document' : 'Current Chapter'}`, 2000);
-                    // Optionally clear suggestions or add default ones when context changes
                     renderSuggestedQuestions(initialSuggestedQuestions);
                 });
-                DOM.chatSuggestions.addEventListener('click', handleSuggestionClick); // Add listener for suggestion clicks
+                DOM.chatSuggestions.addEventListener('click', handleSuggestionClick);
                 DOM.summarizeChapterBtn.addEventListener('click', summarizeCurrentChapter);
             }
 
@@ -2724,10 +2723,6 @@
                          cancelListCreation();
                      }
                  }
-
-                 if (DOM.chatPanel.classList.contains('visible') && !DOM.chatPanel.contains(event.target) && !DOM.chatBtn.contains(event.target)) { closeChatPanel(); }
-                 if (DOM.settingsPanel.classList.contains('visible') && !DOM.settingsPanel.contains(event.target) && !DOM.settingsBtn.contains(event.target)) { closeSettingsPanel(); }
-                 if (DOM.tocPanel.classList.contains('visible') && !DOM.tocPanel.contains(event.target) && !DOM.tocBtn.contains(event.target)) { closeTocPanel(); }
              }
 
             function handleKeyPress(e) {
@@ -2744,11 +2739,11 @@
                 }
 
                 if (e.key === 'Enter' && state.isCreatingList && e.target === DOM.newListNameInput) { handleCreateList(); e.preventDefault(); }
-                if (e.key === 't' && !e.ctrlKey && !e.metaKey) { toggleTocPanel(); e.preventDefault(); }
-                if (e.key === 's' && !e.ctrlKey && !e.metaKey) { toggleSettingsPanel(); e.preventDefault(); }
-                if (e.key === 'h' && !e.ctrlKey && !e.metaKey) { goToHome(); e.preventDefault(); }
-                if ((e.key === '+' || e.key === '=') && (e.ctrlKey || e.metaKey)) { increaseFontSize(); saveUserPreferences(); e.preventDefault(); }
-                if (e.key === '-' && (e.ctrlKey || e.metaKey)) { decreaseFontSize(); saveUserPreferences(); e.preventDefault(); }
+                if (e.key === 't' && !e.ctrlKey && !e.metaKey && DOM.readerContainer.offsetParent !== null) { toggleTocPanel(); e.preventDefault(); }
+                if (e.key === 's' && !e.ctrlKey && !e.metaKey && DOM.readerContainer.offsetParent !== null) { toggleSettingsPanel(); e.preventDefault(); }
+                if (e.key === 'h' && !e.ctrlKey && !e.metaKey && DOM.readerContainer.offsetParent !== null) { goToHome(); e.preventDefault(); }
+                if ((e.key === '+' || e.key === '=') && (e.ctrlKey || e.metaKey) && DOM.readerContainer.offsetParent !== null) { increaseFontSize(); saveUserPreferences(); e.preventDefault(); }
+                if (e.key === '-' && (e.ctrlKey || e.metaKey) && DOM.readerContainer.offsetParent !== null) { decreaseFontSize(); saveUserPreferences(); e.preventDefault(); }
                 if (e.key === 'c' && !e.ctrlKey && !e.metaKey && DOM.readerContainer.offsetParent !== null) { toggleChatPanel(); e.preventDefault(); }
             }
 
@@ -2756,7 +2751,7 @@
             function handleTouchEnd(e) {
                 state.touchEndY = e.changedTouches[0].clientY;
                 const distance = state.touchStartY - state.touchEndY;
-                if (distance < -50 && DOM.contentArea.scrollTop <= 0) { toggleNavbar(); }
+                if (distance < -50 && DOM.contentArea.scrollTop <= 0 && DOM.readerContainer.offsetParent !== null) { toggleNavbar(); }
             }
 
             function handleFileSelected() {
@@ -3115,7 +3110,6 @@
                  } catch (error) { console.error('Error scraping and saving link:', error); showToast(`Error scraping "${url}": ${error.message}`, 5000); }
             }
 
-            // Renders clickable suggestion chips in the chat input area
             function renderSuggestedQuestions(questions = []) {
                 DOM.chatSuggestions.innerHTML = '';
                 if (questions && questions.length > 0) {
@@ -3124,7 +3118,7 @@
                         const chip = document.createElement('button');
                         chip.className = 'suggestion-chip';
                         chip.textContent = question;
-                        chip.type = 'button'; // Important for accessibility and forms
+                        chip.type = 'button';
                         DOM.chatSuggestions.appendChild(chip);
                     });
                 } else {
@@ -3132,16 +3126,12 @@
                 }
             }
 
-            // Handles clicks on suggestion chips
             function handleSuggestionClick(event) {
                 const clickedChip = event.target.closest('.suggestion-chip');
                 if (!clickedChip) return;
-
-                // Send the clicked suggestion as a new message
                 sendSuggestedQuestion(clickedChip.textContent);
             }
 
-            // Sends a suggested question (similar to user sending a message)
             function sendSuggestedQuestion(question) {
                 if (!state.userApiSettings || !state.userApiSettings.api_key) {
                     displayChatMessage('assistant', 'Sorry, the Gemini API key is not configured. Please set it up in the main dashboard.');
@@ -3151,7 +3141,7 @@
                 state.chatHistory.push({ role: 'user', parts: [{ text: question }] });
                 const loadingElement = displayChatMessage('assistant', '', true);
                 DOM.chatSendBtn.disabled = true;
-                renderSuggestedQuestions([]); // Clear suggestions after one is clicked
+                renderSuggestedQuestions([]);
                 processAndSendChat(question, loadingElement);
             }
 
@@ -3203,9 +3193,9 @@
 
             function showBook() {
                 DOM.welcomeScreen.style.display = 'none';
-                DOM.navbar.classList.add('visible');
+                DOM.navbar.classList.remove('visible');
+                DOM.navControls.classList.remove('visible');
                 clearTimeout(state.navbarHideTimer);
-                state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000);
 
                 displayCurrentChapter();
                 populateToc();
@@ -3318,67 +3308,104 @@
             function goToNext() { const numChapters = state.bookData.chapters?.length || 0; if (state.bookData.currentPosition < numChapters - 1) { state.bookData.currentPosition++; displayCurrentChapter(); saveBookToLibrary(); } }
 
             function toggleNavbar() {
-                DOM.navbar.classList.toggle('visible');
-                if (DOM.navbar.classList.contains('visible')) { clearTimeout(state.navbarHideTimer); state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000); }
+                const becomingVisible = !DOM.navbar.classList.contains('visible');
+                DOM.navbar.classList.toggle('visible', becomingVisible);
+                DOM.navControls.classList.toggle('visible', becomingVisible);
+
+                clearTimeout(state.navbarHideTimer);
+                if (becomingVisible) {
+                    state.navbarHideTimer = setTimeout(() => {
+                        DOM.navbar.classList.remove('visible');
+                        DOM.navControls.classList.remove('visible');
+                    }, 3000);
+                }
+            }
+
+            function openAPanelProcedure() {
+                DOM.navbar.classList.add('visible');
+                DOM.navControls.classList.add('visible');
+                clearTimeout(state.navbarHideTimer);
+                DOM.overlay.classList.add('visible');
+            }
+
+            function closeAPanelProcedure() {
+                if (!DOM.tocPanel.classList.contains('visible') &&
+                    !DOM.settingsPanel.classList.contains('visible') &&
+                    !DOM.chatPanel.classList.contains('visible')) {
+                    DOM.overlay.classList.remove('visible');
+                    clearTimeout(state.navbarHideTimer); // Clear just in case
+                    state.navbarHideTimer = setTimeout(() => {
+                        DOM.navbar.classList.remove('visible');
+                        DOM.navControls.classList.remove('visible');
+                    }, 3000);
+                }
             }
 
             function toggleTocPanel() {
                 const isVisible = !DOM.tocPanel.classList.contains('visible');
                 DOM.tocPanel.classList.toggle('visible', isVisible);
-                DOM.overlay.classList.toggle('visible', isVisible);
                 if (isVisible) {
+                    openAPanelProcedure();
                     DOM.settingsPanel.classList.remove('visible');
                     DOM.chatPanel.classList.remove('visible');
                     const activeItem = DOM.tocContent.querySelector('.toc-active');
                     if (activeItem) {
                         setTimeout(() => activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
                     }
+                } else {
+                    closeAPanelProcedure();
                 }
             }
-            function closeTocPanel() { DOM.tocPanel.classList.remove('visible'); if (!DOM.settingsPanel.classList.contains('visible') && !DOM.chatPanel.classList.contains('visible')) DOM.overlay.classList.remove('visible'); }
+            function closeTocPanel() { DOM.tocPanel.classList.remove('visible'); closeAPanelProcedure(); }
 
             function toggleSettingsPanel() {
                 const isVisible = !DOM.settingsPanel.classList.contains('visible');
                 DOM.settingsPanel.classList.toggle('visible', isVisible);
-                DOM.overlay.classList.toggle('visible', isVisible);
-                 if (isVisible) { DOM.tocPanel.classList.remove('visible'); DOM.chatPanel.classList.remove('visible'); }
+                if (isVisible) {
+                    openAPanelProcedure();
+                    DOM.tocPanel.classList.remove('visible');
+                    DOM.chatPanel.classList.remove('visible');
+                } else {
+                    closeAPanelProcedure();
+                }
             }
-            function closeSettingsPanel() { DOM.settingsPanel.classList.remove('visible'); if (!DOM.tocPanel.classList.contains('visible') && !DOM.chatPanel.classList.contains('visible')) DOM.overlay.classList.remove('visible'); }
+            function closeSettingsPanel() { DOM.settingsPanel.classList.remove('visible'); closeAPanelProcedure(); }
 
             function toggleChatPanel() {
                 const isVisible = !DOM.chatPanel.classList.contains('visible');
                 DOM.chatPanel.classList.toggle('visible', isVisible);
-                DOM.overlay.classList.toggle('visible', isVisible);
                  if (isVisible) {
+                     openAPanelProcedure();
                      DOM.tocPanel.classList.remove('visible');
                      DOM.settingsPanel.classList.remove('visible');
-                     // Show initial suggestions only if chat is empty/new
                      if (state.chatHistory.length <= 1) {
                          renderSuggestedQuestions(initialSuggestedQuestions);
-                     } else {
-                         // Otherwise, maybe show last suggestions or clear them
-                         // For now, let's clear them if panel was closed and reopened without new message
-                         // renderSuggestedQuestions([]); // Or keep the last ones? Let's keep them for now.
                      }
                      DOM.chatInput.focus();
                  } else {
-                     // Clear suggestions when panel is explicitly closed
                      renderSuggestedQuestions([]);
+                     closeAPanelProcedure();
                  }
             }
             function closeChatPanel() {
                 DOM.chatPanel.classList.remove('visible');
-                if (!DOM.tocPanel.classList.contains('visible') && !DOM.settingsPanel.classList.contains('visible')) {
-                    DOM.overlay.classList.remove('visible');
-                }
-                renderSuggestedQuestions([]); // Clear suggestions on close
+                renderSuggestedQuestions([]);
+                closeAPanelProcedure();
             }
 
-
             function closeAllPanels() {
-                closeTocPanel();
-                closeSettingsPanel();
-                closeChatPanel();
+                DOM.tocPanel.classList.remove('visible');
+                DOM.settingsPanel.classList.remove('visible');
+                DOM.chatPanel.classList.remove('visible');
+                DOM.overlay.classList.remove('visible');
+
+                if (DOM.navbar.classList.contains('visible')) {
+                    clearTimeout(state.navbarHideTimer);
+                    state.navbarHideTimer = setTimeout(() => {
+                        DOM.navbar.classList.remove('visible');
+                        DOM.navControls.classList.remove('visible');
+                    }, 3000);
+                }
             }
 
             function showAiCleanupModal() {
@@ -3471,6 +3498,7 @@
             function goToHome() {
                 DOM.welcomeScreen.style.display = 'flex';
                 DOM.navbar.classList.remove('visible');
+                DOM.navControls.classList.remove('visible');
                 closeAllPanels();
                 DOM.fileInput.value = '';
                 DOM.textInput.value = '';
@@ -3483,13 +3511,11 @@
             }
 
             function handleContentClick(e) {
-                 if (!state.settings.viewRawHtmlEnabled) {
+                if (!state.settings.viewRawHtmlEnabled) {
                      const link = e.target.closest('a');
-
                      if (link && link.href && DOM.contentArea.contains(link)) {
                          e.preventDefault();
                          const url = link.href;
-
                          if (url.startsWith('http://') || url.startsWith('https://')) {
                              const linkText = link.textContent || url;
                              showLinkActionConfirmation(url, linkText);
@@ -3499,19 +3525,43 @@
                          }
                          return;
                      }
-                 }
+                }
 
                 const selection = window.getSelection();
-                if (selection && selection.toString().trim().length > 0) return;
-                const clickY = e.clientY;
-                const viewportHeight = window.innerHeight;
-                if (DOM.navbar.classList.contains('visible')) { if (!DOM.navbar.contains(e.target)) DOM.navbar.classList.remove('visible'); }
-                else if (clickY <= viewportHeight * 0.15) { toggleNavbar(); }
+                const isTextSelected = selection && selection.toString().trim().length > 0;
 
-                if (!DOM.translationPopup.contains(e.target)) {
-                     DOM.translationPopup.classList.remove('visible');
-                     setTimeout(() => { DOM.translationPopup.style.display = 'none'; }, 200);
+                if (!DOM.translationPopup.contains(e.target) && !(isTextSelected && DOM.translationPopup.style.display === 'none')) {
+                    if (DOM.translationPopup.classList.contains('visible')) {
+                        DOM.translationPopup.classList.remove('visible');
+                        setTimeout(() => { if (!DOM.translationPopup.classList.contains('visible')) DOM.translationPopup.style.display = 'none'; }, 200);
+                    }
                 }
+
+                if (isTextSelected) return;
+
+                const clickedOnInteractiveUI =
+                    (DOM.navbar.contains(e.target) && DOM.navbar.classList.contains('visible')) ||
+                    (DOM.navControls.contains(e.target) && DOM.navControls.classList.contains('visible')) ||
+                    (DOM.tocPanel.contains(e.target) && DOM.tocPanel.classList.contains('visible')) ||
+                    (DOM.settingsPanel.contains(e.target) && DOM.settingsPanel.classList.contains('visible')) ||
+                    (DOM.chatPanel.contains(e.target) && DOM.chatPanel.classList.contains('visible')) ||
+                    [DOM.tocBtn, DOM.settingsBtn, DOM.chatBtn, DOM.homeBtn].some(btn => btn.contains(e.target));
+
+                if (clickedOnInteractiveUI) {
+                    if (DOM.navbar.classList.contains('visible') &&
+                        !DOM.tocPanel.classList.contains('visible') &&
+                        !DOM.settingsPanel.classList.contains('visible') &&
+                        !DOM.chatPanel.classList.contains('visible'))
+                    {
+                        clearTimeout(state.navbarHideTimer);
+                        state.navbarHideTimer = setTimeout(() => {
+                            DOM.navbar.classList.remove('visible');
+                            DOM.navControls.classList.remove('visible');
+                        }, 3000);
+                    }
+                    return;
+                }
+                toggleNavbar();
             }
 
             function handleTextSelection() {
@@ -3960,7 +4010,7 @@
                     showToast(`List "${listName}" created.`);
                     cancelListCreation();
                     await fetchBookLists();
-                } catch (error) { console.error('Error creating list:', error); showToast(`Error: ${error.message}`); DOM.createListBtn.disabled = false; DOM.createListBtn.classList.remove('loading'); DOM.createListBtn.textContent = '✓'; DOM.newListNameInput.focus(); }
+                } catch (error) { console.error('Error creating list:', error); showToast(`Error: ${error.message}`); DOM.createListBtn.disabled = false; DOM.createListBtn.classList.remove('loading'); DOM.createListBtn.textContent = state.isCreatingList ? '✓' : '+'; DOM.newListNameInput.focus(); }
                 finally {
                      if (DOM.createListBtn.classList.contains('loading')) {
                          DOM.createListBtn.disabled = false;
@@ -4113,13 +4163,11 @@
                                 file_type: bookRecord.file_type,
                                 list_id: bookRecord.list_id
                             })
-                            .eq('user_id', session.user.id) // Ensure user owns this ID
+                            .eq('user_id', session.user.id)
                             .eq('id', state.bookData.id);
 
                         if (updateByIdError) {
                             console.error(`Error updating book by ID ${state.bookData.id}:`, updateByIdError);
-                            // If update by ID fails (e.g., record deleted, or RLS policy),
-                            // PGRST116 from Supabase often means "0 rows updated".
                             if (updateByIdError.code === 'PGRST116' || (updateByIdError.details && updateByIdError.details.includes("0 rows"))) {
                                 console.warn(`Update by ID ${state.bookData.id} found no matching record. Will try to find by attributes or insert.`);
                                 state.bookData.id = null;
@@ -4132,7 +4180,6 @@
                         }
                     }
 
-                    // Fallback: If state.bookData.id was not set, or update-by-ID failed and reset it
                     if (!state.bookData.id) {
                         let existingBookQuery = supabase.from('ebooks')
                             .select('id')
@@ -4161,7 +4208,7 @@
                             console.log(`Found existing book by attributes (ID: ${existingBookEntry.id}). Updating.`);
                             const { error: updateError } = await supabase
                                 .from('ebooks')
-                                .update({ // Only update fields that change, title & list_id were match criteria
+                                .update({
                                     raw_content: bookRecord.raw_content,
                                     metadata: bookRecord.metadata,
                                     last_position: bookRecord.last_position,
@@ -4174,14 +4221,14 @@
                                 console.error("Error updating book found by attributes:", updateError);
                                 throw updateError;
                             }
-                            state.bookData.id = existingBookEntry.id; // Store found ID in state
+                            state.bookData.id = existingBookEntry.id;
                             console.log(`Book updated successfully by attributes, ID: ${state.bookData.id}`);
                         } else {
                             console.log(`No existing book found by attributes for title "${bookRecord.title}". Inserting new record.`);
                             const { data: insertedData, error: insertError } = await supabase
                                 .from('ebooks')
                                 .insert(bookRecord)
-                                .select('id') // Select the ID of the newly inserted record
+                                .select('id')
                                 .single();
 
                             if (insertError) {
@@ -4189,7 +4236,7 @@
                                 throw insertError;
                             }
                             if (insertedData && insertedData.id) {
-                                state.bookData.id = insertedData.id; // Store the new ID in state
+                                state.bookData.id = insertedData.id;
                                 console.log(`Book inserted successfully with ID: ${state.bookData.id}`);
                             } else {
                                 console.warn("Insert operation did not return an ID.");
@@ -4208,7 +4255,7 @@
                  showLoading();
                  try {
                      state.bookData.title = book.title;
-                     state.bookData.id = book.id; // Store the database ID
+                     state.bookData.id = book.id;
                      state.bookData.currentListId = book.list_id || null;
                      state.bookData.rawContent = book.raw_content || null;
                      DOM.bookTitle.textContent = book.title;
@@ -4252,9 +4299,7 @@
 
             function restoreReadingPosition(lastPosition) {
                  if (!lastPosition || !DOM.contentArea) return;
-
-                 showToast('Restoring reading position...', 2500); // Changed line: Increased duration
-
+                 showToast('Restoring reading position...', 2500);
                  requestAnimationFrame(() => {
                      requestAnimationFrame(() => {
                          let restored = false;
@@ -4310,11 +4355,7 @@
 
              function restoreByTextAnchor(textAnchor) {
                  if (!textAnchor || textAnchor.index === undefined || textAnchor.index < 0) return false;
-
-                 DOM.contentArea.querySelectorAll('p:not([data-p-index])').forEach((p, index) => {
-                 });
-
-
+                 DOM.contentArea.querySelectorAll('p:not([data-p-index])').forEach((p, index) => {});
                  let targetParagraph = DOM.contentArea.querySelector(`p[data-p-index="${textAnchor.index}"]`);
 
                   if (!targetParagraph && textAnchor.text) {
@@ -4333,16 +4374,12 @@
                      console.error("Could not find target paragraph for text anchor restoration.");
                      return false;
                  }
-
                   targetParagraph.scrollIntoView({ behavior: 'auto', block: 'start' });
-
                   if (textAnchor.offset && textAnchor.offset > 0.1) {
                        const rect = targetParagraph.getBoundingClientRect();
                        const scrollAdjustment = rect.height * textAnchor.offset;
                        DOM.contentArea.scrollTop += scrollAdjustment;
                   }
-
-
                  console.log(`Scrolled to anchor paragraph (Index: ${targetParagraph.getAttribute('data-p-index')})`);
                  return true;
              }
@@ -4373,7 +4410,7 @@
                 DOM.chatMessages.innerHTML = '';
                 const initialGreeting = state.chatUseFullDocument ? "Chat cleared. Ask me anything about the full document." : "Chat cleared. Ask me anything about the current chapter.";
                 displayChatMessage('assistant', initialGreeting);
-                renderSuggestedQuestions(initialSuggestedQuestions); // Show initial suggestions after clearing
+                renderSuggestedQuestions(initialSuggestedQuestions);
             }
 
             async function handleSendMessage() {
@@ -4383,10 +4420,10 @@
                 displayChatMessage('user', userMessage);
                 state.chatHistory.push({ role: 'user', parts: [{ text: userMessage }] });
                 DOM.chatInput.value = '';
-                DOM.chatInput.style.height = 'auto'; // Reset height after sending
+                DOM.chatInput.style.height = 'auto';
                 const loadingElement = displayChatMessage('assistant', '', true);
                 DOM.chatSendBtn.disabled = true;
-                renderSuggestedQuestions([]); // Clear suggestions when user sends a message
+                renderSuggestedQuestions([]);
                 processAndSendChat(userMessage, loadingElement);
             }
 
@@ -4418,7 +4455,6 @@
                      const language = localStorage.getItem('speech-language') || 'en-US';
                      const languageName = language.startsWith('fr') ? 'French' : 'English';
 
-                     // Updated system prompt to request suggestions
                      const systemPrompt = `You are a helpful AI assistant integrated into an ebook reader. The user is reading a book and will provide context (either the current chapter or the full document).\nYour primary goal is to help the user **explore and understand** the provided text. Answer questions, summarize, explain concepts, and identify key points based *strictly* on the context.\nBe concise and accurate. \nUse basic Markdown for formatting (like **bold**, *italic*, and simple lists starting with * or -). Use new lines for paragraphs.\nRemember the user might be learning ${languageName}, so explain complex ideas simply if appropriate.\n\n**IMPORTANT - Follow-up Questions:**\nAfter your main response, provide **exactly 3 concrete, specific follow-up questions** (max 7-10 words each) that directly relate to the content just discussed or the provided context. These questions should encourage deeper exploration of the text.\nFormat these questions EXACTLY like this, with no extra text before or after the block, and each question on a new line:\n[SUGGESTIONS]\nWhat is the significance of X?\nCan you elaborate on Y?\nHow does Z relate to the previous section?\n[/SUGGESTIONS]`;
 
                      const requestPayloadContents = [
@@ -4436,32 +4472,25 @@
                      loadingElement.remove();
 
                      let assistantResponseText = 'Sorry, I could not generate a response.';
-                     let extractedSuggestions = []; // To store parsed suggestions
+                     let extractedSuggestions = [];
 
                      if (response.error) {
                          assistantResponseText = `Sorry, there was an error: ${response.error.message}`;
                      } else {
                          const rawResponse = response?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-                         // Regex to find the suggestion block at the end
                          const suggestionBlockRegex = /\[SUGGESTIONS\]([\s\S]*?)\[\/SUGGESTIONS\]\s*$/;
                          const match = rawResponse.match(suggestionBlockRegex);
 
                          if (match && match[1]) {
-                             // Extract the text between the tags
                              const questionsText = match[1].trim();
-                             // Split into lines, remove numbering/bullets, filter empty lines
                              extractedSuggestions = questionsText.split('\n')
-                                 .map(q => q.trim().replace(/^[\d.*-]+\s*/, '')) // Remove potential list markers
-                                 .filter(q => q.length > 0 && q.length < 100); // Basic validation
-                             // Get the main response text by removing the suggestion block
+                                 .map(q => q.trim().replace(/^[\d.*-]+\s*/, ''))
+                                 .filter(q => q.length > 0 && q.length < 100);
                              assistantResponseText = rawResponse.replace(suggestionBlockRegex, '').trim();
                          } else {
-                             // If no suggestion block found, use the whole response
                              assistantResponseText = rawResponse.trim();
                              console.warn("AI response did not contain the expected [SUGGESTIONS] block.");
                          }
-
-                         // Handle cases where the main response might be empty after stripping suggestions
                          if (!assistantResponseText) {
                              assistantResponseText = "Okay, I've processed that. What would you like to explore next?";
                          }
@@ -4469,7 +4498,7 @@
 
                      displayChatMessage('assistant', assistantResponseText);
                      state.chatHistory.push({ role: 'assistant', parts: [{ text: assistantResponseText }] });
-                     renderSuggestedQuestions(extractedSuggestions); // Render the extracted suggestions
+                     renderSuggestedQuestions(extractedSuggestions);
 
                  } catch (error) {
                      console.error('Error handling chat message:', error);
@@ -4574,7 +4603,7 @@
                  if (existingToast) existingToast.remove();
 
                  const toast = document.createElement('div');
-                 toast.className = 'flashcard-toast'; // Initially visible will be added by JS
+                 toast.className = 'flashcard-toast';
 
                  toast.innerHTML = `
                      <div class="flashcard-header">
@@ -4587,49 +4616,30 @@
                          <button type="button" class="flashcard-save-btn">Save</button>
                      </div>`;
 
-                // Append to body but keep it hidden and fixed to measure its actual dimensions
                 toast.style.visibility = 'hidden';
-                toast.style.position = 'fixed'; // Crucial for getBoundingClientRect with fixed elements
+                toast.style.position = 'fixed';
                 document.body.appendChild(toast);
-                const toastActualRect = toast.getBoundingClientRect(); // Get intrinsic dimensions
+                const toastActualRect = toast.getBoundingClientRect();
 
                 const selRect = state.lastSelectionRect;
                 const transPopupNode = DOM.translationPopup;
                 const vpWidth = window.innerWidth;
                 const vpHeight = window.innerHeight;
-                const margin = 10; // Spacing from selection and viewport edges
+                const margin = 10;
 
                 if (selRect) {
                     let toastTop, toastLeft;
-
-                    // --- NEW VERTICAL LOGIC ---
-                    // Preferred: Above selection
                     toastTop = selRect.top - toastActualRect.height - margin;
-
-                    // If above overflows top, try below selection
                     if (toastTop < margin) {
                         toastTop = selRect.bottom + margin;
                     }
-
-                    // --- NEW HORIZONTAL LOGIC ---
-                    // Preferred: Right of selection
                     toastLeft = selRect.right + margin;
-
-                    // If right of selection overflows viewport right, align to viewport right
                     if (toastLeft + toastActualRect.width > vpWidth - margin) {
                         toastLeft = vpWidth - toastActualRect.width - margin;
                     }
-                    // If the above positioning results in the toast being off-screen to the left
-                    // (e.g., very wide toast on a small screen, or selection is very far right and toast is wide),
-                    // the clamping below will handle it by pinning it to the left margin.
-
-                    // --- CLAMPING ---
-                    // Horizontal clamp
                     toastLeft = Math.max(margin, Math.min(toastLeft, vpWidth - toastActualRect.width - margin));
-                    // Vertical clamp (ensure it's within viewport top and bottom)
                     toastTop = Math.max(margin, Math.min(toastTop, vpHeight - toastActualRect.height - margin));
 
-                    // Check for overlap with translation popup IF IT IS VISIBLE
                     if (transPopupNode.classList.contains('visible')) {
                         const transRect = transPopupNode.getBoundingClientRect();
                         let currentPotentialToastArea = {
@@ -4638,23 +4648,18 @@
                         };
 
                         if (checkOverlap(currentPotentialToastArea, transRect)) {
-                            // Overlap detected! Try to resolve.
-                            // Attempt 1: Move toast further up, if it's not already at the top margin
                             let newTop = transRect.top - toastActualRect.height - margin;
                             if (newTop >= margin && !checkOverlap({ ...currentPotentialToastArea, top: newTop, bottom: newTop + toastActualRect.height }, transRect)) {
                                 toastTop = newTop;
                             } else {
-                                // Attempt 2: Move toast further down
                                 newTop = transRect.bottom + margin;
                                 if (newTop + toastActualRect.height <= vpHeight - margin && !checkOverlap({ ...currentPotentialToastArea, top: newTop, bottom: newTop + toastActualRect.height }, transRect)) {
                                     toastTop = newTop;
                                 } else {
-                                    // Attempt 3: Move toast to the right of translation popup
                                     let newLeft = transRect.right + margin;
                                     if (newLeft + toastActualRect.width <= vpWidth - margin && !checkOverlap({ ...currentPotentialToastArea, left: newLeft, right: newLeft + toastActualRect.width, top: toastTop, bottom: toastTop + toastActualRect.height }, transRect)) {
                                         toastLeft = newLeft;
                                     } else {
-                                        // Attempt 4: Move toast to the left of translation popup
                                         newLeft = transRect.left - toastActualRect.width - margin;
                                         if (newLeft >= margin && !checkOverlap({ ...currentPotentialToastArea, left: newLeft, right: newLeft + toastActualRect.width, top: toastTop, bottom: toastTop + toastActualRect.height }, transRect)) {
                                             toastLeft = newLeft;
@@ -4662,7 +4667,6 @@
                                     }
                                 }
                             }
-                            // Re-clamp to viewport after attempting to avoid overlap
                             toastTop = Math.max(margin, Math.min(toastTop, vpHeight - toastActualRect.height - margin));
                             toastLeft = Math.max(margin, Math.min(toastLeft, vpWidth - toastActualRect.width - margin));
                         }
@@ -4670,20 +4674,16 @@
 
                     toast.style.top = `${toastTop}px`;
                     toast.style.left = `${toastLeft}px`;
-                    toast.style.bottom = 'auto'; // Override CSS fallback if JS positions
-                    toast.style.right = 'auto';  // Override CSS fallback if JS positions
+                    toast.style.bottom = 'auto';
+                    toast.style.right = 'auto';
                 } else {
-                    // No selection rectangle, position top-right as a fallback
                     toast.style.top = `${margin}px`;
                     toast.style.right = `${margin}px`;
                     toast.style.left = 'auto';
                     toast.style.bottom = 'auto';
                 }
-
-                // Make it visible now that it's positioned (or using CSS fallback)
                 toast.style.visibility = 'visible';
                 toast.classList.add('visible');
-
 
                  const removeToast = () => {
                      toast.classList.add('fade-out');
@@ -4733,7 +4733,6 @@
                          setTimeout(() => { saveButton.textContent = 'Retry'; saveButton.disabled = false; }, 1500);
                      }
                  });
-
                  setTimeout(removeToast, 20000);
              }
 
