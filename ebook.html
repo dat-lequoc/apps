@@ -2579,7 +2579,8 @@
                     currentPosition: 0,
                     sourceUrl: null,
                     rawContent: null,
-                    currentListId: null
+                    currentListId: null,
+                    originalFileType: null
                 },
                 settings: {
                     fontSize: 100,
@@ -2602,6 +2603,7 @@
                 chatUseFullDocument: true,
                 lastPosition: null
             };
+            let activeSaveBookPromise = null;
 
             const initialSuggestedQuestions = [
                 "Summarize this.",
@@ -2753,6 +2755,7 @@
                 state.bookData.sourceUrl = null;
                 state.bookData.rawContent = null;
                 const fileExtension = file.name.split('.').pop().toLowerCase();
+                state.bookData.originalFileType = fileExtension; // Store original file type
                 if (fileExtension === 'txt') { processTextFile(file); }
                 else if (fileExtension === 'epub') { processEpubFile(file); }
                 else if (fileExtension === 'pdf') { processPdfFile(file); }
@@ -2770,6 +2773,7 @@
                 state.bookData.currentListId = null;
                 state.bookData.sourceUrl = null;
                 state.bookData.rawContent = null;
+                state.bookData.originalFileType = 'text'; // Set for pasted text
                 try {
                     state.bookData.chapters = [{ title: customTitle, markdownContent: text, content: null, startLine: 0, endLine: text.split('\n').length }];
                     state.settings.viewRawHtmlEnabled = false;
@@ -3007,6 +3011,7 @@
                 DOM.bookTitle.textContent = `Reading: ${url}`;
                 state.bookData.title = url;
                 state.bookData.currentListId = null;
+                state.bookData.originalFileType = 'url'; // Set for URL input
 
                 try {
                     const response = await firecrawlScrapeRequest(state.userApiSettings.firecrawl_api_key, url);
@@ -3179,18 +3184,30 @@
             }
 
 
-            function showBook() {
+            async function showBook(lastPositionToRestore = null) { // Make async
                 DOM.welcomeScreen.style.display = 'none';
                 DOM.navbar.classList.add('visible');
                 clearTimeout(state.navbarHideTimer);
                 state.navbarHideTimer = setTimeout(() => { DOM.navbar.classList.remove('visible'); }, 3000);
 
-                displayCurrentChapter();
+                // Wait for the book to be saved (inserted if new, or initial save)
+                const saveSuccess = await saveBookToLibrary(); // Await the save operation
+
+                if (!saveSuccess || !state.bookData.id) {
+                    showToast("Failed to save the book to the library. Cannot proceed.", 5000);
+                    console.error("showBook: saveBookToLibrary failed or did not set an ID. Aborting showBook.");
+                    goToHome(); // Or handle error appropriately
+                    return;
+                }
+                
+                // Now that the book is saved and state.bookData.id is set, proceed
+                console.log(`showBook: Book saved/identified with ID: ${state.bookData.id}. Proceeding to display.`);
+                displayCurrentChapter(lastPositionToRestore);
                 populateToc();
-                saveBookToLibrary();
+                // saveBookToLibrary(); // This call is no longer needed here.
             }
 
-            function displayCurrentChapter() {
+            function displayCurrentChapter(positionToRestore = null) {
                 const chapter = state.bookData.chapters[state.bookData.currentPosition];
                 if (!chapter) {
                      console.error("Attempted to display non-existent chapter at index:", state.bookData.currentPosition);
@@ -3254,9 +3271,13 @@
                      }
                  }
 
-                DOM.contentArea.scrollTop = 0;
+                if (positionToRestore) {
+                    restoreReadingPosition(positionToRestore);
+                } else {
+                    DOM.contentArea.scrollTop = 0;
+                    updateProgressBar(); // Update progress after explicitly setting scroll to 0
+                }
                 updateNavigationButtonsState();
-                updateProgressBar();
 
                 if (state.bookData.sourceUrl) { DOM.sourceUrlContentLink.href = state.bookData.sourceUrl; DOM.sourceUrlContentLink.textContent = state.bookData.sourceUrl; DOM.sourceUrlDisplay.style.display = 'block'; }
                 else { DOM.sourceUrlDisplay.style.display = 'none'; }
@@ -3481,7 +3502,7 @@
                 DOM.fileInput.value = '';
                 DOM.textInput.value = '';
                 DOM.textInputTitle.value = '';
-                state.bookData = { id: null, title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null };
+                state.bookData = { id: null, title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null, originalFileType: null };
                 state.selectedListId = 'all';
                 state.bookLists = [];
                 DOM.sourceUrlDisplay.style.display = 'none';
@@ -3658,8 +3679,7 @@
                      chapter: state.bookData.currentPosition,
                      percentComplete: percentComplete,
                      scroll: DOM.contentArea.scrollTop || 0,
-                     timestamp: new Date().getTime(),
-                     textAnchor: findVisibleTextAnchor()
+                     timestamp: new Date().getTime()
                  };
                  state.lastPosition = currentPosition;
                  saveBookToLibrary();
@@ -3674,34 +3694,6 @@
                 }
                 return Math.max(0, Math.min(1, scrollTop / (scrollHeight - clientHeight)));
             }
-
-            function findVisibleTextAnchor() {
-                 const paragraphs = DOM.contentArea.querySelectorAll('p[data-p-index]');
-                 const scrollTop = DOM.contentArea.scrollTop;
-                 const contentTop = DOM.contentArea.getBoundingClientRect().top;
-                 const viewportHeight = DOM.contentArea.clientHeight;
-
-                 if (paragraphs.length === 0) return null;
-
-                 for (let i = 0; i < paragraphs.length; i++) {
-                     const p = paragraphs[i];
-                     const rect = p.getBoundingClientRect();
-                     const pTopInViewport = rect.top;
-                      if (pTopInViewport >= contentTop && pTopInViewport < contentTop + viewportHeight / 3) {
-                         const text = p.textContent?.substring(0, 50).trim() || '';
-                         const offset = Math.max(0, Math.min(1, (contentTop - pTopInViewport) / rect.height));
-                         return { index: parseInt(p.getAttribute('data-p-index')), text: text, offset: offset };
-                     }
-                 }
-
-                  const firstP = paragraphs[0];
-                 return {
-                     index: parseInt(firstP.getAttribute('data-p-index')) || 0,
-                     text: firstP.textContent?.substring(0, 50).trim() || '',
-                     offset: 0
-                 };
-            }
-
 
             function showLoading() { DOM.loading.classList.add('visible'); }
             function hideLoading() { DOM.loading.classList.remove('visible'); }
@@ -4074,63 +4066,69 @@
                 finally { hideLoading(); }
             }
 
-             async function saveBookToLibrary() {
-                 const { data: { session } } = await supabase.auth.getSession();
-                 if (!session || !state.bookData.title || !state.bookData.chapters || state.bookData.chapters.length === 0) {
-                      return false;
-                 }
+             async function saveBookToLibraryCoreLogic(bookDataForSave, session) {
+                 // bookDataForSave is a snapshot of state.bookData and state.lastPosition
+                 // session is the user session object
 
                  try {
                      let fileType = 'unknown';
-                     if (state.bookData.sourceUrl) {
+                     if (bookDataForSave.sourceUrl) {
                          fileType = 'url';
-                     } else if (state.bookData.title.includes('.')) {
-                         fileType = state.bookData.title.split('.').pop().toLowerCase();
-                          const knownTypes = ['txt', 'epub', 'pdf', 'url'];
-                          if (!knownTypes.includes(fileType)) {
+                     } else if (bookDataForSave.originalFileType) {
+                         const knownFileTypes = ['txt', 'epub', 'pdf'];
+                         if (knownFileTypes.includes(bookDataForSave.originalFileType)) {
+                             fileType = bookDataForSave.originalFileType;
+                         } else if (bookDataForSave.originalFileType === 'url') {
+                             fileType = 'url';
+                         } else {
                              fileType = 'text';
-                          }
+                         }
                      } else {
-                          fileType = 'text';
+                         fileType = 'text';
                      }
 
                      const metadata = {
-                         chapters: state.bookData.chapters.map(chapter => ({
+                         chapters: bookDataForSave.chapters.map(chapter => ({
                              title: chapter.title,
                              content: chapter.content || null,
                              markdownContent: chapter.markdownContent || null,
                              startLine: chapter.startLine,
                              endLine: chapter.endLine
                          })),
-                         viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled,
-                         sourceUrl: state.bookData.sourceUrl
+                         viewRawHtmlEnabled: bookDataForSave.viewRawHtmlEnabledSetting, // Assuming this is passed in bookDataForSave
+                         sourceUrl: bookDataForSave.sourceUrl
                      };
 
-                     const lastPosition = state.lastPosition || {
-                         chapter: state.bookData.currentPosition,
-                         scroll: DOM.contentArea.scrollTop || 0,
-                         percentComplete: calculatePercentageComplete(),
-                         timestamp: new Date().getTime(),
-                         textAnchor: findVisibleTextAnchor()
+                     const lastPositionToSave = bookDataForSave.lastPosition || {
+                         chapter: bookDataForSave.currentPosition,
+                         scroll: DOM.contentArea.scrollTop || 0, 
+                         percentComplete: calculatePercentageComplete(), 
+                         timestamp: new Date().getTime()
                      };
+                     // Ensure textAnchor is not part of lastPositionToSave if it came from bookDataForSave.lastPosition
+                     if (lastPositionToSave.textAnchor) {
+                        delete lastPositionToSave.textAnchor;
+                     }
 
                      const bookRecord = {
                          user_id: session.user.id,
-                         title: state.bookData.title,
+                         title: bookDataForSave.title,
                          content: null,
-                         raw_content: state.bookData.rawContent || null,
+                         raw_content: bookDataForSave.rawContent || null,
                          file_type: fileType,
                          metadata: metadata,
-                         last_position: lastPosition,
-                         list_id: state.bookData.currentListId || null,
+                         last_position: lastPositionToSave,
+                         list_id: bookDataForSave.currentListId || null,
                          updated_at: new Date()
                      };
 
-                    if (state.bookData.id) {
-                        console.log(`Attempting to update book by known ID: ${state.bookData.id}`);
-                        const { error: updateByIdError } = await supabase
+                    let currentBookId = bookDataForSave.id;
+
+                    if (currentBookId) { // If an ID is provided in the snapshot, this is an update.
+                        console.log(`CoreLogic: Attempting to update book by known ID: ${currentBookId}`);
+                        const { error: updateError } = await supabase
                             .from('ebooks')
-                            .update({
+                            .update({ // Fields to update
                                 title: bookRecord.title,
                                 raw_content: bookRecord.raw_content,
                                 metadata: bookRecord.metadata,
@@ -4140,92 +4138,113 @@
                                 list_id: bookRecord.list_id
                             })
                             .eq('user_id', session.user.id)
-                            .eq('id', state.bookData.id);
+                            .eq('id', currentBookId);
 
-                        if (updateByIdError) {
-                            console.error(`Error updating book by ID ${state.bookData.id}:`, updateByIdError);
-                            if (updateByIdError.code === 'PGRST116' || (updateByIdError.details && updateByIdError.details.includes("0 rows"))) {
-                                console.warn(`Update by ID ${state.bookData.id} found no matching record. Will try to find by attributes or insert.`);
-                                state.bookData.id = null;
-                            } else {
-                                throw updateByIdError;
-                            }
+                        if (updateError) {
+                            console.error(`CoreLogic: Error updating book by ID ${currentBookId}:`, updateError);
+                            // If update fails, it's an error. Do not attempt to insert.
+                            return { id: currentBookId, error: updateError };
+                        }
+                        console.log(`CoreLogic: Book updated successfully by ID: ${currentBookId}`);
+                        return { id: currentBookId, error: null };
+                    } else { // No ID in snapshot, this is a new book to be inserted.
+                        console.log(`CoreLogic: New book. Title: "${bookRecord.title}". Inserting new record.`);
+                        // bookRecord is already prepared without an 'id' field.
+                        const { data: insertedData, error: insertError } = await supabase
+                            .from('ebooks')
+                            .insert(bookRecord)
+                            .select('id')
+                            .single();
+
+                        if (insertError) {
+                            console.error("CoreLogic: Error inserting new book:", insertError);
+                            return { id: null, error: insertError };
+                        }
+
+                        if (insertedData && insertedData.id) {
+                            currentBookId = insertedData.id;
+                            console.log(`CoreLogic: Book inserted successfully with ID: ${currentBookId}`);
+                            return { id: currentBookId, error: null };
                         } else {
-                            console.log(`Book updated successfully by ID: ${state.bookData.id}`);
-                            return true;
+                            console.warn("CoreLogic: Insert operation did not return an ID or expected data.");
+                            return { id: null, error: new Error("Insert operation failed to return an ID.") };
                         }
                     }
-
-                    if (!state.bookData.id) {
-                        let existingBookQuery = supabase.from('ebooks')
-                            .select('id')
-                            .eq('user_id', session.user.id)
-                            .eq('title', bookRecord.title);
-
-                        if (bookRecord.list_id === null) {
-                            existingBookQuery = existingBookQuery.is('list_id', null);
-                        } else {
-                            existingBookQuery = existingBookQuery.eq('list_id', bookRecord.list_id);
-                        }
-
-                        const { data: existingBooksData, error: checkError } = await existingBookQuery.limit(1);
-
-                        let existingBookEntry = null;
-                        if (!checkError && existingBooksData && existingBooksData.length > 0) {
-                            existingBookEntry = existingBooksData[0];
-                        }
-
-                        if (checkError) {
-                            console.error("Error checking for existing book by attributes:", checkError);
-                            throw checkError;
-                        }
-
-                        if (existingBookEntry && existingBookEntry.id) {
-                            console.log(`Found existing book by attributes (ID: ${existingBookEntry.id}). Updating.`);
-                            const { error: updateError } = await supabase
-                                .from('ebooks')
-                                .update({
-                                    raw_content: bookRecord.raw_content,
-                                    metadata: bookRecord.metadata,
-                                    last_position: bookRecord.last_position,
-                                    updated_at: bookRecord.updated_at,
-                                    file_type: bookRecord.file_type
-                                })
-                                .eq('id', existingBookEntry.id);
-
-                            if (updateError) {
-                                console.error("Error updating book found by attributes:", updateError);
-                                throw updateError;
-                            }
-                            state.bookData.id = existingBookEntry.id;
-                            console.log(`Book updated successfully by attributes, ID: ${state.bookData.id}`);
-                        } else {
-                            console.log(`No existing book found by attributes for title "${bookRecord.title}". Inserting new record.`);
-                            const { data: insertedData, error: insertError } = await supabase
-                                .from('ebooks')
-                                .insert(bookRecord)
-                                .select('id')
-                                .single();
-
-                            if (insertError) {
-                                console.error("Error inserting new book:", insertError);
-                                throw insertError;
-                            }
-                            if (insertedData && insertedData.id) {
-                                state.bookData.id = insertedData.id;
-                                console.log(`Book inserted successfully with ID: ${state.bookData.id}`);
-                            } else {
-                                console.warn("Insert operation did not return an ID.");
-                            }
-                        }
-                     }
-
-                     return true;
                  } catch (error) {
-                     console.error('Full error in saveBookToLibrary:', error);
-                     return false;
+                     console.error('Full error in saveBookToLibraryCoreLogic:', error);
+                     return { id: null, error: error };
                  }
              }
+
+
+            // New wrapper function to manage concurrency and update global state
+            async function saveBookToLibrary() {
+                if (activeSaveBookPromise) {
+                    console.warn("saveBookToLibrary: Operation already in progress. Returning existing promise.");
+                    return activeSaveBookPromise;
+                }
+
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session || !state.bookData.title || !state.bookData.chapters || state.bookData.chapters.length === 0) {
+                    console.log("saveBookToLibrary: Pre-conditions not met (no session, title, or chapters). Skipping save.");
+                    return false; // Or a more specific status
+                }
+
+                // Create a snapshot of the data to be saved.
+                // This is important if the core logic is deferred.
+                const bookDataSnapshot = {
+                    id: state.bookData.id,
+                    title: state.bookData.title,
+                    chapters: JSON.parse(JSON.stringify(state.bookData.chapters)), // Deep copy for safety
+                    currentPosition: state.bookData.currentPosition,
+                    sourceUrl: state.bookData.sourceUrl,
+                    rawContent: state.bookData.rawContent,
+                    currentListId: state.bookData.currentListId,
+                    originalFileType: state.bookData.originalFileType,
+                    lastPosition: state.lastPosition ? JSON.parse(JSON.stringify(state.lastPosition)) : null, // Deep copy
+                    viewRawHtmlEnabledSetting: state.settings.viewRawHtmlEnabled // Include relevant settings
+                };
+                 // Ensure lastPosition is up-to-date if not explicitly passed via state.lastPosition
+                 if (!bookDataSnapshot.lastPosition) {
+                     bookDataSnapshot.lastPosition = {
+                         chapter: bookDataSnapshot.currentPosition,
+                         scroll: DOM.contentArea.scrollTop || 0,
+                         percentComplete: calculatePercentageComplete(),
+                         timestamp: new Date().getTime()
+                     };
+                 }
+
+
+                activeSaveBookPromise = (async () => {
+                    try {
+                        const result = await saveBookToLibraryCoreLogic(bookDataSnapshot, session);
+
+                        if (result.error) {
+                            console.error('saveBookToLibrary: CoreLogic reported an error:', result.error);
+                            showToast(`Error saving book: ${result.error.message || 'Unknown error'}`, 5000);
+                            return false; // Indicate failure
+                        }
+
+                        if (result.id) {
+                            state.bookData.id = result.id; // Update global state ONLY on success
+                            console.log(`saveBookToLibrary: Book operation successful. Global book ID updated to: ${result.id}`);
+                            return true; // Indicate success
+                        } else {
+                            console.warn("saveBookToLibrary: CoreLogic completed without a definitive ID.");
+                            // This might happen if an insert didn't return an ID but also didn't error.
+                            showToast("Book saved, but state might be inconsistent. Please check library.", 4000);
+                            return false; // Ambiguous outcome
+                        }
+                    } catch (e) {
+                        console.error('saveBookToLibrary: Unexpected error in wrapper:', e);
+                        showToast(`Critical error saving book: ${e.message}`, 5000);
+                        return false;
+                    } finally {
+                        activeSaveBookPromise = null; // Clear the promise once this operation (and any chained to it) is done
+                    }
+                })();
+                return activeSaveBookPromise;
+            }
 
              async function loadBookFromLibrary(book) {
                  showLoading();
@@ -4256,12 +4275,11 @@
                          : false;
                      DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
 
-                     const lastPosition = book.last_position || {};
-                     state.bookData.currentPosition = lastPosition.chapter !== undefined ? lastPosition.chapter : 0;
+                     const lastPosition = book.last_position || null;
+                     state.bookData.currentPosition = (lastPosition && lastPosition.chapter !== undefined) ? lastPosition.chapter : 0;
 
-                     showBook();
-
-                     restoreReadingPosition(lastPosition);
+                     showBook(lastPosition);
+                     // restoreReadingPosition is now called by displayCurrentChapter via showBook
 
                  } catch (error) {
                      console.error('Error loading book from library:', error);
@@ -4277,96 +4295,46 @@
                  if (!lastPosition || !DOM.contentArea) return;
                  showToast('Restoring reading position...', 2500);
                  requestAnimationFrame(() => {
+                     // A second requestAnimationFrame ensures layout is stable before scrolling
                      requestAnimationFrame(() => {
                          let restored = false;
-                         const isPositionRecent = lastPosition.timestamp && (Date.now() - lastPosition.timestamp < 90 * 24 * 60 * 60 * 1000);
+                         const scrollHeight = DOM.contentArea.scrollHeight;
+                         const clientHeight = DOM.contentArea.clientHeight;
 
-                         if (isPositionRecent && lastPosition.textAnchor && lastPosition.textAnchor.index !== undefined) {
-                             restored = restoreByTextAnchor(lastPosition.textAnchor);
-                             if (restored) {
-                                 console.log(`Restored position using text anchor (Index: ${lastPosition.textAnchor.index}).`);
-                                 updateProgressBar();
-                                 return;
-                             } else {
-                                 console.warn("Failed to restore using text anchor, trying percentage.");
-                             }
-                         } else if (isPositionRecent && lastPosition.textAnchor) {
-                              console.warn("Text anchor data seems incomplete, skipping.", lastPosition.textAnchor);
-                         }
-
-                         if (lastPosition.percentComplete !== undefined && lastPosition.percentComplete >= 0 && lastPosition.percentComplete <= 1) {
-                             const scrollHeight = DOM.contentArea.scrollHeight;
-                             const clientHeight = DOM.contentArea.clientHeight;
-                             if (scrollHeight > clientHeight) {
-                                 const targetPosition = lastPosition.percentComplete * (scrollHeight - clientHeight);
-                                 DOM.contentArea.scrollTo({ top: targetPosition, behavior: 'auto' });
-                                 console.log(`Restored position using percentage: ${Math.round(lastPosition.percentComplete * 100)}%`);
-                                 restored = true;
-                                 updateProgressBar();
-                                 return;
-                             }
-                         }
-
-                         if (lastPosition.scroll !== undefined && lastPosition.scroll >= 0) {
-                             if (lastPosition.scroll < DOM.contentArea.scrollHeight) {
+                         // 1. Try to restore using exact scroll position
+                         if (typeof lastPosition.scroll === 'number' && lastPosition.scroll >= 0) {
+                             if (lastPosition.scroll < scrollHeight) {
                                  DOM.contentArea.scrollTo({ top: lastPosition.scroll, behavior: 'auto' });
-                                 console.warn("Restored position using raw scroll value (fallback).");
+                                 console.log(`Restored position using exact scroll: ${lastPosition.scroll}px.`);
                                  restored = true;
-                                 updateProgressBar();
-                                 return;
                              } else {
-                                 console.warn("Saved scroll position exceeds current scroll height, ignoring.");
+                                 console.warn(`Saved scroll position (${lastPosition.scroll}px) exceeds current scroll height (${scrollHeight}px).`);
                              }
                          }
 
-                         if (!restored) {
-                             console.warn("Could not restore reading position from saved data. Scrolling to top.");
-                             DOM.contentArea.scrollTo({ top: 0, behavior: 'auto' });
-                             updateProgressBar();
+                         // 2. Fallback to percentage if exact scroll failed or wasn't valid
+                         if (!restored && typeof lastPosition.percentComplete === 'number' && lastPosition.percentComplete >= 0 && lastPosition.percentComplete <= 1) {
+                             if (scrollHeight > clientHeight) {
+                                 const targetScroll = lastPosition.percentComplete * (scrollHeight - clientHeight);
+                                 DOM.contentArea.scrollTo({ top: targetScroll, behavior: 'auto' });
+                                 console.log(`Restored position using percentage: ${Math.round(lastPosition.percentComplete * 100)}% (Scroll: ${targetScroll}px).`);
+                                 restored = true;
+                             } else { // Content fits in viewport, scroll to top or bottom based on completion
+                                DOM.contentArea.scrollTo({ top: lastPosition.percentComplete > 0.5 ? scrollHeight : 0, behavior: 'auto' });
+                                console.log(`Restored position using percentage (full view): ${Math.round(lastPosition.percentComplete * 100)}%.`);
+                                restored = true;
+                             }
                          }
+
+                         // 3. If nothing worked, scroll to top
+                         if (!restored) {
+                             DOM.contentArea.scrollTo({ top: 0, behavior: 'auto' });
+                             console.warn("Could not restore reading position from saved data. Scrolled to top.");
+                         }
+                         updateProgressBar();
                      });
                  });
              }
-
-
-             function restoreByTextAnchor(textAnchor) {
-                 if (!textAnchor || textAnchor.index === undefined || textAnchor.index < 0) return false;
-                 DOM.contentArea.querySelectorAll('p:not([data-p-index])').forEach((p, index) => {});
-                 let targetParagraph = DOM.contentArea.querySelector(`p[data-p-index="${textAnchor.index}"]`);
-
-                  if (!targetParagraph && textAnchor.text) {
-                     console.warn(`Paragraph at index ${textAnchor.index} not found. Searching by text...`);
-                     const paragraphs = DOM.contentArea.querySelectorAll('p');
-                     for (let i = 0; i < paragraphs.length; i++) {
-                         if (paragraphs[i].hasAttribute('data-p-index') && isTextSimilar(paragraphs[i].textContent, textAnchor.text)) {
-                             targetParagraph = paragraphs[i];
-                             console.log(`Found similar text in paragraph index ${paragraphs[i].getAttribute('data-p-index')}`);
-                             break;
-                         }
-                     }
-                 }
-
-                 if (!targetParagraph) {
-                     console.error("Could not find target paragraph for text anchor restoration.");
-                     return false;
-                 }
-                  targetParagraph.scrollIntoView({ behavior: 'auto', block: 'start' });
-                  if (textAnchor.offset && textAnchor.offset > 0.1) {
-                       const rect = targetParagraph.getBoundingClientRect();
-                       const scrollAdjustment = rect.height * textAnchor.offset;
-                       DOM.contentArea.scrollTop += scrollAdjustment;
-                  }
-                 console.log(`Scrolled to anchor paragraph (Index: ${targetParagraph.getAttribute('data-p-index')})`);
-                 return true;
-             }
-
-            function isTextSimilar(text1, text2) {
-                if (!text1 || !text2) return false;
-                const t1 = text1.substring(0, 50).trim().toLowerCase();
-                const t2 = text2.substring(0, 50).trim().toLowerCase();
-                return t1.startsWith(t2) || t2.startsWith(t1);
-            }
-
 
             function displayChatMessage(sender, message, isLoading = false) {
                 const messageElement = document.createElement('div');
