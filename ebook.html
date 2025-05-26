@@ -2580,14 +2580,18 @@
                     sourceUrl: null,
                     rawContent: null,
                     currentListId: null,
-                    originalFileType: null
+                    originalFileType: null,
+                    book_settings: null // Holds settings specific to this book
                 },
-                settings: {
+                settings: { // Global default settings
                     fontSize: 100,
                     lineHeight: 1.6,
                     theme: 'dark',
                     viewRawHtmlEnabled: false,
-                    speakSelectionEnabled: false
+                    translationEnabled: true,
+                    autoSpeakEnabled: true,
+                    speakSelectionEnabled: false,
+                    speechLanguage: 'en-US'
                 },
                 session: null,
                 userApiSettings: null,
@@ -2613,14 +2617,38 @@
 
             function init() {
                 setupEventListeners();
-                checkAuthAndLoadApiSettings();
-                loadUserPreferences();
-                updateCssVariables();
+                checkAuthAndLoadApiSettings(); // This will call loadUserPreferences
+                // loadUserPreferences(); // Called by checkAuthAndLoadApiSettings or directly if no auth
+                // updateCssVariables(); // Called by applySettingsToUI
             }
 
-             function updateCssVariables() {
-                document.documentElement.style.setProperty('--reader-line-height', state.settings.lineHeight);
-                DOM.contentArea.style.fontSize = `${state.settings.fontSize}%`;
+            function applySettingsToUI() {
+                const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+
+                // Font Size
+                DOM.fontSizeValue.textContent = `${effectiveSettings.fontSize}%`;
+                // Line Height
+                DOM.lineHeightValue.textContent = effectiveSettings.lineHeight;
+                // Theme
+                document.body.className = `${effectiveSettings.theme}-theme`;
+                DOM.themeOptions.forEach(option => {
+                    option.classList.toggle('active', option.getAttribute('data-theme') === effectiveSettings.theme);
+                });
+                // Toggles
+                DOM.viewRawHtmlToggle.checked = effectiveSettings.viewRawHtmlEnabled;
+                DOM.translationToggle.checked = effectiveSettings.translationEnabled;
+                DOM.autoSpeakToggle.checked = effectiveSettings.autoSpeakEnabled;
+                DOM.speakSelectionToggle.checked = effectiveSettings.speakSelectionEnabled;
+                // Select
+                DOM.speechLanguage.value = effectiveSettings.speechLanguage;
+
+                updateCssVariables(effectiveSettings);
+                // If viewRawHtmlEnabled changed, displayCurrentChapter will handle re-render when called.
+            }
+
+            function updateCssVariables(currentSettings) {
+                document.documentElement.style.setProperty('--reader-line-height', currentSettings.lineHeight);
+                DOM.contentArea.style.fontSize = `${currentSettings.fontSize}%`;
             }
 
             function setupEventListeners() {
@@ -2649,25 +2677,115 @@
                 DOM.contentArea.addEventListener('touchstart', handleTouchStart);
                 DOM.contentArea.addEventListener('touchend', handleTouchEnd);
 
-                DOM.fontDecreaseBtn.addEventListener('click', () => { decreaseFontSize(); saveUserPreferences(); });
-                DOM.fontIncreaseBtn.addEventListener('click', () => { increaseFontSize(); saveUserPreferences(); });
-                DOM.lineHeightDecreaseBtn.addEventListener('click', () => { decreaseLineHeight(); saveUserPreferences(); });
-                DOM.lineHeightIncreaseBtn.addEventListener('click', () => { increaseLineHeight(); saveUserPreferences(); });
+                // Font Size
+                DOM.fontDecreaseBtn.addEventListener('click', () => {
+                    const currentFontSize = (state.bookData.id && state.bookData.book_settings) ? state.bookData.book_settings.fontSize : state.settings.fontSize;
+                    const newFontSize = Math.max(currentFontSize - 10, 70);
+                    if (newFontSize === currentFontSize && newFontSize <= 70) { showToast('Minimum font size reached'); return; }
 
-                DOM.themeOptions.forEach(option => {
-                    option.addEventListener('click', () => { setTheme(option.getAttribute('data-theme')); saveUserPreferences(); });
+                    state.settings.fontSize = newFontSize; // Update global default
+                    if (state.bookData.id) {
+                        if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                        state.bookData.book_settings.fontSize = newFontSize;
+                        saveBookToLibrary();
+                    }
+                    saveUserPreferences(); // Save global
+                    applySettingsToUI();
+                });
+                DOM.fontIncreaseBtn.addEventListener('click', () => {
+                    const currentFontSize = (state.bookData.id && state.bookData.book_settings) ? state.bookData.book_settings.fontSize : state.settings.fontSize;
+                    const newFontSize = Math.min(currentFontSize + 10, 200);
+                    if (newFontSize === currentFontSize && newFontSize >= 200) { showToast('Maximum font size reached'); return; }
+
+                    state.settings.fontSize = newFontSize; // Update global default
+                     if (state.bookData.id) {
+                        if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                        state.bookData.book_settings.fontSize = newFontSize;
+                        saveBookToLibrary();
+                    }
+                    saveUserPreferences(); // Save global
+                    applySettingsToUI();
                 });
 
-                DOM.viewRawHtmlToggle.addEventListener('change', function() {
-                    state.settings.viewRawHtmlEnabled = this.checked;
-                    displayCurrentChapter();
+                // Line Height
+                DOM.lineHeightDecreaseBtn.addEventListener('click', () => {
+                    const currentLineHeight = (state.bookData.id && state.bookData.book_settings) ? state.bookData.book_settings.lineHeight : state.settings.lineHeight;
+                    const newLineHeight = Math.max(1.2, Math.round((currentLineHeight - 0.1) * 10) / 10);
+                    if (newLineHeight === currentLineHeight && newLineHeight <= 1.2) { showToast('Minimum line height reached'); return; }
+
+                    state.settings.lineHeight = newLineHeight;
+                    if (state.bookData.id) {
+                        if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                        state.bookData.book_settings.lineHeight = newLineHeight;
+                        saveBookToLibrary();
+                    }
                     saveUserPreferences();
+                    applySettingsToUI();
+                });
+                DOM.lineHeightIncreaseBtn.addEventListener('click', () => {
+                    const currentLineHeight = (state.bookData.id && state.bookData.book_settings) ? state.bookData.book_settings.lineHeight : state.settings.lineHeight;
+                    const newLineHeight = Math.min(2.4, Math.round((currentLineHeight + 0.1) * 10) / 10);
+                    if (newLineHeight === currentLineHeight && newLineHeight >= 2.4) { showToast('Maximum line height reached'); return; }
+
+                    state.settings.lineHeight = newLineHeight;
+                    if (state.bookData.id) {
+                        if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                        state.bookData.book_settings.lineHeight = newLineHeight;
+                        saveBookToLibrary();
+                    }
+                    saveUserPreferences();
+                    applySettingsToUI();
                 });
 
-                DOM.translationToggle.addEventListener('change', function() { localStorage.setItem('translation-enabled', this.checked); saveUserPreferences(); });
-                DOM.autoSpeakToggle.addEventListener('change', function() { localStorage.setItem('auto-speak-enabled', this.checked); saveUserPreferences(); });
-                DOM.speakSelectionToggle.addEventListener('change', function() { state.settings.speakSelectionEnabled = this.checked; localStorage.setItem('speak-selection-enabled', this.checked); saveUserPreferences(); });
-                DOM.speechLanguage.addEventListener('change', function() { localStorage.setItem('speech-language', this.value); saveUserPreferences(); });
+                // Theme
+                DOM.themeOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        const newTheme = option.getAttribute('data-theme');
+                        state.settings.theme = newTheme;
+                        if (state.bookData.id) {
+                            if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                            state.bookData.book_settings.theme = newTheme;
+                            saveBookToLibrary();
+                        }
+                        saveUserPreferences();
+                        applySettingsToUI();
+                    });
+                });
+
+                // View Raw HTML Toggle
+                DOM.viewRawHtmlToggle.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    state.settings.viewRawHtmlEnabled = isChecked;
+                    if (state.bookData.id) {
+                        if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                        state.bookData.book_settings.viewRawHtmlEnabled = isChecked;
+                        saveBookToLibrary();
+                    }
+                    saveUserPreferences();
+                    applySettingsToUI(); // Ensures UI consistency
+                    displayCurrentChapter(); // Re-render content based on the new state
+                });
+
+                // AI Feature Toggles & Select
+                const settingsToggleAndSelectHandler = (settingName, domElement, isCheckbox = true) => {
+                    const eventType = isCheckbox ? 'change' : 'change'; // 'input' for select if needed, but change is fine
+                    domElement.addEventListener(eventType, function() {
+                        const value = isCheckbox ? this.checked : this.value;
+                        state.settings[settingName] = value;
+                        if (state.bookData.id) {
+                            if (!state.bookData.book_settings) state.bookData.book_settings = { ...state.settings };
+                            state.bookData.book_settings[settingName] = value;
+                            saveBookToLibrary();
+                        }
+                        saveUserPreferences();
+                        applySettingsToUI(); // Keep UI in sync
+                    });
+                };
+
+                settingsToggleAndSelectHandler('translationEnabled', DOM.translationToggle);
+                settingsToggleAndSelectHandler('autoSpeakEnabled', DOM.autoSpeakToggle);
+                settingsToggleAndSelectHandler('speakSelectionEnabled', DOM.speakSelectionToggle);
+                settingsToggleAndSelectHandler('speechLanguage', DOM.speechLanguage, false);
 
                 document.addEventListener('selectionchange', handleTextSelection);
                 DOM.loginBtn.addEventListener('click', () => { window.open('index.html', '_blank'); });
@@ -3199,12 +3317,18 @@
                     goToHome(); // Or handle error appropriately
                     return;
                 }
-                
+
+                // Initialize book_settings from global defaults if it's a new book being shown
+                // or if it somehow doesn't have settings yet (though loadBookFromLibrary should handle this)
+                if (!state.bookData.book_settings) {
+                    state.bookData.book_settings = { ...state.settings };
+                }
+                applySettingsToUI(); // Apply the effective settings to the UI
+
                 // Now that the book is saved and state.bookData.id is set, proceed
                 console.log(`showBook: Book saved/identified with ID: ${state.bookData.id}. Proceeding to display.`);
                 displayCurrentChapter(lastPositionToRestore);
                 populateToc();
-                // saveBookToLibrary(); // This call is no longer needed here.
             }
 
             function displayCurrentChapter(positionToRestore = null) {
@@ -3220,15 +3344,18 @@
                 if (state.bookData.sourceUrl) { DOM.bookTitle.innerHTML = `<a href="${escapeHTML(state.bookData.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open Source URL" style="color: var(--primary-color); text-decoration: none;">${escapeHTML(chapterTitleText)}</a>`; DOM.bookTitle.style.cursor = 'pointer'; }
                 else { DOM.bookTitle.innerHTML = escapeHTML(chapterTitleText); DOM.bookTitle.style.cursor = 'default'; }
 
+                const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                const useRawHtml = effectiveSettings.viewRawHtmlEnabled;
+
                 const canViewRaw = !!(state.bookData.rawContent || (chapter && chapter.content));
-                DOM.viewRawHtmlToggle.disabled = !canViewRaw;
+                DOM.viewRawHtmlToggle.disabled = !canViewRaw; // Still disable if no raw content
                 DOM.viewRawHtmlToggle.closest('.settings-row').title = !canViewRaw ? "Raw HTML view only available for books added via URL or EPUB." : "View the original scraped/extracted HTML content.";
-                 DOM.viewRawHtmlToggle.checked = canViewRaw && state.settings.viewRawHtmlEnabled;
+                // DOM.viewRawHtmlToggle.checked is handled by applySettingsToUI
 
                 let contentToDisplay = '';
                 let displayMode = 'markdown';
 
-                if (canViewRaw && state.settings.viewRawHtmlEnabled) {
+                if (canViewRaw && useRawHtml) {
                     contentToDisplay = chapter.content || state.bookData.rawContent || "[Raw HTML not available for this section]";
                     displayMode = 'raw';
                 } else if (typeof chapter.markdownContent === 'string' && chapter.markdownContent.trim() !== '') {
@@ -3255,14 +3382,14 @@
                 } else if (displayMode === 'markdown') {
                     DOM.contentArea.innerHTML = markdownToHtml(contentToDisplay);
                     DOM.contentArea.style.fontFamily = 'inherit';
-                    updateCssVariables();
+                    // updateCssVariables(); // Called by applySettingsToUI if settings change
                      DOM.contentArea.querySelectorAll('p').forEach((p, index) => {
                         p.setAttribute('data-p-index', index);
                     });
                 } else {
                      DOM.contentArea.innerHTML = contentToDisplay;
                      DOM.contentArea.style.fontFamily = 'inherit';
-                     updateCssVariables();
+                    // updateCssVariables(); // Called by applySettingsToUI if settings change
                       DOM.contentArea.querySelectorAll('p').forEach((p, index) => {
                          p.setAttribute('data-p-index', index);
                      });
@@ -3340,6 +3467,8 @@
                         DOM.navbar.classList.remove('visible');
                     }, 3000);
                 }
+                // applySettingsToUI(); // Ensure UI reflects current book's settings when a panel is closed.
+                                     // This might be too aggressive. Let's see.
             }
 
             function toggleTocPanel() {
@@ -3502,11 +3631,11 @@
                 DOM.fileInput.value = '';
                 DOM.textInput.value = '';
                 DOM.textInputTitle.value = '';
-                state.bookData = { id: null, title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null, originalFileType: null };
+                state.bookData = { id: null, title: '', content: '', chapters: [], currentPosition: 0, sourceUrl: null, rawContent: null, originalFileType: null, book_settings: null };
                 state.selectedListId = 'all';
                 state.bookLists = [];
                 DOM.sourceUrlDisplay.style.display = 'none';
-                 checkAuthAndLoadApiSettings();
+                checkAuthAndLoadApiSettings(); // This will also call loadUserPreferences -> applySettingsToUI
             }
 
             function handleContentClick(e) {
@@ -3577,7 +3706,8 @@
                         positionTranslationPopup(rect);
                         DOM.translationContent.textContent = 'Translating...';
                         DOM.translationLoading.style.display = 'flex';
-                        if (state.settings.speakSelectionEnabled) speakText(selectedText);
+                        const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                        if (effectiveSettings.speakSelectionEnabled) speakText(selectedText);
                         translateText(selectedText);
                     }, 750);
                 } else {
@@ -3629,14 +3759,8 @@
                 });
             }
 
-            function decreaseFontSize() { if (state.settings.fontSize > 70) { state.settings.fontSize -= 10; updateFontSize(); } else { showToast('Minimum font size reached'); } }
-            function increaseFontSize() { if (state.settings.fontSize < 200) { state.settings.fontSize += 10; updateFontSize(); } else { showToast('Maximum font size reached'); } }
-            function updateFontSize() { DOM.fontSizeValue.textContent = `${state.settings.fontSize}%`; localStorage.setItem('ebook-fontsize', state.settings.fontSize); updateCssVariables(); }
-            function decreaseLineHeight() { if (state.settings.lineHeight > 1.2) { state.settings.lineHeight = Math.round((state.settings.lineHeight - 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Minimum line height reached'); } }
-            function increaseLineHeight() { if (state.settings.lineHeight < 2.4) { state.settings.lineHeight = Math.round((state.settings.lineHeight + 0.1) * 10) / 10; updateLineHeight(); } else { showToast('Maximum line height reached'); } }
-            function updateLineHeight() { DOM.lineHeightValue.textContent = state.settings.lineHeight; localStorage.setItem('ebook-lineheight', state.settings.lineHeight); updateCssVariables(); }
-
-            function setTheme(theme) { document.body.className = `${theme}-theme`; DOM.themeOptions.forEach(option => { option.classList.remove('active'); if (option.getAttribute('data-theme') === theme) option.classList.add('active'); }); state.settings.theme = theme; localStorage.setItem('ebook-theme', theme); }
+            // decreaseFontSize, increaseFontSize, updateFontSize, decreaseLineHeight, increaseLineHeight, updateLineHeight, setTheme
+            // are effectively replaced by the new event listener patterns that call applySettingsToUI.
 
             function updateProgressBar() {
                  if (!DOM.contentArea || !DOM.progressBar || !state.bookData.chapters || state.bookData.chapters.length === 0) {
@@ -3703,12 +3827,16 @@
             async function checkAuthAndLoadApiSettings() {
                 const { data: { session } } = await supabase.auth.getSession();
                 state.session = session;
+
+                await loadUserPreferences(); // Load global defaults first
+
                 if (!session) {
                     DOM.loginBtn.classList.remove('hidden');
                     DOM.authSection.innerHTML = `<p>Sign in to save books to your library.</p>`;
                     DOM.librarySection.style.display = 'none';
                     renderListBadges();
                     updateAiFeatureAvailability(null);
+                    applySettingsToUI(); // Apply loaded global defaults
                     return;
                 }
 
@@ -3716,11 +3844,12 @@
                  DOM.authSection.innerHTML = `<p>Signed in as ${session.user.email}</p>`;
                  DOM.librarySection.style.display = 'flex';
 
-                 state.userApiSettings = await getUserApiSettings();
-                 updateAiFeatureAvailability(state.userApiSettings);
+                 state.userApiSettings = await getUserApiSettings(); // DB settings for APIs
+                 updateAiFeatureAvailability(state.userApiSettings); // Update UI based on API keys
 
                  await fetchBookLists();
                  loadUserLibrary();
+                 applySettingsToUI(); // Apply potentially updated global defaults after DB load
             }
 
             function updateAiFeatureAvailability(apiSettings) {
@@ -4113,10 +4242,14 @@
                      const bookRecord = {
                          user_id: session.user.id,
                          title: bookDataForSave.title,
-                         content: null,
+                         content: null, // Main content is in chapters or raw_content
                          raw_content: bookDataForSave.rawContent || null,
                          file_type: fileType,
-                         metadata: metadata,
+                         metadata: { // Ensure metadata structure is consistent
+                             chapters: metadata.chapters, // from above
+                             sourceUrl: metadata.sourceUrl, // from above
+                             book_settings: bookDataForSave.book_settings || { ...state.settings } // Key change: save book_settings
+                         },
                          last_position: lastPositionToSave,
                          list_id: bookDataForSave.currentListId || null,
                          updated_at: new Date()
@@ -4131,10 +4264,10 @@
                             .update({ // Fields to update
                                 title: bookRecord.title,
                                 raw_content: bookRecord.raw_content,
-                                metadata: bookRecord.metadata,
+                                metadata: bookRecord.metadata, // This now includes book_settings
                                 last_position: bookRecord.last_position,
                                 updated_at: bookRecord.updated_at,
-                                file_type: bookRecord.file_type,
+                                file_type: bookRecord.file_type, // file_type might change if user re-processes
                                 list_id: bookRecord.list_id
                             })
                             .eq('user_id', session.user.id)
@@ -4201,9 +4334,11 @@
                     rawContent: state.bookData.rawContent,
                     currentListId: state.bookData.currentListId,
                     originalFileType: state.bookData.originalFileType,
+                    book_settings: state.bookData.book_settings ? JSON.parse(JSON.stringify(state.bookData.book_settings)) : null, // Add book_settings
                     lastPosition: state.lastPosition ? JSON.parse(JSON.stringify(state.lastPosition)) : null, // Deep copy
-                    viewRawHtmlEnabledSetting: state.settings.viewRawHtmlEnabled // Include relevant settings
+                    // viewRawHtmlEnabledSetting is now part of book_settings
                 };
+
                  // Ensure lastPosition is up-to-date if not explicitly passed via state.lastPosition
                  if (!bookDataSnapshot.lastPosition) {
                      bookDataSnapshot.lastPosition = {
@@ -4255,31 +4390,34 @@
                      state.bookData.rawContent = book.raw_content || null;
                      DOM.bookTitle.textContent = book.title;
 
-                     if (book.metadata && book.metadata.chapters && book.metadata.chapters.length > 0) {
-                         state.bookData.chapters = book.metadata.chapters.map(chapter => ({
+                     const bookMetadata = book.metadata || {};
+                     if (bookMetadata.chapters && bookMetadata.chapters.length > 0) {
+                         state.bookData.chapters = bookMetadata.chapters.map(chapter => ({
                              title: chapter.title,
                              content: chapter.content || null,
                              markdownContent: chapter.markdownContent || null,
                              startLine: chapter.startLine,
                              endLine: chapter.endLine
                          }));
-                         state.bookData.sourceUrl = book.metadata.sourceUrl || null;
+                         state.bookData.sourceUrl = bookMetadata.sourceUrl || null;
                      } else {
                          state.bookData.chapters = [{ title: book.title, markdownContent: "[Content structure not found in metadata]", content: null, startLine: 0, endLine: 1 }];
                          state.bookData.sourceUrl = null;
-                         console.warn("Book metadata missing or incomplete for:", book.title);
+                         console.warn("Book metadata missing or incomplete for chapters:", book.title);
                      }
 
-                     state.settings.viewRawHtmlEnabled = (book.metadata && book.metadata.viewRawHtmlEnabled !== undefined)
-                         ? book.metadata.viewRawHtmlEnabled
-                         : false;
-                     DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
+                    // Load book-specific settings or fall back to global defaults
+                    if (bookMetadata.book_settings) {
+                        state.bookData.book_settings = { ...state.settings, ...bookMetadata.book_settings }; // Merge with defaults to ensure all keys exist
+                    } else {
+                        state.bookData.book_settings = { ...state.settings }; // No specific settings, use current global defaults
+                    }
+                    applySettingsToUI(); // Apply the determined settings to the UI
 
                      const lastPosition = book.last_position || null;
                      state.bookData.currentPosition = (lastPosition && lastPosition.chapter !== undefined) ? lastPosition.chapter : 0;
 
-                     showBook(lastPosition);
-                     // restoreReadingPosition is now called by displayCurrentChapter via showBook
+                     showBook(lastPosition); // This will also call displayCurrentChapter
 
                  } catch (error) {
                      console.error('Error loading book from library:', error);
@@ -4487,7 +4625,8 @@
                 if (!state.userApiSettings || !state.userApiSettings.api_key) { DOM.translationContent.textContent = 'Please configure Gemini API key to use translation.'; DOM.translationLoading.style.display = 'none'; return; }
                 DOM.translationContent.textContent = ''; DOM.translationLoading.style.display = 'flex';
                 const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
-                const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
+                const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                const currentSpeechLanguage = effectiveSettings.speechLanguage;
                 const sourceLanguage = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
 
                 try {
@@ -4504,7 +4643,8 @@
              async function generateFlashcard(text) {
                  if (!state.userApiSettings || !state.userApiSettings.api_key) return;
                  const modelToUse = state.userApiSettings?.model || 'gemini-1.5-flash-latest';
-                 const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
+                 const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                 const currentSpeechLanguage = effectiveSettings.speechLanguage;
                  const sourceLanguageForPrompt = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
                  const definitionLanguageForPrompt = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
                  try {
@@ -4639,8 +4779,9 @@
                  toast.querySelector('.flashcard-close-btn').addEventListener('click', removeToast);
                  toast.querySelector('.flashcard-speak-btn').addEventListener('click', () => speakText(flashcardData.word));
 
-                 const autoSpeakEnabled = localStorage.getItem('auto-speak-enabled') !== 'false';
-                 const speakSelectionEnabled = state.settings.speakSelectionEnabled;
+                 const autoSpeakEnabled = (state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings.autoSpeakEnabled : state.settings.autoSpeakEnabled);
+                 const speakSelectionEnabled = (state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings.speakSelectionEnabled : state.settings.speakSelectionEnabled);
+
                  if (autoSpeakEnabled && !speakSelectionEnabled) {
                      setTimeout(() => speakText(flashcardData.word), 300);
                  }
@@ -4684,7 +4825,8 @@
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(text);
-                    const language = localStorage.getItem('speech-language') || 'en-US';
+                    const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                    const language = effectiveSettings.speechLanguage;
                     utterance.lang = language;
 
                     const voices = window.speechSynthesis.getVoices();
@@ -4715,37 +4857,25 @@
 
 
             async function saveUserPreferences() {
-                 const preferences = {
-                     fontSize: state.settings.fontSize,
-                     lineHeight: state.settings.lineHeight,
-                     theme: state.settings.theme,
-                     viewRawHtmlEnabled: state.settings.viewRawHtmlEnabled,
-                     translationEnabled: DOM.translationToggle.checked,
-                     autoSpeakEnabled: DOM.autoSpeakToggle.checked,
-                     speakSelectionEnabled: state.settings.speakSelectionEnabled,
-                     speechLanguage: DOM.speechLanguage.value
-                 };
+                 // state.settings now directly holds all global default values
+                 // The event handlers update state.settings directly.
 
-                 localStorage.setItem('ebook-fontsize', preferences.fontSize);
-                 localStorage.setItem('ebook-lineheight', preferences.lineHeight);
-                 localStorage.setItem('ebook-theme', preferences.theme);
-                 localStorage.setItem('ebook-viewrawhtml', preferences.viewRawHtmlEnabled);
-                 localStorage.setItem('ebook-translation', preferences.translationEnabled);
-                 localStorage.setItem('ebook-autospeak', preferences.autoSpeakEnabled);
-                 localStorage.setItem('ebook-speakselection', preferences.speakSelectionEnabled);
-                 localStorage.setItem('ebook-speechlanguage', preferences.speechLanguage);
-
+                 // Save to localStorage
+                 for (const key in state.settings) {
+                     localStorage.setItem(`ebook-${key.toLowerCase()}`, state.settings[key]);
+                 }
 
                  const { data: { session } } = await supabase.auth.getSession();
                  if (!session) return;
 
                  try {
+                     // Save the entire state.settings object as 'preferences'
                      const { error } = await supabase
                          .from('user_settings')
-                         .upsert({ user_id: session.user.id, preferences: preferences }, { onConflict: 'user_id' });
+                         .upsert({ user_id: session.user.id, preferences: { ...state.settings } }, { onConflict: 'user_id' });
 
                      if (error) throw error;
-
+                     console.log("Global user preferences saved to DB.");
                  } catch (error) {
                      console.error('Error saving user preferences to DB:', error);
                  }
@@ -4753,24 +4883,21 @@
 
 
              async function loadUserPreferences() {
-                 state.settings.fontSize = parseInt(localStorage.getItem('ebook-fontsize') || '100', 10);
-                 state.settings.lineHeight = parseFloat(localStorage.getItem('ebook-lineheight') || '1.6');
-                 state.settings.theme = localStorage.getItem('ebook-theme') || 'dark';
-                 state.settings.viewRawHtmlEnabled = localStorage.getItem('ebook-viewrawhtml') === 'true';
-                 state.settings.speakSelectionEnabled = localStorage.getItem('ebook-speakselection') === 'true';
-
-                 DOM.translationToggle.checked = localStorage.getItem('ebook-translation') !== 'false';
-                 DOM.autoSpeakToggle.checked = localStorage.getItem('ebook-autospeak') !== 'false';
-                 DOM.speechLanguage.value = localStorage.getItem('ebook-speechlanguage') || 'en-US';
-
-                 updateFontSize();
-                 updateLineHeight();
-                 setTheme(state.settings.theme);
-                 DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
-                 DOM.speakSelectionToggle.checked = state.settings.speakSelectionEnabled;
+                // Load from localStorage first as a baseline
+                state.settings.fontSize = parseInt(localStorage.getItem('ebook-fontsize') || state.settings.fontSize, 10);
+                state.settings.lineHeight = parseFloat(localStorage.getItem('ebook-lineheight') || state.settings.lineHeight);
+                state.settings.theme = localStorage.getItem('ebook-theme') || state.settings.theme;
+                state.settings.viewRawHtmlEnabled = localStorage.getItem('ebook-viewrawhtml') === 'true' || state.settings.viewRawHtmlEnabled;
+                state.settings.translationEnabled = localStorage.getItem('ebook-translationenabled') !== 'false'; // Note key change for consistency
+                state.settings.autoSpeakEnabled = localStorage.getItem('ebook-autospeakenabled') !== 'false';   // Note key change
+                state.settings.speakSelectionEnabled = localStorage.getItem('ebook-speakselectionenabled') === 'true' || state.settings.speakSelectionEnabled; // Note key change
+                state.settings.speechLanguage = localStorage.getItem('ebook-speechlanguage') || state.settings.speechLanguage;
 
                  const { data: { session } } = await supabase.auth.getSession();
-                 if (!session) return;
+                 if (!session) {
+                    applySettingsToUI(); // Apply localStorage or initial defaults
+                    return;
+                 }
 
                  try {
                      const { data, error } = await supabase
@@ -4785,41 +4912,27 @@
                      }
 
                      if (data && data.preferences) {
-                         const prefs = data.preferences;
-                         console.log("Loaded preferences from DB:", prefs);
-
-                         if (prefs.fontSize !== undefined) state.settings.fontSize = prefs.fontSize;
-                         if (prefs.lineHeight !== undefined) state.settings.lineHeight = prefs.lineHeight;
-                         if (prefs.theme) state.settings.theme = prefs.theme;
-                         if (prefs.viewRawHtmlEnabled !== undefined) state.settings.viewRawHtmlEnabled = prefs.viewRawHtmlEnabled;
-                         if (prefs.speakSelectionEnabled !== undefined) state.settings.speakSelectionEnabled = prefs.speakSelectionEnabled;
-                         if (prefs.translationEnabled !== undefined) DOM.translationToggle.checked = prefs.translationEnabled;
-                         if (prefs.autoSpeakEnabled !== undefined) DOM.autoSpeakToggle.checked = prefs.autoSpeakEnabled;
-                         if (prefs.speechLanguage) DOM.speechLanguage.value = prefs.speechLanguage;
-
-                         updateFontSize();
-                         updateLineHeight();
-                         setTheme(state.settings.theme);
-                         DOM.viewRawHtmlToggle.checked = state.settings.viewRawHtmlEnabled;
-                         DOM.speakSelectionToggle.checked = state.settings.speakSelectionEnabled;
-
-                         localStorage.setItem('ebook-fontsize', state.settings.fontSize);
-                         localStorage.setItem('ebook-lineheight', state.settings.lineHeight);
-                         localStorage.setItem('ebook-theme', state.settings.theme);
-                         localStorage.setItem('ebook-viewrawhtml', state.settings.viewRawHtmlEnabled);
-                         localStorage.setItem('ebook-translation', DOM.translationToggle.checked);
-                         localStorage.setItem('ebook-autospeak', DOM.autoSpeakToggle.checked);
-                         localStorage.setItem('ebook-speakselection', state.settings.speakSelectionEnabled);
-                         localStorage.setItem('ebook-speechlanguage', DOM.speechLanguage.value);
-
+                         const dbPrefs = data.preferences;
+                         console.log("Loaded global preferences from DB:", dbPrefs);
+                        // Merge DB preferences into state.settings, DB takes precedence
+                        for (const key in dbPrefs) {
+                            if (state.settings.hasOwnProperty(key)) {
+                                state.settings[key] = dbPrefs[key];
+                            }
+                        }
+                        // Update localStorage with these merged/DB values
+                        for (const key in state.settings) {
+                            localStorage.setItem(`ebook-${key.toLowerCase()}`, state.settings[key]);
+                        }
                      } else {
-                          console.log("No preferences found in DB for user, saving current settings.");
-                          saveUserPreferences();
+                          console.log("No global preferences found in DB for user. Current state.settings (from localStorage/defaults) will be used and saved if changed.");
+                          // Optionally save current state.settings to DB if not found
+                          // saveUserPreferences(); // This might be too eager if called during init too often
                      }
-
                  } catch (error) {
-                     console.error('Exception loading/processing user preferences:', error);
+                     console.error('Exception loading/processing user preferences from DB:', error);
                  }
+                applySettingsToUI(); // Apply the final loaded settings
              }
 
 
@@ -4902,8 +5015,8 @@
                  DOM.summarizeChapterBtn.disabled = true;
                  DOM.summarizeChapterBtn.classList.add('loading');
 
-                 const currentSpeechLanguage = localStorage.getItem('ebook-speechlanguage') || DOM.speechLanguage.value || 'en-US';
-                 const summaryLanguage = currentSpeechLanguage.startsWith('fr') ? 'French' : 'English';
+                 const effectiveSettings = { ...state.settings, ...(state.bookData.id && state.bookData.book_settings ? state.bookData.book_settings : {}) };
+                 const summaryLanguage = effectiveSettings.speechLanguage.startsWith('fr') ? 'French' : 'English';
 
                  try {
                      const maxContentLength = 15000;
