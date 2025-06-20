@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Improvement Diff Viewer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #24292e;
+            margin: 0;
+            padding: 20px;
+            background-color: #f6f8fa;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h1, h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 16px;
+            background-color: #f6f8fa;
+            border-radius: 6px;
+            border: 1px solid #d1d5da;
+        }
+        .controls input, .controls button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0366d6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0256cc;
+        }
+        .columns {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .column {
+            flex: 1;
+            background-color: #f9f9f9;
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid #d1d5da;
+            position: relative;
+        }
+        .column.small {
+            flex: 0.3;
+        }
+        .column.large {
+            flex: 0.7;
+        }
+        .full-width {
+            flex-direction: column;
+        }
+        .full-width .column {
+            flex: none;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            background-color: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 0;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #d1d5da;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .copy-btn:hover {
+            background-color: #e1e4e8;
+        }
+        .addition {
+            background-color: #d4edda;
+            border-left: 3px solid #28a745;
+            padding-left: 4px;
+        }
+        .deletion {
+            background-color: #f8d7da;
+            border-left: 3px solid #dc3545;
+            padding-left: 4px;
+            text-decoration: line-through;
+        }
+        .info {
+            padding: 12px;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .error {
+            padding: 12px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: #721c24;
+        }
+        .description {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .user-query {
+            background-color: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .assistant-response {
+            background-color: #f3e5f5;
+            border: 1px solid #9c27b0;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .validation-info {
+            background-color: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .file-info {
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        .score {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .score-10 { background-color: #4caf50; }
+        .score-9 { background-color: #8bc34a; }
+        .score-8 { background-color: #cddc39; color: #333; }
+        .score-7 { background-color: #ffeb3b; color: #333; }
+        .score-6 { background-color: #ffc107; color: #333; }
+        .score-5 { background-color: #ff9800; }
+        .score-4 { background-color: #ff5722; }
+        .score-3 { background-color: #f44336; }
+        .score-2 { background-color: #e91e63; }
+        .score-1 { background-color: #9c27b0; }
+        .tag {
+            display: inline-block;
+            background-color: #2196f3;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+        .sr-blocks {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 1200px) {
+            .columns {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Code Improvement Diff Viewer</h1>
+        
+        <div class="controls">
+            <div>
+                <input type="file" id="fileInput" accept=".jsonl,.json" />
+                <span id="fileInfo"></span>
+            </div>
+            <div>
+                <input type="number" id="rowInput" min="1" placeholder="Row #" />
+                <button onclick="selectRow()">Go to Row</button>
+                <button onclick="selectRandomRow()">Random</button>
+                <button onclick="previousRow()">Previous</button>
+                <button onclick="nextRow()">Next</button>
+                <span id="rowInfo"></span>
+            </div>
+        </div>
+
+        <div id="content">
+            <div class="info">Please select a JSONL file to begin viewing diffs.</div>
+        </div>
+    </div>
+
+    <script>
+        let jsonData = [];
+        let currentRowIndex = 0;
+
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    jsonData = parseJSONL(text);
+                    
+                    if (jsonData.length === 0) {
+                        showError('No valid data found in the file.');
+                        return;
+                    }
+
+                    document.getElementById('fileInfo').textContent = `Loaded ${jsonData.length} entries`;
+                    document.getElementById('rowInput').max = jsonData.length;
+                    document.getElementById('rowInput').value = 1;
+                    currentRowIndex = 0;
+                    displayRow(0);
+                    
+                } catch (error) {
+                    showError('Error parsing file: ' + error.message);
+                    console.error('Parse error:', error);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function parseJSONL(text) {
+            const lines = text.trim().split('\n');
+            const data = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line) {
+                    try {
+                        data.push(JSON.parse(line));
+                    } catch (e) {
+                        console.warn(`Failed to parse line ${i + 1}:`, line);
+                    }
+                }
+            }
+            
+            return data;
+        }
+
+        function extractCodeFromMarkdown(text) {
+            if (!text) return '';
+            
+            // Extract code from markdown code blocks
+            const codeBlockRegex = /```[a-z]*:?[^\n]*\n?([\s\S]*?)\n?```/i;
+            const match = text.match(codeBlockRegex);
+            
+            if (match) {
+                return match[1];
+            }
+            
+            // If no code block found, return the text as-is
+            return text;
+        }
+
+        function extractDescriptionFromMarkdown(text) {
+            if (!text) return '';
+            
+            // Remove code blocks and return the remaining text
+            const withoutCodeBlocks = text.replace(/```[a-z]*:?[^\n]*\n?[\s\S]*?\n?```/gi, '').trim();
+            return withoutCodeBlocks;
+        }
+
+        function displayRow(index) {
+            if (index < 0 || index >= jsonData.length) {
+                showError('Invalid row index');
+                return;
+            }
+
+            const row = jsonData[index];
+            currentRowIndex = index;
+            
+            const originalCode = row.original_code || '';
+            const finalCode = row.final_code || '';
+            const userQuery = row.user_query || '';
+            const updatedSnippet = row.updated_snippet || '';
+            const srBlocks = row.sr_blocks || '';
+            const validation = row.validation || {};
+            const language = row.language || '';
+            const path = row.path || '';
+
+            // Extract description from updated_snippet
+            const assistantDescription = extractDescriptionFromMarkdown(updatedSnippet);
+
+            document.getElementById('rowInfo').textContent = `Showing ${index + 1} of ${jsonData.length}`;
+
+            let html = '';
+
+            // File information and User request side by side
+            if ((path || language) || userQuery) {
+                html += `<div class="columns">`;
+                
+                // File information
+                if (path || language) {
+                    html += `
+                        <div class="column small file-info">
+                            <h3>File Information</h3>
+                            ${path ? `<p><strong>Path:</strong> ${path}</p>` : ''}
+                            ${language ? `<p><strong>Language:</strong> ${language}</p>` : ''}
+                        </div>
+                    `;
+                }
+
+                // User query
+                if (userQuery) {
+                    html += `
+                        <div class="column large user-query">
+                            <h3>User Request</h3>
+                            <p>${userQuery.replace(/\n/g, '<br>')}</p>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+
+
+
+            // Validation information
+            if (validation.score !== undefined || validation.tags || validation.analysis) {
+                html += `
+                    <div class="validation-info">
+                        <h3>Validation</h3>
+                        ${validation.score !== undefined ? `
+                            <p><strong>Score:</strong> 
+                                <span class="score score-${validation.score}">${validation.score}/10</span>
+                            </p>
+                        ` : ''}
+                        ${validation.tags ? `
+                            <p><strong>Tags:</strong> 
+                                ${validation.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                            </p>
+                        ` : ''}
+                        ${validation.analysis ? `
+                            <p><strong>Analysis:</strong> ${validation.analysis}</p>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // Updated Snippet and Diff view side by side
+            html += `<div class="columns">`;
+            
+            // Updated snippet (left side)
+            if (updatedSnippet) {
+                const updatedCode = extractCodeFromMarkdown(updatedSnippet);
+                html += `
+                    <div class="column">
+                        <h3>Updated Snippet</h3>
+                        <button class="copy-btn" onclick="copyToClipboard('updatedSnippet')">Copy</button>
+                        <pre id="updatedSnippet">${escapeHtml(updatedCode)}</pre>
+                    </div>
+                `;
+            }
+            
+            // Diff view (right side)
+            html += `
+                <div class="column">
+                    <h3>Diff View (Changes Highlighted)</h3>
+                    <button class="copy-btn" onclick="copyToClipboard('diffView')">Copy</button>
+                    <pre id="diffView"></pre>
+                </div>
+            `;
+            
+            html += `</div>`;
+
+            // Side-by-side comparison
+            html += `
+                <div class="columns">
+                    <div class="column">
+                        <h3>Original Code</h3>
+                        <button class="copy-btn" onclick="copyToClipboard('originalCode')">Copy</button>
+                        <pre id="originalCode">${escapeHtml(originalCode)}</pre>
+                    </div>
+                    <div class="column">
+                        <h3>Final Code</h3>
+                        <button class="copy-btn" onclick="copyToClipboard('finalCode')">Copy</button>
+                        <pre id="finalCode">${escapeHtml(finalCode)}</pre>
+                    </div>
+                </div>
+            `;
+
+            // Search/Replace blocks (if exists)
+            if (srBlocks) {
+                html += `
+                    <div class="columns full-width">
+                        <div class="column sr-blocks">
+                            <h3>Search/Replace Blocks</h3>
+                            <button class="copy-btn" onclick="copyToClipboard('srBlocks')">Copy</button>
+                            <pre id="srBlocks">${escapeHtml(srBlocks)}</pre>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('content').innerHTML = html;
+
+            // Generate and display diff
+            generateDiff(originalCode, finalCode);
+        }
+
+        function generateDiff(original, improved) {
+            const dmp = new diff_match_patch();
+            const diffs = dmp.diff_main(original, improved);
+            dmp.diff_cleanupSemantic(diffs);
+
+            const diffElement = document.getElementById('diffView');
+            const fragment = document.createDocumentFragment();
+
+            for (let i = 0; i < diffs.length; i++) {
+                const [operation, text] = diffs[i];
+                const span = document.createElement('span');
+                span.textContent = text;
+
+                switch (operation) {
+                    case 1: // Insertion
+                        span.className = 'addition';
+                        break;
+                    case -1: // Deletion
+                        span.className = 'deletion';
+                        break;
+                    default: // No change
+                        break;
+                }
+
+                fragment.appendChild(span);
+            }
+
+            diffElement.innerHTML = '';
+            diffElement.appendChild(fragment);
+        }
+
+        function selectRow() {
+            const rowNumber = parseInt(document.getElementById('rowInput').value);
+            if (rowNumber < 1 || rowNumber > jsonData.length) {
+                showError(`Invalid row number. Please enter a number between 1 and ${jsonData.length}`);
+                return;
+            }
+            displayRow(rowNumber - 1);
+        }
+
+        function selectRandomRow() {
+            if (jsonData.length === 0) return;
+            const randomIndex = Math.floor(Math.random() * jsonData.length);
+            document.getElementById('rowInput').value = randomIndex + 1;
+            displayRow(randomIndex);
+        }
+
+        function previousRow() {
+            if (currentRowIndex > 0) {
+                currentRowIndex--;
+                document.getElementById('rowInput').value = currentRowIndex + 1;
+                displayRow(currentRowIndex);
+            }
+        }
+
+        function nextRow() {
+            if (currentRowIndex < jsonData.length - 1) {
+                currentRowIndex++;
+                document.getElementById('rowInput').value = currentRowIndex + 1;
+                displayRow(currentRowIndex);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Visual feedback
+                const btn = element.parentElement.querySelector('.copy-btn');
+                const originalText = btn.textContent;
+                btn.textContent = 'Copied!';
+                btn.style.backgroundColor = '#28a745';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.backgroundColor = '';
+                }, 1000);
+            }).catch(err => {
+                console.error('Could not copy text: ', err);
+                alert('Copy failed. Please copy manually.');
+            });
+        }
+
+        function showError(message) {
+            document.getElementById('content').innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
