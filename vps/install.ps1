@@ -1,25 +1,3 @@
-Of course. Here is the complete, unified PowerShell script that accomplishes all the tasks in sequence:
-
-Installs Chocolatey.
-
-Uses Chocolatey to install Firefox, Git, and VS Code.
-
-Downloads the specified ZIP file to the user's "Downloads" folder.
-
-The script incorporates administrator checks, error handling for each step, and dynamically finds the correct Downloads folder path.
-
-How to Use
-
-Save the code below as a single .ps1 file (e.g., setup-and-download.ps1).
-
-Right-click the file and choose "Run with PowerShell".
-
-If prompted by a security warning, you may need to allow it.
-
-If you did not right-click and "Run as administrator," the script will notify you and exit.
-
-The Complete Script
-Generated powershell
 <#
 .SYNOPSIS
     A full setup script that installs Chocolatey, then installs Firefox, Git, and VS Code,
