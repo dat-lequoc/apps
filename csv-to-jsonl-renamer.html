@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSV → JSONL Renamer</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #0f1720;
+      --muted: #9aa4b2;
+      --text: #e6eef8;
+      --accent: #3b82f6;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #ef4444;
+      --border: #1f2a37;
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 10% -10%, #0c1422 10%, #0b0f14 60%);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 980px;
+      margin: 40px auto;
+      padding: 0 16px 48px;
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; margin-bottom: 18px;
+    }
+    h1 {
+      font-size: 28px; margin: 0;
+      letter-spacing: .3px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    h1 .logo {
+      display: inline-grid; place-items: center;
+      width: 32px; height: 32px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--accent), #06b6d4);
+      box-shadow: 0 6px 22px rgba(59,130,246,.25);
+    }
+    h1 .logo svg { width: 18px; height: 18px; }
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    }
+    .drop {
+      cursor: pointer;
+      display: grid; place-items: center; text-align: center;
+      border: 1.5px dashed #2a3a4f;
+      border-radius: calc(var(--radius) - 4px);
+      padding: 34px 22px;
+      transition: .15s ease border, .15s ease background;
+      background: rgba(255,255,255,.02);
+    }
+    .drop.dragover {
+      border-color: var(--accent);
+      background: rgba(59,130,246,.08);
+    }
+    .drop input { display: none; }
+    .muted { color: var(--muted); }
+    .row { display: grid; gap: 12px; }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    .row .card {
+      padding: 16px; border-top: 1px solid var(--border);
+    }
+    .controls {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;
+      padding: 14px 16px; border-bottom: 1px solid var(--border);
+    }
+    button, .btn {
+      appearance: none; border: 1px solid #2a3a4f; background: #121a26;
+      color: var(--text); padding: 10px 14px; border-radius: 12px; cursor: pointer;
+      font-weight: 600; letter-spacing: .2px;
+      transition: .15s ease transform, .15s ease opacity, .15s ease border;
+    }
+    button.primary { border-color: transparent; background: linear-gradient(135deg, var(--accent), #06b6d4); color: #001222; }
+    button.success { border-color: transparent; background: linear-gradient(135deg, var(--accent-2), #16a34a); color: #031206; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .kbd {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      padding: 2px 6px; border-radius: 6px; background: #0f1520; border: 1px solid #2a3a4f; color: #cbd5e1;
+    }
+    .pill {
+      display: inline-flex; gap: 8px; align-items: center;
+      padding: 6px 10px; border-radius: 9999px; background: #0f1520; border: 1px solid #293547; color: #cfe3ff;
+      font-size: 12px; letter-spacing: .2px;
+    }
+    .grid { display: grid; gap: 16px; }
+    .grid.cols-2 { grid-template-columns: 1fr 1fr; }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    pre, code, textarea {
+      background: #0a111c; color: #d6e4ff; border: 1px solid #1f2b3c; border-radius: 12px; padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px; overflow: auto;
+    }
+    textarea { width: 100%; min-height: 160px; resize: vertical; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: #cfe3ff; font-weight: 700; }
+    .status { display: flex; gap: 10px; align-items: center; }
+    .status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+    .status.ok .dot { background: var(--accent-2); }
+    .status.err .dot { background: var(--danger); }
+    .small { font-size: 12px; }
+    footer { margin-top: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h7l-2 2m2-2-2-2M21 12h-7l2 2m-2-2 2-2" />
+          </svg>
+        </span>
+        CSV → JSONL Renamer
+      </h1>
+      <div class="pill"><span>Target</span> <strong>original_code</strong> & <strong>update_snippet</strong></div>
+    </header>
+
+    <div class="panel">
+      <div class="controls">
+        <div class="status" id="status"><span class="dot"></span><span id="statusText">Waiting for a CSV…</span></div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <label class="small muted">Delimiter:
+            <select id="delimiterSelect">
+              <option value="auto" selected>Auto</option>
+              <option value=",">Comma (,)</option>
+              <option value=";">Semicolon (;)</option>
+              <option value="\\t">Tab (\\t)</option>
+              <option value="|">Pipe (|)</option>
+            </select>
+          </label>
+          <button id="downloadBtn" class="success" disabled>Download JSONL</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <label for="fileInput" class="drop" id="dropArea" tabindex="0" title="Drop CSV here or click to choose">
+          <div>
+            <div style="font-size: 18px; font-weight: 700; margin-bottom: 4px;">Drop your CSV here</div>
+            <div class="muted">…or click to select a file. You can also paste (<span class="kbd">Ctrl/⌘ + V</span>) CSV text.</div>
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" />
+        </label>
+      </div>
+
+      <div class="row">
+        <div class="card">
+          <div style="font-weight:700; margin-bottom:6px;">Column Mapping</div>
+          <table id="mappingTable">
+            <thead><tr><th>Detected</th><th>Renamed To</th><th>Note</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="small muted" style="margin-top:8px">Rules: <code>initial code</code> → <code>original_code</code>; <code>snippet</code> or <code>edit_snippet</code> → <code>update_snippet</code>. Matching is case- and separator-insensitive.</div>
+        </div>
+        <div class="card">
+          <div style="font-weight:700; margin-bottom:6px;">Preview (first 10 lines)</div>
+          <textarea id="preview" readonly></textarea>
+        </div>
+      </div>
+    </div>
+
+    <footer>All processing happens locally in your browser. No data leaves your machine.</footer>
+  </div>
+
+<script>
+(() => {
+  "use strict";
+
+  const el = (id) => document.getElementById(id);
+  const status = el("status");
+  const statusText = el("statusText");
+  const fileInput = el("fileInput");
+  const dropArea = el("dropArea");
+  const delimiterSelect = el("delimiterSelect");
+  const mappingTableBody = document.querySelector("#mappingTable tbody");
+  const preview = el("preview");
+  const downloadBtn = el("downloadBtn");
+  const resetBtn = el("resetBtn");
+
+  let objectURL = null;
+  let outputBlob = null;
+  let outputName = "converted.jsonl";
+
+  function setStatus(kind, message) {
+    status.classList.remove("ok", "err");
+    if (kind === "ok") status.classList.add("ok");
+    if (kind === "err") status.classList.add("err");
+    statusText.textContent = message;
+  }
+
+  function normalize(name) {
+    return String(name || "").toLowerCase().replace(/[\\s_-]+/g, "").trim();
+  }
+
+  function detectDelimiter(sample) {
+    // Very light heuristic over first ~5 lines
+    const lines = sample.split(/\\r?\\n/).slice(0, 5);
+    const candidates = [",", ";", "\\t", "|"];
+    const scores = candidates.map(d => {
+      const counts = lines.map(line => (line.match(new RegExp(escapeRegExp(d), "g")) || []).length);
+      // prefer consistent counts across lines & larger counts
+      const mean = counts.reduce((a,b)=>a+b,0)/Math.max(1,counts.length);
+      const variance = counts.reduce((a,b)=>a + Math.pow(b - mean, 2), 0)/Math.max(1,counts.length);
+      const stability = 1/(1+variance);
+      return {d, score: mean * stability};
+    });
+    scores.sort((a,b)=>b.score - a.score);
+    return (scores[0] && scores[0].score > 0) ? scores[0].d : ",";
+  }
+
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+  }
+
+  // RFC-4180 style CSV parser (handles quotes, escapes, CRLF). Single-character delimiter.
+  function parseCSV(text, delimiter) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let i = 0;
+    const len = text.length;
+    let inQuotes = false;
+
+    function endField() {
+      row.push(field);
+      field = "";
+    }
+    function endRow() {
+      rows.push(row);
+      row = [];
+    }
+
+    while (i < len) {
+      const c = text[i];
+
+      if (inQuotes) {
+        if (c === '"') {
+          const next = text[i+1];
+          if (next === '"') {
+            field += '"'; // Escaped quote
+            i += 2;
+            continue;
+          } else {
+            inQuotes = false;
+            i++;
+            continue;
+          }
+        } else {
+          field += c;
+          i++;
+          continue;
+        }
+      } else {
+        if (c === '"') {
+          inQuotes = true;
+          i++;
+          continue;
+        }
+        if (c === delimiter) {
+          endField();
+          i++;
+          continue;
+        }
+        if (c === "\\r") {
+          // handle CRLF or solo CR
+          endField();
+          endRow();
+          if (text[i+1] === "\\n") i += 2; else i += 1;
+          continue;
+        }
+        if (c === "\\n") {
+          endField();
+          endRow();
+          i++;
+          continue;
+        }
+        field += c;
+        i++;
+      }
+    }
+    // Flush last field/row if any
+    endField();
+    if (row.length > 1 || (row.length === 1 && row[0] !== "")) {
+      endRow();
+    }
+    return rows;
+  }
+
+  function makeJSONL(headers, rows) {
+    const lines = [];
+    for (const r of rows) {
+      const obj = {};
+      for (let i = 0; i < headers.length; i++) {
+        const key = headers[i] ?? `col_${i+1}`;
+        obj[key] = r[i] === undefined ? null : r[i];
+      }
+      lines.push(JSON.stringify(obj));
+    }
+    return lines.join("\\n");
+  }
+
+  function buildMapping(headers) {
+    const exists = new Set(headers.map(h => normalize(h)));
+    const map = new Map(); // original -> renamed
+    const notes = new Map(); // original -> note
+
+    // Helpers
+    const tryMap = (candidates, target, note) => {
+      for (const c of candidates) {
+        const n = normalize(c);
+        const foundIndex = headers.findIndex(h => normalize(h) === n);
+        if (foundIndex !== -1) {
+          const original = headers[foundIndex];
+          // Avoid overwriting if target already exists
+          if (!exists.has(normalize(target))) {
+            map.set(original, target);
+            exists.add(normalize(target));
+            notes.set(original, note || "");
+          } else {
+            // Target exists; skip rename and mark note
+            notes.set(original, `Target "${target}" already exists — kept as "${original}"`);
+          }
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // initial code → original_code
+    tryMap(
+      ["initial code", "initial_code", "initialcode", "initcode", "code initial", "code_initial"],
+      "original_code",
+      "Renamed by rule: initial code → original_code"
+    );
+
+    // Prefer edit_snippet if both present; otherwise snippet → update_snippet
+    const hadEdit = tryMap(["edit_snippet", "edit snippet", "editsnippet"], "update_snippet", "Renamed by rule: edit_snippet → update_snippet");
+    if (!hadEdit) {
+      tryMap(["snippet"], "update_snippet", "Renamed by rule: snippet → update_snippet");
+    } else {
+      // If both edit_snippet and snippet exist, we leave 'snippet' untouched and warn
+      const hasSnippet = headers.some(h => normalize(h) === "snippet");
+      if (hasSnippet) {
+        const idx = headers.findIndex(h => normalize(h) === "snippet");
+        const original = headers[idx];
+        notes.set(original, 'Both "edit_snippet" and "snippet" present — kept "snippet" as-is.');
+      }
+    }
+
+    return { map, notes };
+  }
+
+  function applyMapping(headers, map) {
+    return headers.map(h => map.get(h) ?? h);
+  }
+
+  function renderMappingTable(headersBefore, headersAfter, notes) {
+    mappingTableBody.innerHTML = "";
+    for (let i = 0; i < headersBefore.length; i++) {
+      const before = headersBefore[i];
+      const after = headersAfter[i];
+      const changed = before !== after;
+      const note = notes.get(before) || (changed ? "Renamed" : "");
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td><code>${escapeHtml(before)}</code></td>
+                      <td>${changed ? `<code>${escapeHtml(after)}</code>` : '<span class="muted">—</span>'}</td>
+                      <td class="small ${changed ? '' : 'muted'}">${escapeHtml(note)}</td>`;
+      mappingTableBody.appendChild(tr);
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+  }
+
+  async function handleTextInput(text, suggestedName="converted.jsonl") {
+    try {
+      setStatus("", "Parsing…");
+      downloadBtn.disabled = true;
+
+      // Strip BOM if present
+      if (text.charCodeAt(0) === 0xFEFF) {
+        text = text.slice(1);
+      }
+
+      const delimSel = delimiterSelect.value;
+      const delimiter = (delimSel === "auto") ? detectDelimiter(text) : (delimSel === "\\t" ? "\\t" : delimSel);
+      const rows = parseCSV(text, delimiter === "\\t" ? "\\t" : delimiter);
+      if (!rows.length) throw new Error("No rows found.");
+
+      const headersBefore = rows[0].map(h => h ?? "");
+      const dataRows = rows.slice(1);
+
+      const { map, notes } = buildMapping(headersBefore);
+      const headersAfter = applyMapping(headersBefore, map);
+
+      // If all headers are empty or only one column, try to recover (maybe headerless)
+      if (headersAfter.filter(Boolean).length === 0 && dataRows.length) {
+        throw new Error("Could not detect header row. Make sure the first row contains column names.");
+      }
+
+      renderMappingTable(headersBefore, headersAfter, notes);
+
+      // Recompose rows using renamed headers
+      const jsonl = makeJSONL(headersAfter, dataRows);
+      preview.value = jsonl.split("\\n").slice(0, 10).join("\\n");
+
+      outputBlob = new Blob([jsonl], { type: "application/x-ndjson;charset=utf-8" });
+      if (objectURL) URL.revokeObjectURL(objectURL);
+      objectURL = URL.createObjectURL(outputBlob);
+
+      const base = suggestedName.replace(/\\.(csv|tsv|txt)$/i, "") || "converted";
+      outputName = base + "-renamed.jsonl";
+
+      downloadBtn.disabled = false;
+      setStatus("ok", `Ready • Detected delimiter "${delimiter === "\\t" ? "TAB" : delimiter}" • ${dataRows.length} rows`);
+    } catch (err) {
+      console.error(err);
+      setStatus("err", "Error: " + (err && err.message ? err.message : String(err)));
+    }
+  }
+
+  // File handling
+  fileInput.addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const text = await file.text();
+    await handleTextInput(text, file.name.replace(/\\s+/g, "_"));
+  });
+
+  // Drag & drop
+  ;["dragenter", "dragover"].forEach(evt => dropArea.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); dropArea.classList.add("dragover");
+  }));
+  ;["dragleave", "drop"].forEach(evt => dropArea.addEventListener(evt, (e) => {
+    e.preventDefault(); e.stopPropagation(); dropArea.classList.remove("dragover");
+  }));
+  dropArea.addEventListener("drop", async (e) => {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    const text = await file.text();
+    await handleTextInput(text, file.name.replace(/\\s+/g, "_"));
+  });
+  dropArea.addEventListener("click", () => fileInput.click());
+  dropArea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") fileInput.click();
+  });
+
+  // Paste CSV text support
+  window.addEventListener("paste", async (e) => {
+    if (!e.clipboardData) return;
+    const text = e.clipboardData.getData("text/plain");
+    if (text && /[\\n,;\\t|]/.test(text)) {
+      await handleTextInput(text, "pasted.csv");
+    }
+  });
+
+  // Download button
+  downloadBtn.addEventListener("click", () => {
+    if (!outputBlob || !objectURL) return;
+    const a = document.createElement("a");
+    a.href = objectURL;
+    a.download = outputName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+
+  // Reset
+  resetBtn.addEventListener("click", () => {
+    if (objectURL) URL.revokeObjectURL(objectURL);
+    objectURL = null; outputBlob = null;
+    fileInput.value = "";
+    mappingTableBody.innerHTML = "";
+    preview.value = "";
+    downloadBtn.disabled = true;
+    setStatus("", "Waiting for a CSV…");
+  });
+
+})();
+</script>
+</body>
+</html>
